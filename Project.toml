@@ -1,0 +1,30 @@
+name = "DBN"
+uuid = "90689371-c8cb-40d1-831f-18033db90f74"
+authors = ["Tyler Beason <tbeas12@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+CRC32c = "8bf52ea8-c179-5cab-976a-9e18b702a9bc"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CodecZstd = "6b39b394-51ab-5f42-8807-6242bab2b4c2"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+EnumX = "4e289a0a-7415-4d19-859d-a7e5c4648b56"
+Parquet2 = "98572fba-bba0-415d-956f-fa77e587d26d"
+TranscodingStreams = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
+
+[compat]
+CRC32c = "1.11.0"
+CSV = "0.10.15"
+CodecZstd = "0.8.6"
+DataFrames = "1.7.0"
+Dates = "1.11.0"
+EnumX = "1.0.5"
+Parquet2 = "0.2.31"
+TranscodingStreams = "0.11.3"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
