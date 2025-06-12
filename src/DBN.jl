@@ -7,13 +7,14 @@ module DBN
 
 using Dates
 using CRC32c
-using CodecZstd
-using TranscodingStreams
+using CodecZstd  # Commented out for basic testing
+using TranscodingStreams  # Commented out for basic testing
 using EnumX
 
 export DBNDecoder, DBNEncoder, read_dbn, write_dbn
 export Metadata, DBNHeader, RecordHeader, DBNTimestamp
 export MBOMsg, TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg, StatMsg
+export CMBP1Msg, CBBO1sMsg, CBBO1mMsg, TCBBOMsg, BBO1sMsg, BBO1mMsg
 export ErrorMsg, SymbolMappingMsg, SystemMsg, InstrumentDefMsg
 export DBNStream, DBNStreamWriter, write_record!, close_writer!
 export compress_dbn_file, compress_daily_files
@@ -29,6 +30,7 @@ const FIXED_PRICE_SCALE = Int32(1_000_000_000)
 const UNDEF_PRICE = typemax(Int64)
 const UNDEF_ORDER_SIZE = typemax(UInt32)
 const UNDEF_TIMESTAMP = typemax(Int64)
+const LENGTH_MULTIPLIER = 4  # The multiplier for converting the length field to bytes
 
 # Enums using EnumX for better namespace management
 @enumx Schema::UInt16 begin
@@ -45,6 +47,13 @@ const UNDEF_TIMESTAMP = typemax(Int64)
     STATISTICS = 10
     STATUS = 11
     IMBALANCE = 12
+    CBBO = 13
+    CBBO_1S = 14
+    CBBO_1M = 15
+    CMBP_1 = 16
+    TCBBO = 17
+    BBO_1S = 18
+    BBO_1M = 19
 end
 
 @enumx Compression::UInt8 begin
@@ -66,27 +75,37 @@ end
 end
 
 @enumx RType::UInt8 begin
-    MBO_MSG = 0x00
-    TRADE_MSG = 0x01
-    MBP_1_MSG = 0x02
-    MBP_10_MSG = 0x03
-    OHLCV_MSG = 0x11
-    STATUS_MSG = 0x12
-    INSTRUMENT_DEF_MSG = 0x13
-    IMBALANCE_MSG = 0x14
-    STAT_MSG = 0x15
-    ERROR_MSG = 0x16
-    SYMBOL_MAPPING_MSG = 0x17
-    SYSTEM_MSG = 0x18
+    MBP_0_MSG = 0x00        # Trades (book depth 0)
+    MBP_1_MSG = 0x01        # TBBO/MBP-1 (book depth 1)
+    MBP_10_MSG = 0x0A       # MBP-10 (book depth 10)
+    STATUS_MSG = 0x12       # Exchange status record
+    INSTRUMENT_DEF_MSG = 0x13  # Instrument definition record
+    IMBALANCE_MSG = 0x14    # Order imbalance record
+    ERROR_MSG = 0x15        # Error record from live gateway
+    SYMBOL_MAPPING_MSG = 0x16  # Symbol mapping record from live gateway
+    SYSTEM_MSG = 0x17       # Non-error record from live gateway
+    STAT_MSG = 0x18         # Statistics record from publisher
+    OHLCV_1S_MSG = 0x20     # OHLCV at 1-second cadence
+    OHLCV_1M_MSG = 0x21     # OHLCV at 1-minute cadence
+    OHLCV_1H_MSG = 0x22     # OHLCV at hourly cadence
+    OHLCV_1D_MSG = 0x23     # OHLCV at daily cadence
+    MBO_MSG = 0xA0          # Market-by-order record
+    CMBP_1_MSG = 0xB1       # Consolidated market-by-price with book depth 1
+    CBBO_1S_MSG = 0xC0      # Consolidated market-by-price with book depth 1 at 1-second cadence
+    CBBO_1M_MSG = 0xC1      # Consolidated market-by-price with book depth 1 at 1-minute cadence
+    TCBBO_MSG = 0xC2        # Consolidated market-by-price with book depth 1 (trades only)
+    BBO_1S_MSG = 0xC3       # Market-by-price with book depth 1 at 1-second cadence
+    BBO_1M_MSG = 0xC4       # Market-by-price with book depth 1 at 1-minute cadence
 end
 
 @enumx Action::UInt8 begin
-    ADD = UInt8('A')
-    CANCEL = UInt8('C')
-    MODIFY = UInt8('F')
-    TRADE = UInt8('T')
-    FILL = UInt8('E')
-    CLEAR = UInt8('R')
+    ADD = UInt8('A')      # Insert a new order into the book
+    MODIFY = UInt8('M')   # Change an order's price and/or size
+    CANCEL = UInt8('C')   # Fully or partially cancel an order from the book
+    CLEAR = UInt8('R')    # Remove all resting orders for the instrument
+    TRADE = UInt8('T')    # An aggressing order traded. Does not affect the book
+    FILL = UInt8('F')     # A resting order was filled. Does not affect the book
+    NONE = UInt8('N')     # No action: does not affect the book, but may carry flags or other information
 end
 
 @enumx Side::UInt8 begin
@@ -101,6 +120,15 @@ end
     FUTURE = UInt8('F')
     FX = UInt8('X')
     BOND = UInt8('B')
+    MIXED_SPREAD = UInt8('M')
+    COMMODITY = UInt8('C')
+    INDEX = UInt8('I')
+    CURRENCY = UInt8('U')
+    SWAP = UInt8('S')
+    OTHER = UInt8('?')
+    # Also support numeric values
+    UNKNOWN_0 = 0
+    UNKNOWN_45 = 45
 end
 
 # Structures
@@ -119,11 +147,10 @@ struct Metadata
     version::UInt8
     dataset::String
     schema::Schema.T
-    start_ts::Int64  # renamed from 'start' for consistency with end_ts
-    end_ts::Int64  # renamed from 'end' which is a reserved keyword
-    limit::UInt64
-    compression::Compression.T
-    stype_in::SType.T
+    start_ts::Int64
+    end_ts::Union{Int64,Nothing}  # Can be null
+    limit::Union{UInt64,Nothing}  # Can be null
+    stype_in::Union{SType.T,Nothing}  # Can be null
     stype_out::SType.T
     ts_out::Bool
     symbols::Vector{String}
@@ -222,37 +249,50 @@ end
 
 struct StatusMsg
     hd::RecordHeader
-    ts_recv::Int64
+    ts_recv::UInt64
     action::UInt16
     reason::UInt16
     trading_event::UInt16
-    is_trading::Bool
-    is_quoting::Bool
-    is_short_sell_restricted::Bool
+    is_trading::UInt8  # c_char in Rust
+    is_quoting::UInt8  # c_char in Rust
+    is_short_sell_restricted::UInt8  # c_char in Rust
 end
 
 struct ImbalanceMsg
     hd::RecordHeader
     ts_recv::Int64
     ref_price::Int64
-    auction_time::Int64
-    cont_size::Int32
-    auction_size::Int32
-    imbalance_size::Int32
-    imbalance_side::Side.T
-    clearing_price::Int64
+    auction_time::UInt64
+    cont_book_clr_price::Int64
+    auct_interest_clr_price::Int64
+    ssr_filling_price::Int64
+    ind_match_price::Int64
+    upper_collar::Int64
+    lower_collar::Int64
+    paired_qty::UInt32
+    total_imbalance_qty::UInt32
+    market_imbalance_qty::UInt32
+    unpaired_qty::UInt32
+    auction_type::UInt8
+    side::Side.T
+    auction_status::UInt8
+    freeze_status::UInt8
+    num_extensions::UInt8
+    unpaired_side::UInt8
+    significant_imbalance::UInt8
+    # _reserved field for alignment
 end
 
 struct StatMsg
     hd::RecordHeader
-    ts_recv::Int64
-    ts_ref::Int64
+    ts_recv::UInt64
+    ts_ref::UInt64
     price::Int64
     quantity::Int64  # Expanded to 64 bits in DBN v3
     sequence::UInt32
     ts_in_delta::Int32
     stat_type::UInt16
-    channel_id::UInt8
+    channel_id::UInt16  # Changed to UInt16 to match Rust
     update_action::UInt8
     stat_flags::UInt8
 end
@@ -352,6 +392,126 @@ struct InstrumentDefMsg
     leg_delta::Int64
 end
 
+# Additional message structures for consolidated and BBO records
+struct CMBP1Msg
+    hd::RecordHeader
+    price::Int64
+    size::UInt32
+    action::Action.T
+    side::Side.T
+    flags::UInt8
+    depth::UInt8
+    ts_recv::Int64
+    ts_in_delta::Int32
+    sequence::UInt32
+    levels::BidAskPair
+end
+
+struct CBBO1sMsg
+    hd::RecordHeader
+    price::Int64
+    size::UInt32
+    action::Action.T
+    side::Side.T
+    flags::UInt8
+    depth::UInt8
+    ts_recv::Int64
+    ts_in_delta::Int32
+    sequence::UInt32
+    levels::BidAskPair
+end
+
+struct CBBO1mMsg
+    hd::RecordHeader
+    price::Int64
+    size::UInt32
+    action::Action.T
+    side::Side.T
+    flags::UInt8
+    depth::UInt8
+    ts_recv::Int64
+    ts_in_delta::Int32
+    sequence::UInt32
+    levels::BidAskPair
+end
+
+struct TCBBOMsg
+    hd::RecordHeader
+    price::Int64
+    size::UInt32
+    action::Action.T
+    side::Side.T
+    flags::UInt8
+    depth::UInt8
+    ts_recv::Int64
+    ts_in_delta::Int32
+    sequence::UInt32
+    levels::BidAskPair
+end
+
+struct BBO1sMsg
+    hd::RecordHeader
+    price::Int64
+    size::UInt32
+    action::Action.T
+    side::Side.T
+    flags::UInt8
+    depth::UInt8
+    ts_recv::Int64
+    ts_in_delta::Int32
+    sequence::UInt32
+    levels::BidAskPair
+end
+
+struct BBO1mMsg
+    hd::RecordHeader
+    price::Int64
+    size::UInt32
+    action::Action.T
+    side::Side.T
+    flags::UInt8
+    depth::UInt8
+    ts_recv::Int64
+    ts_in_delta::Int32
+    sequence::UInt32
+    levels::BidAskPair
+end
+
+# Helper function for safe enum conversion
+function safe_action(raw_val::UInt8)
+    # Special case: 0 might indicate no action for certain record types
+    if raw_val == 0
+        return Action.NONE
+    end
+    
+    try
+        return Action.T(raw_val)
+    catch ArgumentError
+        # For unknown action values, use a default or create a placeholder
+        # For now, return TRADE as a safe default
+        @warn "Unknown Action value: $raw_val (0x$(string(raw_val, base=16))), using TRADE as default"
+        return Action.TRADE
+    end
+end
+
+function safe_side(raw_val::UInt8)
+    try
+        return Side.T(raw_val)
+    catch ArgumentError
+        @warn "Unknown Side value: $raw_val, using NONE as default"
+        return Side.NONE
+    end
+end
+
+function safe_instrument_class(raw_val::UInt8)
+    try
+        return InstrumentClass.T(raw_val)
+    catch ArgumentError
+        @warn "Unknown InstrumentClass value: $raw_val, using OTHER as default"
+        return InstrumentClass.OTHER
+    end
+end
+
 # DBN Decoder
 mutable struct DBNDecoder
     io::IO
@@ -363,119 +523,264 @@ end
 
 DBNDecoder(io::IO) = DBNDecoder(io, io, nothing, nothing, 0)
 
+function DBNDecoder(filename::String)
+    base_io = open(filename, "r")
+    
+    # Check if the file is compressed by looking at magic bytes
+    # Zstd magic number is 0xFD2FB528 (little-endian)
+    mark_pos = position(base_io)
+    magic_bytes = read(base_io, 4)
+    seek(base_io, mark_pos)  # Reset to beginning
+    
+    is_zstd = false
+    if length(magic_bytes) == 4
+        # Check for Zstd magic number (0x28B52FFD in little-endian)
+        is_zstd = magic_bytes == UInt8[0x28, 0xB5, 0x2F, 0xFD]
+    end
+    
+    # Create appropriate IO stream
+    if is_zstd || endswith(filename, ".zst")
+        # Create a streaming decompressor
+        io = TranscodingStream(ZstdDecompressor(), base_io)
+    else
+        io = base_io
+    end
+    
+    decoder = DBNDecoder(io, base_io, nothing, nothing, 0)
+    read_header!(decoder)
+    return decoder
+end
+
 function read_header!(decoder::DBNDecoder)
-    # Read magic bytes "DBN\0"
-    magic = read(decoder.io, 4)
-    if magic != b"DBN\0"
+    # Read magic bytes "DBN"
+    magic = read(decoder.io, 3)
+    if magic != b"DBN"
         error("Invalid DBN file: wrong magic bytes")
     end
     
     # Read version
     version = read(decoder.io, UInt8)
-    if version != DBN_VERSION
-        error("Unsupported DBN version: $version")
+    if version > DBN_VERSION
+        error("Unsupported DBN version: $version (decoder supports up to $DBN_VERSION)")
     end
     
-    # Read dataset length and dataset
-    dataset_len = read(decoder.io, UInt16)
-    dataset = String(read(decoder.io, dataset_len))
+    # Read metadata length (4 bytes)
+    metadata_length = read(decoder.io, UInt32)
     
-    # Read schema
-    schema_val = read(decoder.io, UInt16)
-    schema = Schema.T(schema_val)
+    # Read the entire metadata block
+    metadata_start_pos = position(decoder.io)
+    metadata_bytes = read(decoder.io, metadata_length)
+    metadata_io = IOBuffer(metadata_bytes)
     
-    # Read timestamps
-    start_ts = read(decoder.io, Int64)
-    end_ts = read(decoder.io, Int64)
+    # Parse metadata fields from the buffer
+    pos = 1
     
-    # Read limit
-    limit = read(decoder.io, UInt64)
+    # Dataset (16 bytes fixed-length C string)
+    dataset_bytes = metadata_bytes[pos:pos+15]
+    pos += 16
+    # Remove null terminator bytes
+    dataset = String(dataset_bytes[1:findfirst(==(0), dataset_bytes)-1])
     
-    # Read compression
-    compression = Compression.T(read(decoder.io, UInt8))
+    # Schema (2 bytes)
+    schema_val = ltoh(reinterpret(UInt16, metadata_bytes[pos:pos+1])[1])
+    pos += 2
+    schema = schema_val == 0xFFFF ? Schema.MIX : Schema.T(schema_val)
     
-    # Read stype
-    stype_in = SType.T(read(decoder.io, UInt8))
-    stype_out = SType.T(read(decoder.io, UInt8))
+    # Start timestamp (8 bytes)
+    start_ts_raw = ltoh(reinterpret(UInt64, metadata_bytes[pos:pos+7])[1])
+    pos += 8
+    start_ts = start_ts_raw <= typemax(Int64) ? Int64(start_ts_raw) : 0
     
-    # Read ts_out
-    ts_out = read(decoder.io, Bool)
+    # End timestamp (8 bytes) 
+    end_ts_raw = ltoh(reinterpret(UInt64, metadata_bytes[pos:pos+7])[1])
+    pos += 8
+    end_ts = if end_ts_raw == 0 || end_ts_raw == 0xffffffffffffffff
+        nothing
+    else
+        # Safe conversion - check if it fits in Int64
+        end_ts_raw <= typemax(Int64) ? Int64(end_ts_raw) : nothing
+    end
     
-    # Read symbol count
-    symbol_count = read(decoder.io, UInt32)
+    # Limit (8 bytes)
+    limit_raw = ltoh(reinterpret(UInt64, metadata_bytes[pos:pos+7])[1])
+    pos += 8
+    limit = limit_raw == 0 ? nothing : limit_raw
     
-    # Read symbols
+    # For version 1, skip record_count (8 bytes)
+    if version == 1
+        pos += 8
+    end
+    
+    # SType in (1 byte)
+    stype_in_val = metadata_bytes[pos]
+    pos += 1
+    stype_in = stype_in_val == 0xFF ? nothing : SType.T(stype_in_val)
+    
+    # SType out (1 byte)
+    stype_out = SType.T(metadata_bytes[pos])
+    pos += 1
+    
+    # TS out (1 byte boolean)
+    ts_out = metadata_bytes[pos] != 0
+    pos += 1
+    
+    # Symbol string length (2 bytes, only for version > 1)
+    symbol_cstr_len = if version == 1
+        22  # v1::SYMBOL_CSTR_LEN
+    else
+        ltoh(reinterpret(UInt16, metadata_bytes[pos:pos+1])[1])
+        pos += 2
+    end
+    
+    # Skip reserved padding
+    reserved_len = if version == 1
+        39  # v1::METADATA_RESERVED_LEN
+    else
+        53  # METADATA_RESERVED_LEN
+    end
+    pos += reserved_len
+    
+    # Schema definition length (4 bytes) - always 0 for now
+    schema_def_len = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+    pos += 4
+    if schema_def_len != 0
+        error("Schema definitions not supported yet")
+    end
+    
+    # Read variable-length sections
+    
+    # Symbols
+    symbols_count = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+    pos += 4
     symbols = String[]
-    for _ in 1:symbol_count
-        sym_len = read(decoder.io, UInt16)
-        push!(symbols, String(read(decoder.io, sym_len)))
+    for _ in 1:symbols_count
+        symbol_bytes = metadata_bytes[pos:pos+symbol_cstr_len-1]
+        pos += symbol_cstr_len
+        # Remove null terminator
+        null_pos = findfirst(==(0), symbol_bytes)
+        if null_pos !== nothing
+            symbol = String(symbol_bytes[1:null_pos-1])
+        else
+            symbol = String(symbol_bytes)
+        end
+        push!(symbols, symbol)
     end
     
-    # Read partial symbols
-    partial_count = read(decoder.io, UInt32)
+    # Partial symbols
+    partial_count = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+    pos += 4
     partial = String[]
     for _ in 1:partial_count
-        sym_len = read(decoder.io, UInt16)
-        push!(partial, String(read(decoder.io, sym_len)))
+        symbol_bytes = metadata_bytes[pos:pos+symbol_cstr_len-1]
+        pos += symbol_cstr_len
+        null_pos = findfirst(==(0), symbol_bytes)
+        if null_pos !== nothing
+            symbol = String(symbol_bytes[1:null_pos-1])
+        else
+            symbol = String(symbol_bytes)
+        end
+        push!(partial, symbol)
     end
     
-    # Read not found symbols
-    not_found_count = read(decoder.io, UInt32)
+    # Not found symbols
+    not_found_count = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+    pos += 4
     not_found = String[]
     for _ in 1:not_found_count
-        sym_len = read(decoder.io, UInt16)
-        push!(not_found, String(read(decoder.io, sym_len)))
+        symbol_bytes = metadata_bytes[pos:pos+symbol_cstr_len-1]
+        pos += symbol_cstr_len
+        null_pos = findfirst(==(0), symbol_bytes)
+        if null_pos !== nothing
+            symbol = String(symbol_bytes[1:null_pos-1])
+        else
+            symbol = String(symbol_bytes)
+        end
+        push!(not_found, symbol)
     end
     
-    # Read mappings
-    mappings_count = read(decoder.io, UInt32)
+    # Symbol mappings
+    mappings_count = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+    pos += 4
     mappings = Tuple{String,String,Int64,Int64}[]
     for _ in 1:mappings_count
-        raw_len = read(decoder.io, UInt16)
-        raw = String(read(decoder.io, raw_len))
-        mapped_len = read(decoder.io, UInt16)
-        mapped = String(read(decoder.io, mapped_len))
-        start_ts = read(decoder.io, Int64)
-        end_ts = read(decoder.io, Int64)
-        push!(mappings, (raw, mapped, start_ts, end_ts))
+        # Raw symbol
+        raw_symbol_bytes = metadata_bytes[pos:pos+symbol_cstr_len-1]
+        pos += symbol_cstr_len
+        null_pos = findfirst(==(0), raw_symbol_bytes)
+        if null_pos !== nothing
+            raw_symbol = String(raw_symbol_bytes[1:null_pos-1])
+        else
+            raw_symbol = String(raw_symbol_bytes)
+        end
+        
+        # Intervals count
+        intervals_count = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+        pos += 4
+        
+        # For now, just read the first interval (simplified)
+        if intervals_count > 0
+            # Start date (4 bytes)
+            start_date_raw = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+            pos += 4
+            
+            # End date (4 bytes)
+            end_date_raw = ltoh(reinterpret(UInt32, metadata_bytes[pos:pos+3])[1])
+            pos += 4
+            
+            # Mapped symbol
+            mapped_symbol_bytes = metadata_bytes[pos:pos+symbol_cstr_len-1]
+            pos += symbol_cstr_len
+            null_pos = findfirst(==(0), mapped_symbol_bytes)
+            if null_pos !== nothing
+                mapped_symbol = String(mapped_symbol_bytes[1:null_pos-1])
+            else
+                mapped_symbol = String(mapped_symbol_bytes)
+            end
+            
+            push!(mappings, (raw_symbol, mapped_symbol, Int64(start_date_raw), Int64(end_date_raw)))
+            
+            # Skip remaining intervals for now
+            for _ in 2:intervals_count
+                pos += 4 + 4 + symbol_cstr_len  # start_date + end_date + symbol
+            end
+        end
     end
-    
-    # Skip to metadata start
-    metadata_len = read(decoder.io, UInt32)
-    _ = read(decoder.io, 4)  # Reserved bytes
-    _ = read(decoder.io, 8)  # 8-byte alignment padding for DBN v3
     
     decoder.metadata = Metadata(
         version, dataset, schema, start_ts, end_ts, limit,
-        compression, stype_in, stype_out, ts_out,
+        stype_in, stype_out, ts_out,
         symbols, partial, not_found, mappings
     )
     
+    # Convert timestamps for DatasetCondition, handling nothing values
+    condition_start_ts = start_ts
+    condition_end_ts = end_ts === nothing ? 0 : end_ts
+    condition_limit = limit === nothing ? 0 : limit
+    
     decoder.header = DBNHeader(
         VersionUpgradePolicy(decoder.upgrade_policy),
-        DatasetCondition(0, start_ts, end_ts, limit),
+        DatasetCondition(0, condition_start_ts, condition_end_ts, condition_limit),
         decoder.metadata
     )
     
-    # If compressed, wrap the IO stream with Zstd decompressor
-    if compression == Compression.ZSTD
-        # Save position after header
-        header_end_pos = position(decoder.io)
-        
-        # Read the rest of the file
-        compressed_data = read(decoder.io)
-        
-        # Create a decompression stream
-        decompressed_io = IOBuffer(transcode(ZstdDecompressor, compressed_data))
-        
-        # Replace decoder's IO with the decompressed stream
-        decoder.io = decompressed_io
-    end
+    # For streaming compatibility, skip remaining metadata bytes instead of seeking
+    # We've already read metadata_length bytes into metadata_bytes
+    # No need to do anything - we're already at the right position
 end
 
 function read_record_header(io::IO)
     length = read(io, UInt8)
-    rtype = RType.T(read(io, UInt8))
+    rtype_raw = read(io, UInt8)
+    
+    # Handle unknown record types first, before trying to read more data
+    rtype = try
+        RType.T(rtype_raw)
+    catch ArgumentError
+        # Return special marker for unknown types - don't read more data
+        return nothing, rtype_raw, length
+    end
+    
+    # Always read the standard header fields
     publisher_id = read(io, UInt16)
     instrument_id = read(io, UInt32)
     ts_event = read(io, Int64)
@@ -488,26 +793,42 @@ function read_record(decoder::DBNDecoder)
         return nothing
     end
     
-    hd = read_record_header(decoder.io)
+    hd_result = read_record_header(decoder.io)
+    
+    # Handle unknown record types
+    if hd_result isa Tuple
+        # Unknown record type - skip it
+        _, rtype_raw, length = hd_result
+        skip(decoder.io, length - 2)  # Already read length(1) + rtype(1) = 2 bytes
+        return nothing
+    end
+    
+    hd = hd_result
     
     if hd.rtype == RType.MBO_MSG
-        order_id = read(decoder.io, UInt64)
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        flags = read(decoder.io, UInt8)
-        channel_id = read(decoder.io, UInt8)
-        action = Action.T(read(decoder.io, UInt8))
-        side = Side.T(read(decoder.io, UInt8))
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
+        # For MBO records, we need to read exactly 56 bytes total
+        # We've already read: length(1) + rtype(1) + publisher_id(2) + instrument_id(4) + ts_event(8) = 16 bytes
+        # Remaining to read: 56 - 16 = 40 bytes
+        
+        # Based on Rust struct order and empirical evidence:
+        ts_recv = read(decoder.io, Int64)      # 8 bytes (positions 16-23)
+        order_id = read(decoder.io, UInt64)    # 8 bytes (positions 24-31)
+        size = read(decoder.io, UInt32)        # 4 bytes (positions 32-35)
+        flags = read(decoder.io, UInt8)        # 1 byte (position 36)
+        channel_id = read(decoder.io, UInt8)   # 1 byte (position 37)
+        action = safe_action(read(decoder.io, UInt8))   # 1 byte (position 38)
+        side = safe_side(read(decoder.io, UInt8))       # 1 byte (position 39)
+        price = read(decoder.io, Int64)        # 8 bytes (positions 40-47)
+        ts_in_delta = read(decoder.io, Int32)  # 4 bytes (positions 48-51)
+        sequence = read(decoder.io, UInt32)    # 4 bytes (positions 52-55)
+        
         return MBOMsg(hd, order_id, price, size, flags, channel_id, action, side, ts_recv, ts_in_delta, sequence)
         
-    elseif hd.rtype == RType.TRADE_MSG
+    elseif hd.rtype == RType.MBP_0_MSG
         price = read(decoder.io, Int64)
         size = read(decoder.io, UInt32)
-        action = Action.T(read(decoder.io, UInt8))
-        side = Side.T(read(decoder.io, UInt8))
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
         flags = read(decoder.io, UInt8)
         depth = read(decoder.io, UInt8)
         ts_recv = read(decoder.io, Int64)
@@ -518,8 +839,8 @@ function read_record(decoder::DBNDecoder)
     elseif hd.rtype == RType.MBP_1_MSG
         price = read(decoder.io, Int64)
         size = read(decoder.io, UInt32)
-        action = Action.T(read(decoder.io, UInt8))
-        side = Side.T(read(decoder.io, UInt8))
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
         flags = read(decoder.io, UInt8)
         depth = read(decoder.io, UInt8)
         ts_recv = read(decoder.io, Int64)
@@ -539,8 +860,8 @@ function read_record(decoder::DBNDecoder)
     elseif hd.rtype == RType.MBP_10_MSG
         price = read(decoder.io, Int64)
         size = read(decoder.io, UInt32)
-        action = Action.T(read(decoder.io, UInt8))
-        side = Side.T(read(decoder.io, UInt8))
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
         flags = read(decoder.io, UInt8)
         depth = read(decoder.io, UInt8)
         ts_recv = read(decoder.io, Int64)
@@ -559,7 +880,7 @@ function read_record(decoder::DBNDecoder)
         
         return MBP10Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
         
-    elseif hd.rtype == RType.OHLCV_MSG
+    elseif hd.rtype in [RType.OHLCV_1S_MSG, RType.OHLCV_1M_MSG, RType.OHLCV_1H_MSG, RType.OHLCV_1D_MSG]
         open = read(decoder.io, Int64)
         high = read(decoder.io, Int64)
         low = read(decoder.io, Int64)
@@ -568,14 +889,14 @@ function read_record(decoder::DBNDecoder)
         return OHLCVMsg(hd, open, high, low, close, volume)
         
     elseif hd.rtype == RType.STATUS_MSG
-        ts_recv = read(decoder.io, Int64)
+        ts_recv = read(decoder.io, UInt64)
         action = read(decoder.io, UInt16)
         reason = read(decoder.io, UInt16)
         trading_event = read(decoder.io, UInt16)
-        is_trading = read(decoder.io, Bool)
-        is_quoting = read(decoder.io, Bool)
-        is_short_sell_restricted = read(decoder.io, Bool)
-        _ = read(decoder.io, 5)  # Reserved
+        is_trading = read(decoder.io, UInt8)
+        is_quoting = read(decoder.io, UInt8)
+        is_short_sell_restricted = read(decoder.io, UInt8)
+        _ = read(decoder.io, 7)  # Reserved (was 5, now 7 to align to 40 bytes total)
         return StatusMsg(hd, ts_recv, action, reason, trading_event, is_trading, is_quoting, is_short_sell_restricted)
         
     elseif hd.rtype == RType.INSTRUMENT_DEF_MSG
@@ -624,7 +945,7 @@ function read_record(decoder::DBNDecoder)
         underlying = String(strip(String(read(decoder.io, 21)), '\0'))
         strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         
-        instrument_class = InstrumentClass.T(read(decoder.io, UInt8))
+        instrument_class = safe_instrument_class(read(decoder.io, UInt8))
         strike_price = read(decoder.io, Int64)
         match_algorithm = read(decoder.io, Char)
         main_fraction = read(decoder.io, UInt8)
@@ -645,9 +966,9 @@ function read_record(decoder::DBNDecoder)
         leg_index = read(decoder.io, UInt8)
         leg_instrument_id = read(decoder.io, UInt32)
         leg_raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
-        leg_side = Side.T(read(decoder.io, UInt8))
+        leg_side = safe_side(read(decoder.io, UInt8))
         leg_underlying_id = read(decoder.io, UInt32)
-        leg_instrument_class = InstrumentClass.T(read(decoder.io, UInt8))
+        leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
         leg_ratio_qty_numerator = read(decoder.io, UInt32)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_ratio_price_numerator = read(decoder.io, UInt32)
@@ -678,30 +999,246 @@ function read_record(decoder::DBNDecoder)
         )
         
     elseif hd.rtype == RType.IMBALANCE_MSG
-        ts_recv = read(decoder.io, Int64)
+        ts_recv = read(decoder.io, UInt64)
         ref_price = read(decoder.io, Int64)
-        auction_time = read(decoder.io, Int64)
-        cont_size = read(decoder.io, Int32)
-        auction_size = read(decoder.io, Int32)
-        imbalance_size = read(decoder.io, Int32)
-        imbalance_side = Side.T(read(decoder.io, UInt8))
-        _ = read(decoder.io, 3)  # Reserved
-        clearing_price = read(decoder.io, Int64)
-        return ImbalanceMsg(hd, ts_recv, ref_price, auction_time, cont_size, auction_size, imbalance_size, imbalance_side, clearing_price)
+        auction_time = read(decoder.io, UInt64)
+        cont_book_clr_price = read(decoder.io, Int64)
+        auct_interest_clr_price = read(decoder.io, Int64)
+        ssr_filling_price = read(decoder.io, Int64)
+        ind_match_price = read(decoder.io, Int64)
+        upper_collar = read(decoder.io, Int64)
+        lower_collar = read(decoder.io, Int64)
+        paired_qty = read(decoder.io, UInt32)
+        total_imbalance_qty = read(decoder.io, UInt32)
+        market_imbalance_qty = read(decoder.io, UInt32)
+        unpaired_qty = read(decoder.io, UInt32)
+        auction_type = read(decoder.io, UInt8)
+        side = safe_side(read(decoder.io, UInt8))
+        auction_status = read(decoder.io, UInt8)
+        freeze_status = read(decoder.io, UInt8)
+        num_extensions = read(decoder.io, UInt8)
+        unpaired_side = read(decoder.io, UInt8)
+        significant_imbalance = read(decoder.io, UInt8)
+        _ = read(decoder.io, 1)  # Reserved
+        return ImbalanceMsg(hd, ts_recv, ref_price, auction_time, cont_book_clr_price, auct_interest_clr_price, ssr_filling_price, ind_match_price, upper_collar, lower_collar, paired_qty, total_imbalance_qty, market_imbalance_qty, unpaired_qty, auction_type, side, auction_status, freeze_status, num_extensions, unpaired_side, significant_imbalance)
         
     elseif hd.rtype == RType.STAT_MSG
-        ts_recv = read(decoder.io, Int64)
-        ts_ref = read(decoder.io, Int64)
+        ts_recv = read(decoder.io, UInt64)
+        ts_ref = read(decoder.io, UInt64) 
         price = read(decoder.io, Int64)
-        quantity = read(decoder.io, Int64)
+        # Handle UNDEF values in quantity field - read as UInt64 first
+        quantity_raw = read(decoder.io, UInt64)
+        quantity = if quantity_raw == 0xffffffffffffffff
+            # UNDEF_STAT_QUANTITY - use a special value or convert safely
+            typemax(Int64)  
+        else
+            # Safe conversion for normal values
+            quantity_raw <= typemax(Int64) ? Int64(quantity_raw) : typemax(Int64)
+        end
         sequence = read(decoder.io, UInt32)
         ts_in_delta = read(decoder.io, Int32)
         stat_type = read(decoder.io, UInt16)
-        channel_id = read(decoder.io, UInt8)
+        channel_id = read(decoder.io, UInt16)
         update_action = read(decoder.io, UInt8)
         stat_flags = read(decoder.io, UInt8)
-        _ = read(decoder.io, 3)  # Reserved
+        _ = read(decoder.io, 18)  # Reserved (adjusted for field size changes)
         return StatMsg(hd, ts_recv, ts_ref, price, quantity, sequence, ts_in_delta, stat_type, channel_id, update_action, stat_flags)
+        
+    elseif hd.rtype == RType.ERROR_MSG
+        # Read error message string
+        msg_bytes = hd.length - 16  # Subtract header size
+        if msg_bytes > 0
+            err_data = read(decoder.io, msg_bytes)
+            # Remove null terminator if present
+            null_pos = findfirst(==(0), err_data)
+            if null_pos !== nothing
+                err_string = String(err_data[1:null_pos-1])
+            else
+                err_string = String(err_data)
+            end
+        else
+            err_string = ""
+        end
+        return ErrorMsg(hd, err_string)
+        
+    elseif hd.rtype == RType.SYMBOL_MAPPING_MSG
+        # Read symbol mapping fields
+        stype_in = SType.T(read(decoder.io, UInt8))
+        _ = read(decoder.io, 3)  # Padding
+        
+        # Read input symbol (variable length string)
+        stype_in_len = read(decoder.io, UInt16)
+        stype_in_symbol = String(read(decoder.io, stype_in_len))
+        
+        stype_out = SType.T(read(decoder.io, UInt8))
+        _ = read(decoder.io, 3)  # Padding
+        
+        # Read output symbol (variable length string)
+        stype_out_len = read(decoder.io, UInt16)
+        stype_out_symbol = String(read(decoder.io, stype_out_len))
+        
+        start_ts = read(decoder.io, Int64)
+        end_ts = read(decoder.io, Int64)
+        
+        return SymbolMappingMsg(hd, stype_in, stype_in_symbol, stype_out, stype_out_symbol, start_ts, end_ts)
+        
+    elseif hd.rtype == RType.SYSTEM_MSG
+        # Read system message fields
+        remaining_bytes = hd.length - 16
+        if remaining_bytes > 0
+            # Split remaining data into msg and code (format TBD)
+            # For now, read as single message string
+            msg_data = read(decoder.io, remaining_bytes)
+            null_pos = findfirst(==(0), msg_data)
+            if null_pos !== nothing
+                msg_string = String(msg_data[1:null_pos-1])
+                # If there's more data after null, treat as code
+                if null_pos < length(msg_data)
+                    code_data = msg_data[null_pos+1:end]
+                    code_null = findfirst(==(0), code_data)
+                    if code_null !== nothing
+                        code_string = String(code_data[1:code_null-1])
+                    else
+                        code_string = String(code_data)
+                    end
+                else
+                    code_string = ""
+                end
+            else
+                msg_string = String(msg_data)
+                code_string = ""
+            end
+        else
+            msg_string = ""
+            code_string = ""
+        end
+        return SystemMsg(hd, msg_string, code_string)
+        
+    elseif hd.rtype == RType.CMBP_1_MSG
+        price = read(decoder.io, Int64)
+        size = read(decoder.io, UInt32)
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
+        flags = read(decoder.io, UInt8)
+        depth = read(decoder.io, UInt8)
+        ts_recv = read(decoder.io, Int64)
+        ts_in_delta = read(decoder.io, Int32)
+        sequence = read(decoder.io, UInt32)
+        
+        bid_px = read(decoder.io, Int64)
+        ask_px = read(decoder.io, Int64)
+        bid_sz = read(decoder.io, UInt32)
+        ask_sz = read(decoder.io, UInt32)
+        bid_ct = read(decoder.io, UInt32)
+        ask_ct = read(decoder.io, UInt32)
+        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+        
+        return CMBP1Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+        
+    elseif hd.rtype == RType.CBBO_1S_MSG
+        price = read(decoder.io, Int64)
+        size = read(decoder.io, UInt32)
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
+        flags = read(decoder.io, UInt8)
+        depth = read(decoder.io, UInt8)
+        ts_recv = read(decoder.io, Int64)
+        ts_in_delta = read(decoder.io, Int32)
+        sequence = read(decoder.io, UInt32)
+        
+        bid_px = read(decoder.io, Int64)
+        ask_px = read(decoder.io, Int64)
+        bid_sz = read(decoder.io, UInt32)
+        ask_sz = read(decoder.io, UInt32)
+        bid_ct = read(decoder.io, UInt32)
+        ask_ct = read(decoder.io, UInt32)
+        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+        
+        return CBBO1sMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+        
+    elseif hd.rtype == RType.CBBO_1M_MSG
+        price = read(decoder.io, Int64)
+        size = read(decoder.io, UInt32)
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
+        flags = read(decoder.io, UInt8)
+        depth = read(decoder.io, UInt8)
+        ts_recv = read(decoder.io, Int64)
+        ts_in_delta = read(decoder.io, Int32)
+        sequence = read(decoder.io, UInt32)
+        
+        bid_px = read(decoder.io, Int64)
+        ask_px = read(decoder.io, Int64)
+        bid_sz = read(decoder.io, UInt32)
+        ask_sz = read(decoder.io, UInt32)
+        bid_ct = read(decoder.io, UInt32)
+        ask_ct = read(decoder.io, UInt32)
+        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+        
+        return CBBO1mMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+        
+    elseif hd.rtype == RType.TCBBO_MSG
+        price = read(decoder.io, Int64)
+        size = read(decoder.io, UInt32)
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
+        flags = read(decoder.io, UInt8)
+        depth = read(decoder.io, UInt8)
+        ts_recv = read(decoder.io, Int64)
+        ts_in_delta = read(decoder.io, Int32)
+        sequence = read(decoder.io, UInt32)
+        
+        bid_px = read(decoder.io, Int64)
+        ask_px = read(decoder.io, Int64)
+        bid_sz = read(decoder.io, UInt32)
+        ask_sz = read(decoder.io, UInt32)
+        bid_ct = read(decoder.io, UInt32)
+        ask_ct = read(decoder.io, UInt32)
+        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+        
+        return TCBBOMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+        
+    elseif hd.rtype == RType.BBO_1S_MSG
+        price = read(decoder.io, Int64)
+        size = read(decoder.io, UInt32)
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
+        flags = read(decoder.io, UInt8)
+        depth = read(decoder.io, UInt8)
+        ts_recv = read(decoder.io, Int64)
+        ts_in_delta = read(decoder.io, Int32)
+        sequence = read(decoder.io, UInt32)
+        
+        bid_px = read(decoder.io, Int64)
+        ask_px = read(decoder.io, Int64)
+        bid_sz = read(decoder.io, UInt32)
+        ask_sz = read(decoder.io, UInt32)
+        bid_ct = read(decoder.io, UInt32)
+        ask_ct = read(decoder.io, UInt32)
+        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+        
+        return BBO1sMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+        
+    elseif hd.rtype == RType.BBO_1M_MSG
+        price = read(decoder.io, Int64)
+        size = read(decoder.io, UInt32)
+        action = safe_action(read(decoder.io, UInt8))
+        side = safe_side(read(decoder.io, UInt8))
+        flags = read(decoder.io, UInt8)
+        depth = read(decoder.io, UInt8)
+        ts_recv = read(decoder.io, Int64)
+        ts_in_delta = read(decoder.io, Int32)
+        sequence = read(decoder.io, UInt32)
+        
+        bid_px = read(decoder.io, Int64)
+        ask_px = read(decoder.io, Int64)
+        bid_sz = read(decoder.io, UInt32)
+        ask_sz = read(decoder.io, UInt32)
+        bid_ct = read(decoder.io, UInt32)
+        ask_ct = read(decoder.io, UInt32)
+        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+        
+        return BBO1mMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
         
     else
         # Skip unknown record types
@@ -724,78 +1261,143 @@ function write_header(encoder::DBNEncoder)
     # Always write header to the base IO (uncompressed)
     io = encoder.base_io
     
-    # Write magic bytes
-    write(io, b"DBN\0")
+    # Write magic bytes "DBN"
+    write(io, b"DBN")
     
     # Write version
     write(io, UInt8(DBN_VERSION))
     
-    # Write dataset
-    write(io, UInt16(length(encoder.metadata.dataset)))
-    write(io, encoder.metadata.dataset)
+    # Create metadata buffer to calculate size
+    metadata_buf = IOBuffer()
     
-    # Write schema
-    write(io, UInt16(encoder.metadata.schema))
+    # Write metadata fields in the exact format that read_header! expects
     
-    # Write timestamps
-    write(io, encoder.metadata.start_ts)
-    write(io, encoder.metadata.end_ts)
+    # Dataset (16 bytes fixed-length C string)
+    dataset_bytes = Vector{UInt8}(undef, 16)
+    fill!(dataset_bytes, 0)
+    dataset_str_bytes = Vector{UInt8}(encoder.metadata.dataset)
+    copy_len = min(length(dataset_str_bytes), 15)  # Leave room for null terminator
+    if copy_len > 0
+        dataset_bytes[1:copy_len] = dataset_str_bytes[1:copy_len]
+    end
+    write(metadata_buf, dataset_bytes)
     
-    # Write limit
-    write(io, encoder.metadata.limit)
+    # Schema (2 bytes)
+    write(metadata_buf, htol(UInt16(encoder.metadata.schema)))
     
-    # Write compression
-    write(io, UInt8(encoder.metadata.compression))
+    # Start timestamp (8 bytes)
+    write(metadata_buf, htol(UInt64(encoder.metadata.start_ts)))
     
-    # Write stype
-    write(io, UInt8(encoder.metadata.stype_in))
-    write(io, UInt8(encoder.metadata.stype_out))
+    # End timestamp (8 bytes)
+    end_ts = encoder.metadata.end_ts === nothing ? 0 : UInt64(encoder.metadata.end_ts)
+    write(metadata_buf, htol(end_ts))
     
-    # Write ts_out
-    write(io, encoder.metadata.ts_out)
+    # Limit (8 bytes)
+    limit = encoder.metadata.limit === nothing ? 0 : encoder.metadata.limit
+    write(metadata_buf, htol(UInt64(limit)))
     
-    # Write symbols
-    write(io, UInt32(length(encoder.metadata.symbols)))
+    # NOTE: For version > 1, we DON'T write record_count (8 bytes) here
+    # This is skipped in the read function for version > 1
+    
+    # SType in (1 byte)
+    stype_in_val = encoder.metadata.stype_in === nothing ? 0xFF : UInt8(encoder.metadata.stype_in)
+    write(metadata_buf, stype_in_val)
+    
+    # SType out (1 byte)
+    write(metadata_buf, UInt8(encoder.metadata.stype_out))
+    
+    # TS out (1 byte boolean)
+    write(metadata_buf, encoder.metadata.ts_out ? UInt8(1) : UInt8(0))
+    
+    # Symbol string length (2 bytes) - only for version > 1
+    # DBN v3 uses 71-byte symbol length (same as v2)
+    symbol_cstr_len = UInt16(71)
+    write(metadata_buf, htol(symbol_cstr_len))
+    
+    # Reserved padding (53 bytes for v3)
+    write(metadata_buf, zeros(UInt8, 53))
+    
+    # Schema definition length (4 bytes) - always 0 for now
+    write(metadata_buf, htol(UInt32(0)))
+    
+    # Variable-length sections
+    
+    # Symbols
+    write(metadata_buf, htol(UInt32(length(encoder.metadata.symbols))))
     for sym in encoder.metadata.symbols
-        write(io, UInt16(length(sym)))
-        write(io, sym)
+        sym_bytes = Vector{UInt8}(undef, symbol_cstr_len)
+        fill!(sym_bytes, 0)
+        sym_str_bytes = Vector{UInt8}(sym)
+        copy_len = min(length(sym_str_bytes), symbol_cstr_len - 1)
+        if copy_len > 0
+            sym_bytes[1:copy_len] = sym_str_bytes[1:copy_len]
+        end
+        write(metadata_buf, sym_bytes)
     end
     
-    # Write partial symbols
-    write(io, UInt32(length(encoder.metadata.partial)))
+    # Partial symbols
+    write(metadata_buf, htol(UInt32(length(encoder.metadata.partial))))
     for sym in encoder.metadata.partial
-        write(io, UInt16(length(sym)))
-        write(io, sym)
+        sym_bytes = Vector{UInt8}(undef, symbol_cstr_len)
+        fill!(sym_bytes, 0)
+        sym_str_bytes = Vector{UInt8}(sym)
+        copy_len = min(length(sym_str_bytes), symbol_cstr_len - 1)
+        if copy_len > 0
+            sym_bytes[1:copy_len] = sym_str_bytes[1:copy_len]
+        end
+        write(metadata_buf, sym_bytes)
     end
     
-    # Write not found symbols
-    write(io, UInt32(length(encoder.metadata.not_found)))
+    # Not found symbols
+    write(metadata_buf, htol(UInt32(length(encoder.metadata.not_found))))
     for sym in encoder.metadata.not_found
-        write(io, UInt16(length(sym)))
-        write(io, sym)
+        sym_bytes = Vector{UInt8}(undef, symbol_cstr_len)
+        fill!(sym_bytes, 0)
+        sym_str_bytes = Vector{UInt8}(sym)
+        copy_len = min(length(sym_str_bytes), symbol_cstr_len - 1)
+        if copy_len > 0
+            sym_bytes[1:copy_len] = sym_str_bytes[1:copy_len]
+        end
+        write(metadata_buf, sym_bytes)
     end
     
-    # Write mappings
-    write(io, UInt32(length(encoder.metadata.mappings)))
-    for (raw, mapped, start_ts, end_ts) in encoder.metadata.mappings
-        write(io, UInt16(length(raw)))
-        write(io, raw)
-        write(io, UInt16(length(mapped)))
-        write(io, mapped)
-        write(io, start_ts)
-        write(io, end_ts)
+    # Symbol mappings - need to write the exact format the reader expects
+    write(metadata_buf, htol(UInt32(length(encoder.metadata.mappings))))
+    for (raw_symbol, mapped_symbol, start_date, end_date) in encoder.metadata.mappings
+        # Raw symbol (fixed length)
+        raw_sym_bytes = Vector{UInt8}(undef, symbol_cstr_len)
+        fill!(raw_sym_bytes, 0)
+        raw_str_bytes = Vector{UInt8}(raw_symbol)
+        copy_len = min(length(raw_str_bytes), symbol_cstr_len - 1)
+        if copy_len > 0
+            raw_sym_bytes[1:copy_len] = raw_str_bytes[1:copy_len]
+        end
+        write(metadata_buf, raw_sym_bytes)
+        
+        # Intervals count (1 interval per mapping for simplicity)
+        write(metadata_buf, htol(UInt32(1)))
+        
+        # Start date (4 bytes)
+        write(metadata_buf, htol(UInt32(start_date)))
+        
+        # End date (4 bytes)
+        write(metadata_buf, htol(UInt32(end_date)))
+        
+        # Mapped symbol (fixed length)
+        mapped_sym_bytes = Vector{UInt8}(undef, symbol_cstr_len)
+        fill!(mapped_sym_bytes, 0)
+        mapped_str_bytes = Vector{UInt8}(mapped_symbol)
+        copy_len = min(length(mapped_str_bytes), symbol_cstr_len - 1)
+        if copy_len > 0
+            mapped_sym_bytes[1:copy_len] = mapped_str_bytes[1:copy_len]
+        end
+        write(metadata_buf, mapped_sym_bytes)
     end
     
-    # Write metadata length (placeholder for now)
-    write(io, UInt32(0))
-    write(io, UInt32(0))  # Reserved
-    write(io, zeros(UInt8, 8))  # 8-byte alignment padding for DBN v3
-    
-    # If using compression, set up compressed buffer
-    if encoder.metadata.compression == Compression.ZSTD
-        encoder.compressed_buffer = IOBuffer()
-        encoder.io = encoder.compressed_buffer
-    end
+    # Get metadata bytes and write length + metadata
+    metadata_bytes = take!(metadata_buf)
+    write(io, htol(UInt32(length(metadata_bytes))))
+    write(io, metadata_bytes)
 end
 
 function write_record_header(io::IO, hd::RecordHeader)
@@ -806,19 +1408,31 @@ function write_record_header(io::IO, hd::RecordHeader)
     write(io, hd.ts_event)
 end
 
+# Helper function to write fixed-length strings with null padding
+function write_fixed_string(io::IO, s::String, len::Int)
+    bytes = Vector{UInt8}(undef, len)
+    fill!(bytes, 0)  # Fill with null bytes
+    s_bytes = Vector{UInt8}(s)
+    copy_len = min(length(s_bytes), len)
+    if copy_len > 0
+        bytes[1:copy_len] = s_bytes[1:copy_len]
+    end
+    write(io, bytes)
+end
+
 function write_record(encoder::DBNEncoder, record)
     io = encoder.io
     
     if isa(record, MBOMsg)
         write_record_header(io, record.hd)
+        write(io, record.ts_recv)
         write(io, record.order_id)
-        write(io, record.price)
         write(io, record.size)
         write(io, record.flags)
         write(io, record.channel_id)
         write(io, UInt8(record.action))
         write(io, UInt8(record.side))
-        write(io, record.ts_recv)
+        write(io, record.price)
         write(io, record.ts_in_delta)
         write(io, record.sequence)
         
@@ -893,7 +1507,7 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.is_trading)
         write(io, record.is_quoting)
         write(io, record.is_short_sell_restricted)
-        write(io, zeros(UInt8, 5))  # Reserved
+        write(io, zeros(UInt8, 7))  # Reserved (adjusted)
         
     elseif isa(record, InstrumentDefMsg)
         write_record_header(io, record.hd)
@@ -927,19 +1541,20 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.decay_start_date)
         write(io, record.channel_id)
         
-        # Write fixed-length strings
-        write(io, rpad(record.currency, 4, '\0'))
-        write(io, rpad(record.settl_currency, 4, '\0'))
-        write(io, rpad(record.secsubtype, 6, '\0'))
-        write(io, rpad(record.raw_symbol, 22, '\0'))
-        write(io, rpad(record.group, 21, '\0'))
-        write(io, rpad(record.exchange, 5, '\0'))
-        write(io, rpad(record.asset, 11, '\0'))  # Expanded to 11 bytes in v3
-        write(io, rpad(record.cfi, 7, '\0'))
-        write(io, rpad(record.security_type, 7, '\0'))
-        write(io, rpad(record.unit_of_measure, 31, '\0'))
-        write(io, rpad(record.underlying, 21, '\0'))
-        write(io, rpad(record.strike_price_currency, 4, '\0'))
+        # Write fixed-length strings with null padding
+        
+        write_fixed_string(io, record.currency, 4)
+        write_fixed_string(io, record.settl_currency, 4)
+        write_fixed_string(io, record.secsubtype, 6)
+        write_fixed_string(io, record.raw_symbol, 22)
+        write_fixed_string(io, record.group, 21)
+        write_fixed_string(io, record.exchange, 5)
+        write_fixed_string(io, record.asset, 11)  # Expanded to 11 bytes in v3
+        write_fixed_string(io, record.cfi, 7)
+        write_fixed_string(io, record.security_type, 7)
+        write_fixed_string(io, record.unit_of_measure, 31)
+        write_fixed_string(io, record.underlying, 21)
+        write_fixed_string(io, record.strike_price_currency, 4)
         
         write(io, UInt8(record.instrument_class))
         write(io, record.strike_price)
@@ -961,7 +1576,7 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.leg_count)
         write(io, record.leg_index)
         write(io, record.leg_instrument_id)
-        write(io, rpad(record.leg_raw_symbol, 22, '\0'))
+        write_fixed_string(io, record.leg_raw_symbol, 22)
         write(io, UInt8(record.leg_side))
         write(io, record.leg_underlying_id)
         write(io, UInt8(record.leg_instrument_class))
@@ -978,41 +1593,167 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.ts_recv)
         write(io, record.ref_price)
         write(io, record.auction_time)
-        write(io, record.cont_size)
-        write(io, record.auction_size)
-        write(io, record.imbalance_size)
-        write(io, UInt8(record.imbalance_side))
-        write(io, zeros(UInt8, 3))  # Reserved
-        write(io, record.clearing_price)
+        write(io, record.cont_book_clr_price)
+        write(io, record.auct_interest_clr_price)
+        write(io, record.ssr_filling_price)
+        write(io, record.ind_match_price)
+        write(io, record.upper_collar)
+        write(io, record.lower_collar)
+        write(io, record.paired_qty)
+        write(io, record.total_imbalance_qty)
+        write(io, record.market_imbalance_qty)
+        write(io, record.unpaired_qty)
+        write(io, record.auction_type)
+        write(io, UInt8(record.side))
+        write(io, record.auction_status)
+        write(io, record.freeze_status)
+        write(io, record.num_extensions)
+        write(io, record.unpaired_side)
+        write(io, record.significant_imbalance)
+        write(io, zeros(UInt8, 1))  # Reserved
         
     elseif isa(record, StatMsg)
         write_record_header(io, record.hd)
         write(io, record.ts_recv)
         write(io, record.ts_ref)
         write(io, record.price)
-        write(io, record.quantity)
+        # Write quantity as UInt64, converting back if needed
+        quantity_to_write = record.quantity == typemax(Int64) ? 0xffffffffffffffff : UInt64(record.quantity)
+        write(io, quantity_to_write)
         write(io, record.sequence)
         write(io, record.ts_in_delta)
         write(io, record.stat_type)
         write(io, record.channel_id)
         write(io, record.update_action)
         write(io, record.stat_flags)
-        write(io, zeros(UInt8, 3))  # Reserved
+        write(io, zeros(UInt8, 18))  # Reserved (adjusted for field size changes)
+        
+    elseif isa(record, CMBP1Msg)
+        write_record_header(io, record.hd)
+        write(io, record.price)
+        write(io, record.size)
+        write(io, UInt8(record.action))
+        write(io, UInt8(record.side))
+        write(io, record.flags)
+        write(io, record.depth)
+        write(io, record.ts_recv)
+        write(io, record.ts_in_delta)
+        write(io, record.sequence)
+        
+        # Write level
+        write(io, record.levels.bid_px)
+        write(io, record.levels.ask_px)
+        write(io, record.levels.bid_sz)
+        write(io, record.levels.ask_sz)
+        write(io, record.levels.bid_ct)
+        write(io, record.levels.ask_ct)
+        
+    elseif isa(record, CBBO1sMsg)
+        write_record_header(io, record.hd)
+        write(io, record.price)
+        write(io, record.size)
+        write(io, UInt8(record.action))
+        write(io, UInt8(record.side))
+        write(io, record.flags)
+        write(io, record.depth)
+        write(io, record.ts_recv)
+        write(io, record.ts_in_delta)
+        write(io, record.sequence)
+        
+        # Write level
+        write(io, record.levels.bid_px)
+        write(io, record.levels.ask_px)
+        write(io, record.levels.bid_sz)
+        write(io, record.levels.ask_sz)
+        write(io, record.levels.bid_ct)
+        write(io, record.levels.ask_ct)
+        
+    elseif isa(record, CBBO1mMsg)
+        write_record_header(io, record.hd)
+        write(io, record.price)
+        write(io, record.size)
+        write(io, UInt8(record.action))
+        write(io, UInt8(record.side))
+        write(io, record.flags)
+        write(io, record.depth)
+        write(io, record.ts_recv)
+        write(io, record.ts_in_delta)
+        write(io, record.sequence)
+        
+        # Write level
+        write(io, record.levels.bid_px)
+        write(io, record.levels.ask_px)
+        write(io, record.levels.bid_sz)
+        write(io, record.levels.ask_sz)
+        write(io, record.levels.bid_ct)
+        write(io, record.levels.ask_ct)
+        
+    elseif isa(record, TCBBOMsg)
+        write_record_header(io, record.hd)
+        write(io, record.price)
+        write(io, record.size)
+        write(io, UInt8(record.action))
+        write(io, UInt8(record.side))
+        write(io, record.flags)
+        write(io, record.depth)
+        write(io, record.ts_recv)
+        write(io, record.ts_in_delta)
+        write(io, record.sequence)
+        
+        # Write level
+        write(io, record.levels.bid_px)
+        write(io, record.levels.ask_px)
+        write(io, record.levels.bid_sz)
+        write(io, record.levels.ask_sz)
+        write(io, record.levels.bid_ct)
+        write(io, record.levels.ask_ct)
+        
+    elseif isa(record, BBO1sMsg)
+        write_record_header(io, record.hd)
+        write(io, record.price)
+        write(io, record.size)
+        write(io, UInt8(record.action))
+        write(io, UInt8(record.side))
+        write(io, record.flags)
+        write(io, record.depth)
+        write(io, record.ts_recv)
+        write(io, record.ts_in_delta)
+        write(io, record.sequence)
+        
+        # Write level
+        write(io, record.levels.bid_px)
+        write(io, record.levels.ask_px)
+        write(io, record.levels.bid_sz)
+        write(io, record.levels.ask_sz)
+        write(io, record.levels.bid_ct)
+        write(io, record.levels.ask_ct)
+        
+    elseif isa(record, BBO1mMsg)
+        write_record_header(io, record.hd)
+        write(io, record.price)
+        write(io, record.size)
+        write(io, UInt8(record.action))
+        write(io, UInt8(record.side))
+        write(io, record.flags)
+        write(io, record.depth)
+        write(io, record.ts_recv)
+        write(io, record.ts_in_delta)
+        write(io, record.sequence)
+        
+        # Write level
+        write(io, record.levels.bid_px)
+        write(io, record.levels.ask_px)
+        write(io, record.levels.bid_sz)
+        write(io, record.levels.ask_sz)
+        write(io, record.levels.bid_ct)
+        write(io, record.levels.ask_ct)
     end
 end
 
 # Add finalize function for encoder
 function finalize_encoder(encoder::DBNEncoder)
-    if encoder.metadata.compression == Compression.ZSTD && encoder.compressed_buffer !== nothing
-        # Get the uncompressed data
-        uncompressed_data = take!(encoder.compressed_buffer)
-        
-        # Compress the data
-        compressed_data = transcode(ZstdCompressor, uncompressed_data)
-        
-        # Write compressed data to the base IO
-        write(encoder.base_io, compressed_data)
-    end
+    # For now, we don't use compression in write mode for simplicity
+    # In the future, compression support could be added here
 end
 
 # DBNStream iterator for streaming file reading
@@ -1047,17 +1788,27 @@ Base.eltype(::Type{DBNStream}) = Any
 # Convenience functions
 function read_dbn(filename::String)
     records = []
-    open(filename, "r") do f
-        decoder = DBNDecoder(f)
-        read_header!(decoder)
-        
+    decoder = DBNDecoder(filename)  # This now handles compression automatically
+    
+    try
         while !eof(decoder.io)
             record = read_record(decoder)
             if record !== nothing
                 push!(records, record)
             end
         end
+    finally
+        # Clean up resources
+        if decoder.io !== decoder.base_io
+            # Close the TranscodingStream first
+            close(decoder.io)
+        end
+        # Always close the base IO
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
     end
+    
     return records
 end
 
@@ -1180,7 +1931,6 @@ function DBNStreamWriter(filename::String, dataset::String, schema::Schema.T;
         typemax(Int64),  # Will update with first record
         typemin(Int64),  # Will update with last record
         0,
-        Compression.NONE,  # No compression for streaming
         SType.RAW_SYMBOL,
         SType.RAW_SYMBOL,
         false,
@@ -1234,7 +1984,6 @@ function close_writer!(writer::DBNStreamWriter)
         writer.first_ts,
         writer.last_ts,
         UInt64(writer.record_count),
-        writer.encoder.metadata.compression,
         writer.encoder.metadata.stype_in,
         writer.encoder.metadata.stype_out,
         writer.encoder.metadata.ts_out,
@@ -1270,7 +2019,6 @@ function compress_dbn_file(input_file::String, output_file::String;
         metadata.start_ts,
         metadata.end_ts,
         metadata.limit,
-        Compression.ZSTD,  # Enable compression
         metadata.stype_in,
         metadata.stype_out,
         metadata.ts_out,

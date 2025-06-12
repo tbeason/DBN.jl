@@ -56,18 +56,24 @@
   - [x] Read them back
   - [x] Verify data integrity
 
-## Phase 5: Record Type Read/Write Testing
+## Phase 5: Record Type Read/Write Testing ✅ - Including Official File Compatibility
 
-- [ ] Test writing and reading each message type:
-  - [ ] MBOMsg serialization/deserialization
-  - [ ] TradeMsg serialization/deserialization
-  - [ ] MBP1Msg serialization/deserialization
-  - [ ] MBP10Msg serialization/deserialization
-  - [ ] OHLCVMsg serialization/deserialization
-  - [ ] StatusMsg serialization/deserialization
-  - [ ] ImbalanceMsg serialization/deserialization
-  - [ ] StatMsg serialization/deserialization
-  - [ ] InstrumentDefMsg serialization/deserialization (complex with many fields)
+- [x] Test writing and reading each message type:
+  - [x] MBOMsg serialization/deserialization
+  - [x] TradeMsg serialization/deserialization
+  - [x] MBP1Msg serialization/deserialization
+  - [x] MBP10Msg serialization/deserialization
+  - [x] OHLCVMsg serialization/deserialization
+  - [x] StatusMsg serialization/deserialization
+  - [x] ImbalanceMsg serialization/deserialization
+  - [x] StatMsg serialization/deserialization
+  - [x] InstrumentDefMsg serialization/deserialization (complex with many fields)
+- [x] **Official DBN file compatibility achieved**:
+  - [x] Fixed header parsing to match official Rust implementation
+  - [x] Added support for ERROR_MSG, SYMBOL_MAPPING_MSG, SYSTEM_MSG
+  - [x] Robust handling of unknown record types
+  - [x] Graceful handling of invalid enum values
+  - [x] Support for variable-length record headers
 
 ## Phase 6: Compression Testing
 

@@ -6,4 +6,5 @@ using Test
     include("test_phase2.jl")
     include("test_phase3.jl")
     include("test_phase4.jl")
+    include("test_phase5.jl")
 end

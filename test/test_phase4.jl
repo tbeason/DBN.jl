@@ -76,8 +76,8 @@ using Test
                 
                 # Check that file has proper DBN magic bytes
                 open(temp_file, "r") do f
-                    magic = read(f, 4)
-                    @test magic == b"DBN\0"
+                    magic = read(f, 3)
+                    @test magic == b"DBN"
                     
                     version = read(f, UInt8)
                     @test version == DBN_VERSION
