@@ -1,5 +1,6 @@
-using DBN
 using Test
+using DBN
+using Dates
 
 @testset "DBN.jl Tests" begin
     include("test_phase1.jl")
@@ -7,4 +8,5 @@ using Test
     include("test_phase3.jl")
     include("test_phase4.jl")
     include("test_phase5.jl")
+    include("test_phase6.jl")
 end

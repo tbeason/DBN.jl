@@ -74,26 +74,35 @@
         @test SType.CONTINUOUS == SType.T(2)
         @test SType.PARENT == SType.T(3)
         
-        # Test RType enum
-        @test RType.MBO_MSG == RType.T(0x00)
-        @test RType.TRADE_MSG == RType.T(0x01)
-        @test RType.MBP_1_MSG == RType.T(0x02)
-        @test RType.MBP_10_MSG == RType.T(0x03)
-        @test RType.OHLCV_MSG == RType.T(0x11)
-        @test RType.STATUS_MSG == RType.T(0x12)
-        @test RType.INSTRUMENT_DEF_MSG == RType.T(0x13)
-        @test RType.IMBALANCE_MSG == RType.T(0x14)
-        @test RType.STAT_MSG == RType.T(0x15)
-        @test RType.ERROR_MSG == RType.T(0x16)
-        @test RType.SYMBOL_MAPPING_MSG == RType.T(0x17)
-        @test RType.SYSTEM_MSG == RType.T(0x18)
+        # Test RType enum (DBN v3 values)
+        @test RType.MBP_0_MSG == RType.T(0x00)        # Trades (book depth 0)
+        @test RType.MBP_1_MSG == RType.T(0x01)        # TBBO/MBP-1 (book depth 1)
+        @test RType.MBP_10_MSG == RType.T(0x0A)       # MBP-10 (book depth 10)
+        @test RType.STATUS_MSG == RType.T(0x12)       # Exchange status record
+        @test RType.INSTRUMENT_DEF_MSG == RType.T(0x13)  # Instrument definition record
+        @test RType.IMBALANCE_MSG == RType.T(0x14)    # Order imbalance record
+        @test RType.ERROR_MSG == RType.T(0x15)        # Error record from live gateway
+        @test RType.SYMBOL_MAPPING_MSG == RType.T(0x16)  # Symbol mapping record from live gateway
+        @test RType.SYSTEM_MSG == RType.T(0x17)       # Non-error record from live gateway
+        @test RType.STAT_MSG == RType.T(0x18)         # Statistics record from publisher
+        @test RType.OHLCV_1S_MSG == RType.T(0x20)     # OHLCV at 1-second cadence
+        @test RType.OHLCV_1M_MSG == RType.T(0x21)     # OHLCV at 1-minute cadence
+        @test RType.OHLCV_1H_MSG == RType.T(0x22)     # OHLCV at hourly cadence
+        @test RType.OHLCV_1D_MSG == RType.T(0x23)     # OHLCV at daily cadence
+        @test RType.MBO_MSG == RType.T(0xA0)          # Market-by-order record
+        @test RType.CMBP_1_MSG == RType.T(0xB1)       # Consolidated market-by-price with book depth 1
+        @test RType.CBBO_1S_MSG == RType.T(0xC0)      # Consolidated market-by-price with book depth 1 at 1-second cadence
+        @test RType.CBBO_1M_MSG == RType.T(0xC1)      # Consolidated market-by-price with book depth 1 at 1-minute cadence
+        @test RType.TCBBO_MSG == RType.T(0xC2)        # Consolidated market-by-price with book depth 1 (trades only)
+        @test RType.BBO_1S_MSG == RType.T(0xC3)       # Market-by-price with book depth 1 at 1-second cadence
+        @test RType.BBO_1M_MSG == RType.T(0xC4)       # Market-by-price with book depth 1 at 1-minute cadence
         
         # Test Action enum
         @test Action.ADD == Action.T(UInt8('A'))
         @test Action.CANCEL == Action.T(UInt8('C'))
-        @test Action.MODIFY == Action.T(UInt8('F'))
+        @test Action.MODIFY == Action.T(UInt8('M'))
         @test Action.TRADE == Action.T(UInt8('T'))
-        @test Action.FILL == Action.T(UInt8('E'))
+        @test Action.FILL == Action.T(UInt8('F'))
         @test Action.CLEAR == Action.T(UInt8('R'))
         
         # Test Side enum

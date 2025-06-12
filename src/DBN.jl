@@ -2028,28 +2028,36 @@ function compress_dbn_file(input_file::String, output_file::String;
         metadata.mappings
     )
     
-    # Stream compress the file
-    open(output_file, "w") do out_io
-        encoder = DBNEncoder(out_io, compressed_metadata)
-        write_header(encoder)
+    # Stream compress the file using Zstd compression
+    open(output_file, "w") do base_io
+        # Create a Zstd compression stream
+        compressed_io = TranscodingStream(ZstdCompressor(level=compression_level), base_io)
         
-        # Stream through input file
-        for record in DBNStream(input_file)
-            write_record(encoder, record)
+        try
+            encoder = DBNEncoder(compressed_io, compressed_metadata)
+            write_header(encoder)
+            
+            # Stream through input file
+            for record in DBNStream(input_file)
+                write_record(encoder, record)
+            end
+            
+            finalize_encoder(encoder)
+        finally
+            # Close the compression stream
+            close(compressed_io)
         end
-        
-        finalize_encoder(encoder)
     end
+    
+    # Get stats before potentially deleting original
+    original_size = filesize(input_file)
+    compressed_size = filesize(output_file)
+    compression_ratio = 1.0 - (compressed_size / original_size)
     
     # Optionally delete original
     if delete_original
         rm(input_file)
     end
-    
-    # Return compression stats
-    original_size = filesize(input_file)
-    compressed_size = filesize(output_file)
-    compression_ratio = 1.0 - (compressed_size / original_size)
     
     return (
         original_size = original_size,

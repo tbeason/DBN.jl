@@ -5,9 +5,9 @@
     @testset "Simple struct creation" begin
         # Test RecordHeader creation
         @testset "RecordHeader" begin
-            hd = RecordHeader(40, RType.TRADE_MSG, 1, 12345, 1640995200000000000)
+            hd = RecordHeader(40, RType.MBP_0_MSG, 1, 12345, 1640995200000000000)
             @test hd.length == 40
-            @test hd.rtype == RType.TRADE_MSG
+            @test hd.rtype == RType.MBP_0_MSG
             @test hd.publisher_id == 1
             @test hd.instrument_id == 12345
             @test hd.ts_event == 1640995200000000000
@@ -47,15 +47,14 @@
         mappings = Tuple{String,String,Int64,Int64}[]
         
         metadata = Metadata(
-            DBN_VERSION,           # version
+            UInt8(DBN_VERSION),       # version
             "XNAS.ITCH",              # dataset
-            Schema.TRADES,        # schema
+            Schema.TRADES,            # schema
             1640995200000000000,      # start
             1640995260000000000,      # end_ts
-            1000,                     # limit
-            Compression.NONE,     # compression
-            SType.RAW_SYMBOL,     # stype_in
-            SType.RAW_SYMBOL,     # stype_out
+            UInt64(1000),             # limit
+            SType.RAW_SYMBOL,         # stype_in
+            SType.RAW_SYMBOL,         # stype_out
             false,                    # ts_out
             symbols,                  # symbols
             partial,                  # partial
@@ -69,7 +68,6 @@
         @test metadata.start_ts == 1640995200000000000
         @test metadata.end_ts == 1640995260000000000
         @test metadata.limit == 1000
-        @test metadata.compression == Compression.NONE
         @test metadata.stype_in == SType.RAW_SYMBOL
         @test metadata.stype_out == SType.RAW_SYMBOL
         @test metadata.ts_out == false
@@ -81,7 +79,7 @@
     
     @testset "Message type struct creation" begin
         # Common record header for all messages
-        hd = RecordHeader(40, RType.TRADE_MSG, 1, 12345, 1640995200000000000)
+        hd = RecordHeader(40, RType.MBP_0_MSG, 1, 12345, 1640995200000000000)
         
         @testset "MBOMsg" begin
             msg = MBOMsg(
@@ -254,23 +252,35 @@
                 hd,                      # hd
                 1640995200000000006,     # ts_recv
                 10055000000,             # ref_price
-                1640995230000000000,     # auction_time
-                1000,                    # cont_size
-                5000,                    # auction_size
-                2000,                    # imbalance_size
-                Side.BID,            # imbalance_side
-                10056000000              # clearing_price
+                UInt64(1640995230000000000), # auction_time
+                10066000000,             # cont_book_clr_price
+                10067000000,             # auct_interest_clr_price
+                10068000000,             # ssr_filling_price
+                10069000000,             # ind_match_price
+                10070000000,             # upper_collar
+                10060000000,             # lower_collar
+                UInt32(5000),            # paired_qty
+                UInt32(15000),           # total_imbalance_qty
+                UInt32(8000),            # market_imbalance_qty
+                UInt32(2000),            # unpaired_qty
+                UInt8('O'),              # auction_type
+                Side.BID,                # side
+                UInt8(1),                # auction_status
+                UInt8(0),                # freeze_status
+                UInt8(0),                # num_extensions
+                UInt8('A'),              # unpaired_side
+                UInt8('N')               # significant_imbalance
             )
             
             @test msg.hd == hd
             @test msg.ts_recv == 1640995200000000006
             @test msg.ref_price == 10055000000
             @test msg.auction_time == 1640995230000000000
-            @test msg.cont_size == 1000
-            @test msg.auction_size == 5000
-            @test msg.imbalance_size == 2000
-            @test msg.imbalance_side == Side.BID
-            @test msg.clearing_price == 10056000000
+            @test msg.cont_book_clr_price == 10066000000
+            @test msg.auct_interest_clr_price == 10067000000
+            @test msg.total_imbalance_qty == 15000
+            @test msg.side == Side.BID
+            @test msg.auction_type == UInt8('O')
         end
         
         @testset "StatMsg (DBN v3)" begin

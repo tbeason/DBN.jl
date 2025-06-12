@@ -1,13 +1,5 @@
 # Phase 5: Record Type Read/Write Testing
 
-using Dates
-using Test
-
-# Load DBN module
-using Pkg
-Pkg.activate(".")
-include("../src/DBN.jl")
-using .DBN
 
 @testset "Phase 5: Record Type Read/Write Testing" begin
     

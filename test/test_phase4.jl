@@ -1,20 +1,18 @@
 # Phase 4: Basic Read/Write Testing (No Compression)
 
-using Dates
-using Test
+
 
 @testset "Phase 4: Basic Read/Write Testing (No Compression)" begin
     
     # Helper function to create test metadata
-    function create_test_metadata(compression=Compression.NONE)
+    function create_test_metadata()
         return Metadata(
-            DBN_VERSION,              # version
+            UInt8(DBN_VERSION),      # version
             "TEST.ITCH",             # dataset
             Schema.TRADES,           # schema
             1640995200000000000,     # start_ts
             1640995260000000000,     # end_ts
-            1000,                    # limit
-            compression,             # compression
+            UInt64(1000),            # limit
             SType.RAW_SYMBOL,        # stype_in
             SType.RAW_SYMBOL,        # stype_out
             false,                   # ts_out
@@ -27,7 +25,7 @@ using Test
     
     # Helper function to create test TradeMsg
     function create_test_trade_msg()
-        hd = RecordHeader(40, RType.TRADE_MSG, 1, 12345, 1640995200000000000)
+        hd = RecordHeader(40, RType.MBP_0_MSG, 1, 12345, 1640995200000000000)
         return TradeMsg(
             hd,                      # hd
             10055000000,             # price
@@ -116,7 +114,6 @@ using Test
                     @test decoder.metadata.version == DBN_VERSION
                     @test decoder.metadata.dataset == "TEST.ITCH"
                     @test decoder.metadata.schema == Schema.TRADES
-                    @test decoder.metadata.compression == Compression.NONE
                     @test length(decoder.metadata.symbols) == 2
                     @test decoder.metadata.symbols[1] == "AAPL"
                     @test decoder.metadata.symbols[2] == "MSFT"
@@ -160,13 +157,13 @@ using Test
                 metadata = create_test_metadata()
                 
                 # Create different message types
-                hd1 = RecordHeader(40, RType.TRADE_MSG, 1, 12345, 1640995200000000000)
+                hd1 = RecordHeader(40, RType.MBP_0_MSG, 1, 12345, 1640995200000000000)
                 trade_msg = TradeMsg(hd1, 10055000000, 250, Action.TRADE, Side.NONE, 0x02, 0, 1640995200000000001, 1000, 12346)
                 
                 hd2 = RecordHeader(50, RType.MBO_MSG, 1, 12345, 1640995200000000002)
                 mbo_msg = MBOMsg(hd2, 9876543210, 10050000000, 100, 0x01, 1, Action.ADD, Side.BID, 1640995200000000003, 2000, 12347)
                 
-                hd3 = RecordHeader(30, RType.OHLCV_MSG, 1, 12345, 1640995200000000004)
+                hd3 = RecordHeader(30, RType.OHLCV_1S_MSG, 1, 12345, 1640995200000000004)
                 ohlcv_msg = OHLCVMsg(hd3, 10050000000, 10070000000, 10040000000, 10065000000, 125000)
                 
                 records = [trade_msg, mbo_msg, ohlcv_msg]
@@ -189,7 +186,7 @@ using Test
                 
                 # Test TradeMsg integrity
                 trade_record = records[1]
-                @test trade_record.hd.rtype == RType.TRADE_MSG
+                @test trade_record.hd.rtype == RType.MBP_0_MSG
                 @test trade_record.price == 10055000000
                 @test trade_record.size == 250
                 @test trade_record.action == Action.TRADE
@@ -206,7 +203,7 @@ using Test
                 
                 # Test OHLCVMsg integrity
                 ohlcv_record = records[3]
-                @test ohlcv_record.hd.rtype == RType.OHLCV_MSG
+                @test ohlcv_record.hd.rtype == RType.OHLCV_1S_MSG
                 @test ohlcv_record.open == 10050000000
                 @test ohlcv_record.high == 10070000000
                 @test ohlcv_record.low == 10040000000
@@ -324,9 +321,9 @@ using Test
                 
                 for schema in schemas_to_test
                     metadata = Metadata(
-                        DBN_VERSION, "TEST.DATA", schema,
-                        1640995200000000000, 1640995260000000000, 1000,
-                        Compression.NONE, SType.RAW_SYMBOL, SType.RAW_SYMBOL,
+                        UInt8(DBN_VERSION), "TEST.DATA", schema,
+                        1640995200000000000, 1640995260000000000, UInt64(1000),
+                        SType.RAW_SYMBOL, SType.RAW_SYMBOL,
                         false, ["TEST"], String[], String[],
                         Tuple{String,String,Int64,Int64}[]
                     )
@@ -346,9 +343,9 @@ using Test
             @testset "Different symbol configurations" begin
                 # Test with no symbols
                 metadata_no_symbols = Metadata(
-                    DBN_VERSION, "TEST.DATA", Schema.TRADES,
-                    1640995200000000000, 1640995260000000000, 1000,
-                    Compression.NONE, SType.RAW_SYMBOL, SType.RAW_SYMBOL,
+                    UInt8(DBN_VERSION), "TEST.DATA", Schema.TRADES,
+                    1640995200000000000, 1640995260000000000, UInt64(1000),
+                    SType.RAW_SYMBOL, SType.RAW_SYMBOL,
                     false, String[], String[], String[],
                     Tuple{String,String,Int64,Int64}[]
                 )
@@ -362,9 +359,9 @@ using Test
                 # Test with many symbols
                 many_symbols = ["SYM$i" for i in 1:50]
                 metadata_many_symbols = Metadata(
-                    DBN_VERSION, "TEST.DATA", Schema.TRADES,
-                    1640995200000000000, 1640995260000000000, 1000,
-                    Compression.NONE, SType.RAW_SYMBOL, SType.RAW_SYMBOL,
+                    UInt8(DBN_VERSION), "TEST.DATA", Schema.TRADES,
+                    1640995200000000000, 1640995260000000000, UInt64(1000),
+                    SType.RAW_SYMBOL, SType.RAW_SYMBOL,
                     false, many_symbols, String[], String[],
                     Tuple{String,String,Int64,Int64}[]
                 )
