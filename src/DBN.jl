@@ -1,7 +1,71 @@
 """
-    DBN.jl
+    DBN
 
-    DBN.jl is a Julia package for reading and writing Databento Binary Encoding (DBN) files.
+Julia implementation of the Databento Binary Encoding (DBN) format for normalized market data.
+
+# Overview
+
+DBN.jl provides complete support for reading and writing DBN v3 format files with:
+- Efficient streaming support for large files
+- Automatic Zstd compression/decompression  
+- All DBN v3 message types
+- Timestamp utilities with nanosecond precision
+- Price conversion utilities with fixed-point arithmetic
+
+# Main Functions
+
+## Reading Data
+- `read_dbn(filename)`: Read entire file into memory
+- `DBNStream(filename)`: Memory-efficient streaming iterator
+- `DBNDecoder(filename)`: Low-level decoder with manual control
+
+## Writing Data  
+- `write_dbn(filename, metadata, records)`: Write complete file
+- `DBNStreamWriter(filename, dataset, schema)`: Real-time streaming writer
+- `DBNEncoder(io, metadata)`: Low-level encoder
+
+## Compression
+- `compress_dbn_file(input, output)`: Compress single file
+- `compress_daily_files(date, directory)`: Batch compress files
+
+## Utilities
+- `price_to_float(price)` / `float_to_price(value)`: Price conversions
+- `ts_to_datetime(ts)` / `datetime_to_ts(dt)`: Timestamp conversions
+- `DBNTimestamp(ns)`: High-precision timestamp handling
+
+# Example Usage
+
+```julia
+using DBN
+
+# Reading data
+records = read_dbn("data.dbn")
+for record in DBNStream("large_file.dbn.zst")
+    process(record)
+end
+
+# Writing data
+metadata = Metadata(3, "XNAS", Schema.TRADES, start_ts, end_ts, 
+                   length(records), SType.RAW_SYMBOL, SType.RAW_SYMBOL, 
+                   false, symbols, [], [], [])
+write_dbn("output.dbn", metadata, records)
+
+# Streaming writer
+writer = DBNStreamWriter("live.dbn", "XNAS", Schema.TRADES)
+write_record!(writer, trade_msg)
+close_writer!(writer)
+```
+
+# Supported Message Types
+
+- Market Data: `MBOMsg`, `TradeMsg`, `MBP1Msg`, `MBP10Msg`, `OHLCVMsg`
+- Consolidated: `CMBP1Msg`, `CBBO1sMsg`, `CBBO1mMsg`, `TCBBOMsg`, `BBO1sMsg`, `BBO1mMsg`  
+- Status: `StatusMsg`, `ImbalanceMsg`, `StatMsg`
+- System: `ErrorMsg`, `SymbolMappingMsg`, `SystemMsg`
+- Definition: `InstrumentDefMsg`
+
+See the [DBN specification](https://databento.com/docs/standards-and-conventions/databento-binary-encoding) 
+for complete format documentation.
 """
 module DBN
 

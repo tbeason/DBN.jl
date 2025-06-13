@@ -1,6 +1,17 @@
 # DBN decoding functionality
 
-# DBN Decoder
+"""
+    DBNDecoder
+
+Decoder for reading DBN (Databento Binary Encoding) files with support for compression.
+
+# Fields
+- `io::IO`: Current IO stream (may be wrapped with compression)
+- `base_io::IO`: Original IO stream before any compression wrapper
+- `header::Union{DBNHeader,Nothing}`: Parsed DBN header information
+- `metadata::Union{Metadata,Nothing}`: Parsed metadata information
+- `upgrade_policy::UInt8`: Version upgrade policy
+"""
 mutable struct DBNDecoder
     io::IO
     base_io::IO  # Original IO before compression wrapper
@@ -9,8 +20,34 @@ mutable struct DBNDecoder
     upgrade_policy::UInt8
 end
 
+"""
+    DBNDecoder(io::IO)
+
+Construct a DBNDecoder from an existing IO stream.
+
+# Arguments
+- `io::IO`: Input stream to read from
+
+# Returns
+- `DBNDecoder`: Decoder instance ready for reading
+"""
 DBNDecoder(io::IO) = DBNDecoder(io, io, nothing, nothing, 0)
 
+"""
+    DBNDecoder(filename::String)
+
+Construct a DBNDecoder from a file, automatically detecting and handling compression.
+
+# Arguments
+- `filename::String`: Path to the DBN file (can be compressed with .zst extension)
+
+# Returns
+- `DBNDecoder`: Decoder instance with header already parsed
+
+# Details
+Automatically detects Zstd compression by checking magic bytes and file extension.
+Reads and parses the DBN header during construction.
+"""
 function DBNDecoder(filename::String)
     base_io = open(filename, "r")
     
@@ -39,6 +76,26 @@ function DBNDecoder(filename::String)
     return decoder
 end
 
+"""
+    read_header!(decoder::DBNDecoder)
+
+Read and parse the DBN file header, populating the decoder's metadata.
+
+# Arguments
+- `decoder::DBNDecoder`: Decoder instance to populate
+
+# Details
+Reads the magic bytes, version, and metadata section of a DBN file.
+Populates the decoder's `metadata` field with parsed information including:
+- Dataset identifier
+- Schema type
+- Time range
+- Symbol information
+- Mappings
+
+# Throws
+- `ErrorException`: If magic bytes are invalid or version is unsupported
+"""
 function read_header!(decoder::DBNDecoder)
     # Read magic bytes "DBN"
     magic = read(decoder.io, 3)
@@ -257,6 +314,28 @@ function read_header!(decoder::DBNDecoder)
     # No need to do anything - we're already at the right position
 end
 
+"""
+    read_record_header(io::IO)
+
+Read a record header from the IO stream.
+
+# Arguments
+- `io::IO`: Input stream positioned at the start of a record header
+
+# Returns
+- `RecordHeader`: Parsed record header, or
+- `Tuple`: (nothing, raw_rtype, length) for unknown record types
+
+# Details
+Reads the standard DBN record header fields:
+- Record length
+- Record type
+- Publisher ID
+- Instrument ID  
+- Event timestamp
+
+Gracefully handles unknown record types by returning a tuple instead of throwing an error.
+"""
 function read_record_header(io::IO)
     record_length = read(io, UInt8)
     rtype_raw = read(io, UInt8)
@@ -277,6 +356,28 @@ function read_record_header(io::IO)
     RecordHeader(record_length, rtype, publisher_id, instrument_id, ts_event)
 end
 
+"""
+    read_record(decoder::DBNDecoder)
+
+Read a complete record from the DBN stream.
+
+# Arguments
+- `decoder::DBNDecoder`: Decoder instance to read from
+
+# Returns
+- Record instance (MBOMsg, TradeMsg, etc.): Parsed record, or
+- `nothing`: If EOF reached or unknown record type encountered
+
+# Details
+Reads the record header and then the appropriate record body based on the record type.
+Supports all DBN v3 record types including:
+- Market data (MBO, MBP, Trade, OHLCV)
+- Status and system messages
+- Instrument definitions
+- Error and mapping messages
+
+Unknown record types are skipped gracefully.
+"""
 function read_record(decoder::DBNDecoder)
     if eof(decoder.io)
         return nothing
@@ -737,6 +838,33 @@ function read_record(decoder::DBNDecoder)
 end
 
 # Convenience function
+"""
+    read_dbn(filename::String)
+
+Convenience function to read all records from a DBN file.
+
+# Arguments
+- `filename::String`: Path to the DBN file (compressed or uncompressed)
+
+# Returns
+- `Vector`: Array containing all records from the file
+
+# Details
+Reads the entire DBN file into memory, automatically handling:
+- Compression detection and decompression
+- Resource cleanup
+- Error recovery for unknown record types
+
+For large files, consider using `DBNStream` for memory-efficient streaming.
+
+# Example
+```julia
+records = read_dbn("data.dbn")
+for record in records
+    println(typeof(record))
+end
+```
+"""
 function read_dbn(filename::String)
     records = []
     decoder = DBNDecoder(filename)  # This now handles compression automatically

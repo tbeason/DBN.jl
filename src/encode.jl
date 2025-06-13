@@ -1,6 +1,16 @@
 # DBN encoding functionality
 
-# DBN Encoder
+"""
+    DBNEncoder
+
+Encoder for writing DBN (Databento Binary Encoding) files with optional compression.
+
+# Fields
+- `io::IO`: Current IO stream (may be wrapped with compression)
+- `base_io::IO`: Original IO stream before any compression wrapper
+- `metadata::Metadata`: Metadata for the DBN file
+- `compressed_buffer::Union{IOBuffer,Nothing}`: Buffer for compressed data (if applicable)
+"""
 mutable struct DBNEncoder
     io::IO
     base_io::IO  # Original IO before compression wrapper
@@ -8,8 +18,38 @@ mutable struct DBNEncoder
     compressed_buffer::Union{IOBuffer,Nothing}
 end
 
+"""
+    DBNEncoder(io::IO, metadata::Metadata)
+
+Construct a DBNEncoder for writing to an IO stream.
+
+# Arguments
+- `io::IO`: Output stream to write to
+- `metadata::Metadata`: Metadata information for the DBN file
+
+# Returns
+- `DBNEncoder`: Encoder instance ready for writing
+"""
 DBNEncoder(io::IO, metadata::Metadata) = DBNEncoder(io, io, metadata, nothing)
 
+"""
+    write_header(encoder::DBNEncoder)
+
+Write the DBN file header including magic bytes, version, and metadata.
+
+# Arguments
+- `encoder::DBNEncoder`: Encoder instance containing metadata to write
+
+# Details
+Writes the complete DBN header in the correct binary format:
+- Magic bytes "DBN"
+- Version number
+- Metadata length
+- Complete metadata section with all fields
+
+Always writes to the base IO stream (uncompressed) as headers must be readable
+for compression detection.
+"""
 function write_header(encoder::DBNEncoder)
     # Always write header to the base IO (uncompressed)
     io = encoder.base_io
@@ -153,6 +193,23 @@ function write_header(encoder::DBNEncoder)
     write(io, metadata_bytes)
 end
 
+"""
+    write_record_header(io::IO, hd::RecordHeader)
+
+Write a record header to the output stream.
+
+# Arguments
+- `io::IO`: Output stream
+- `hd::RecordHeader`: Record header to write
+
+# Details
+Writes the standard DBN record header fields in binary format:
+- Length (1 byte)
+- Record type (1 byte)
+- Publisher ID (2 bytes)
+- Instrument ID (4 bytes)
+- Event timestamp (8 bytes)
+"""
 function write_record_header(io::IO, hd::RecordHeader)
     write(io, hd.length)
     write(io, UInt8(hd.rtype))
@@ -161,7 +218,21 @@ function write_record_header(io::IO, hd::RecordHeader)
     write(io, hd.ts_event)
 end
 
-# Helper function to write fixed-length strings with null padding
+"""
+    write_fixed_string(io::IO, s::String, len::Int)
+
+Write a fixed-length string with null padding to the output stream.
+
+# Arguments
+- `io::IO`: Output stream
+- `s::String`: String to write
+- `len::Int`: Fixed length to write (in bytes)
+
+# Details
+Writes exactly `len` bytes, truncating the string if too long or padding
+with null bytes if too short. This ensures fixed-width fields in the
+binary format.
+"""
 function write_fixed_string(io::IO, s::String, len::Int)
     bytes = Vector{UInt8}(undef, len)
     fill!(bytes, 0)  # Fill with null bytes
@@ -173,6 +244,26 @@ function write_fixed_string(io::IO, s::String, len::Int)
     write(io, bytes)
 end
 
+"""
+    write_record(encoder::DBNEncoder, record)
+
+Write a complete record to the DBN stream.
+
+# Arguments
+- `encoder::DBNEncoder`: Encoder instance
+- `record`: Record to write (any DBN message type)
+
+# Details
+Writes the complete record including header and body based on the record type.
+Supports all DBN v3 record types:
+- Market data: MBOMsg, TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg
+- Status: StatusMsg, ImbalanceMsg, StatMsg
+- System: ErrorMsg, SymbolMappingMsg, SystemMsg
+- Definition: InstrumentDefMsg
+- Consolidated: CMBP1Msg, CBBO1sMsg, CBBO1mMsg, TCBBOMsg, BBO1sMsg, BBO1mMsg
+
+Each record type is serialized according to its specific binary layout.
+"""
 function write_record(encoder::DBNEncoder, record)
     io = encoder.io
     
@@ -548,12 +639,49 @@ function write_record(encoder::DBNEncoder, record)
 end
 
 # Add finalize function for encoder
+"""
+    finalize_encoder(encoder::DBNEncoder)
+
+Finalize the encoder and flush any remaining data.
+
+# Arguments
+- `encoder::DBNEncoder`: Encoder to finalize
+
+# Details
+Ensures all buffered data is written to the output stream.
+Should be called when finished writing all records.
+"""
 function finalize_encoder(encoder::DBNEncoder)
     # For now, we don't use compression in write mode for simplicity
     # In the future, compression support could be added here
 end
 
 # Convenience function
+"""
+    write_dbn(filename::String, metadata::Metadata, records)
+
+Convenience function to write a complete DBN file.
+
+# Arguments
+- `filename::String`: Output file path
+- `metadata::Metadata`: File metadata
+- `records`: Collection of records to write
+
+# Details
+Creates a complete DBN file with header and all records.
+Automatically handles:
+- File creation and management
+- Header writing
+- Record serialization
+- Resource cleanup
+
+# Example
+```julia
+metadata = Metadata(3, "TEST", Schema.TRADES, start_ts, end_ts, length(records), 
+                   SType.RAW_SYMBOL, SType.RAW_SYMBOL, false, symbols, [], [], [])
+write_dbn("output.dbn", metadata, records)
+```
+"""
 function write_dbn(filename::String, metadata::Metadata, records)
     open(filename, "w") do f
         encoder = DBNEncoder(f, metadata)
