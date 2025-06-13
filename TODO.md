@@ -104,11 +104,11 @@
 - [x] Test close_writer! and header update
 - [x] Verify timestamps are correctly updated in metadata
 
-## Phase 8: Missing Functionality Testing
+## Phase 8: Missing Functionality Testing ✅
 
-- [ ] Implement and test DBNStream iterator
-- [ ] Test ErrorMsg, SymbolMappingMsg, SystemMsg write operations
-- [ ] Test batch compression with compress_daily_files
+- [x] Implement and test DBNStream iterator
+- [x] Test ErrorMsg, SymbolMappingMsg, SystemMsg write operations
+- [x] Test batch compression with compress_daily_files
 
 ## Phase 9: Edge Cases and Error Handling
 

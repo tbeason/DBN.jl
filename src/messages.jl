@@ -294,3 +294,4 @@ struct BBO1mMsg
     sequence::UInt32
     levels::BidAskPair
 end
+

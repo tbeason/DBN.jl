@@ -500,6 +500,50 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.levels.ask_sz)
         write(io, record.levels.bid_ct)
         write(io, record.levels.ask_ct)
+        
+    elseif isa(record, ErrorMsg)
+        write_record_header(io, record.hd)
+        # Write error message string with null terminator
+        err_bytes = Vector{UInt8}(record.err)
+        write(io, err_bytes)
+        if length(err_bytes) == 0 || err_bytes[end] != 0
+            write(io, UInt8(0))  # Null terminator
+        end
+        
+    elseif isa(record, SymbolMappingMsg)
+        write_record_header(io, record.hd)
+        write(io, UInt8(record.stype_in))
+        write(io, zeros(UInt8, 3))  # Padding
+        
+        # Write input symbol with length prefix
+        stype_in_bytes = Vector{UInt8}(record.stype_in_symbol)
+        write(io, htol(UInt16(length(stype_in_bytes))))
+        write(io, stype_in_bytes)
+        
+        write(io, UInt8(record.stype_out))
+        write(io, zeros(UInt8, 3))  # Padding
+        
+        # Write output symbol with length prefix
+        stype_out_bytes = Vector{UInt8}(record.stype_out_symbol)
+        write(io, htol(UInt16(length(stype_out_bytes))))
+        write(io, stype_out_bytes)
+        
+        write(io, record.start_ts)
+        write(io, record.end_ts)
+        
+    elseif isa(record, SystemMsg)
+        write_record_header(io, record.hd)
+        # Write message string
+        msg_bytes = Vector{UInt8}(record.msg)
+        write(io, msg_bytes)
+        write(io, UInt8(0))  # Null terminator
+        
+        # Write code string  
+        code_bytes = Vector{UInt8}(record.code)
+        write(io, code_bytes)
+        if length(code_bytes) == 0 || code_bytes[end] != 0
+            write(io, UInt8(0))  # Null terminator
+        end
     end
 end
 

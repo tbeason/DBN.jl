@@ -7,16 +7,22 @@ end
 
 # Make DBNStream iterable
 Base.iterate(stream::DBNStream) = begin
-    io = open(stream.filename, "r")
-    decoder = DBNDecoder(io)
-    read_header!(decoder)
-    return iterate(stream, (decoder, io))
+    decoder = DBNDecoder(stream.filename)  # This handles compression automatically
+    return iterate(stream, decoder)
 end
 
 Base.iterate(stream::DBNStream, state) = begin
-    decoder, io = state
+    decoder = state
     if eof(decoder.io)
-        close(io)
+        # Clean up resources
+        if decoder.io !== decoder.base_io
+            # Close the TranscodingStream first
+            close(decoder.io)
+        end
+        # Always close the base IO
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
         return nothing
     end
     record = read_record(decoder)

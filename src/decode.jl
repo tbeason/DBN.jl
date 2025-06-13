@@ -258,7 +258,7 @@ function read_header!(decoder::DBNDecoder)
 end
 
 function read_record_header(io::IO)
-    length = read(io, UInt8)
+    record_length = read(io, UInt8)
     rtype_raw = read(io, UInt8)
     
     # Handle unknown record types first, before trying to read more data
@@ -266,7 +266,7 @@ function read_record_header(io::IO)
         RType.T(rtype_raw)
     catch ArgumentError
         # Return special marker for unknown types - don't read more data
-        return nothing, rtype_raw, length
+        return nothing, rtype_raw, record_length
     end
     
     # Always read the standard header fields
@@ -274,7 +274,7 @@ function read_record_header(io::IO)
     instrument_id = read(io, UInt32)
     ts_event = read(io, Int64)
     
-    RecordHeader(length, rtype, publisher_id, instrument_id, ts_event)
+    RecordHeader(record_length, rtype, publisher_id, instrument_id, ts_event)
 end
 
 function read_record(decoder::DBNDecoder)
@@ -287,8 +287,8 @@ function read_record(decoder::DBNDecoder)
     # Handle unknown record types
     if hd_result isa Tuple
         # Unknown record type - skip it
-        _, rtype_raw, length = hd_result
-        skip(decoder.io, length - 2)  # Already read length(1) + rtype(1) = 2 bytes
+        _, rtype_raw, record_length = hd_result
+        skip(decoder.io, record_length - 2)  # Already read length(1) + rtype(1) = 2 bytes
         return nothing
     end
     
