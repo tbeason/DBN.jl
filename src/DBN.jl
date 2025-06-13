@@ -628,8 +628,9 @@ function read_header!(decoder::DBNDecoder)
     symbol_cstr_len = if version == 1
         22  # v1::SYMBOL_CSTR_LEN
     else
-        ltoh(reinterpret(UInt16, metadata_bytes[pos:pos+1])[1])
+        len = ltoh(reinterpret(UInt16, metadata_bytes[pos:pos+1])[1])
         pos += 2
+        len
     end
     
     # Skip reserved padding
@@ -1923,14 +1924,14 @@ function DBNStreamWriter(filename::String, dataset::String, schema::Schema.T;
                         symbols::Vector{String}=String[],
                         auto_flush::Bool=true,
                         flush_interval::Int=1000)
-    # Create metadata with placeholder timestamps
+    # Create metadata with placeholder timestamps (using 0 instead of typemin)
     metadata = Metadata(
-        DBN_VERSION,
+        UInt8(DBN_VERSION),
         dataset,
         schema,
-        typemax(Int64),  # Will update with first record
-        typemin(Int64),  # Will update with last record
-        0,
+        0,  # Will update with first record
+        0,  # Will update with last record
+        UInt64(0),
         SType.RAW_SYMBOL,
         SType.RAW_SYMBOL,
         false,
@@ -1946,11 +1947,16 @@ function DBNStreamWriter(filename::String, dataset::String, schema::Schema.T;
     # Write header (will update it later)
     write_header(encoder)
     
-    return DBNStreamWriter(encoder, 0, typemax(Int64), typemin(Int64), 
+    return DBNStreamWriter(encoder, 0, typemax(Int64), 0, 
                           auto_flush, flush_interval, 0)
 end
 
 function write_record!(writer::DBNStreamWriter, record)
+    # Check if the stream is still open
+    if !isopen(writer.encoder.io)
+        throw(Base.IOError("Cannot write to closed DBNStreamWriter", 0))
+    end
+    
     # Update timestamps
     if hasproperty(record, :hd) && hasproperty(record.hd, :ts_event)
         ts = record.hd.ts_event
@@ -1973,16 +1979,23 @@ function close_writer!(writer::DBNStreamWriter)
     # Flush any remaining data
     flush(writer.encoder.io)
     
+    # Save current position
+    current_pos = position(writer.encoder.io)
+    
     # Update header with final timestamps and count
     seekstart(writer.encoder.io)
+    
+    # Handle the case where no records were written
+    final_start_ts = writer.first_ts == typemax(Int64) ? 0 : writer.first_ts
+    final_end_ts = writer.last_ts == 0 ? 0 : writer.last_ts
     
     # Update metadata
     writer.encoder.metadata = Metadata(
         writer.encoder.metadata.version,
         writer.encoder.metadata.dataset,
         writer.encoder.metadata.schema,
-        writer.first_ts,
-        writer.last_ts,
+        final_start_ts,
+        final_end_ts,
         UInt64(writer.record_count),
         writer.encoder.metadata.stype_in,
         writer.encoder.metadata.stype_out,
@@ -1995,6 +2008,11 @@ function close_writer!(writer::DBNStreamWriter)
     
     # Rewrite header with updated metadata
     write_header(writer.encoder)
+    
+    # Make sure we don't truncate the file - seek back to the end
+    if current_pos > position(writer.encoder.io)
+        seek(writer.encoder.io, current_pos)
+    end
     
     # Close the file
     close(writer.encoder.io)
