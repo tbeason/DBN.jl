@@ -2,7 +2,7 @@ module CompatibilityUtils
 
 using DBN
 using Test
-using JSON
+using JSON3
 using DataFrames
 using CSV: CSV
 using Dates

@@ -71,7 +71,6 @@ module DBN
 
 # All using statements at the top
 using Dates
-using CRC32c
 using CodecZstd
 using TranscodingStreams
 using EnumX

@@ -337,7 +337,7 @@ Reads the standard DBN record header fields:
 Gracefully handles unknown record types by returning a tuple instead of throwing an error.
 """
 function read_record_header(io::IO)
-    record_length = read(io, UInt8)
+    record_length_units = read(io, UInt8)
     rtype_raw = read(io, UInt8)
     
     # Handle unknown record types first, before trying to read more data
@@ -345,7 +345,7 @@ function read_record_header(io::IO)
         RType.T(rtype_raw)
     catch ArgumentError
         # Return special marker for unknown types - don't read more data
-        return nothing, rtype_raw, record_length
+        return nothing, rtype_raw, record_length_units * LENGTH_MULTIPLIER
     end
     
     # Always read the standard header fields
@@ -353,6 +353,8 @@ function read_record_header(io::IO)
     instrument_id = read(io, UInt32)
     ts_event = read(io, Int64)
     
+    # Convert length units back to bytes
+    record_length = record_length_units * LENGTH_MULTIPLIER
     RecordHeader(record_length, rtype, publisher_id, instrument_id, ts_event)
 end
 

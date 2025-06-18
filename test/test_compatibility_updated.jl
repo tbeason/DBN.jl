@@ -1,7 +1,7 @@
 using Test
 using DBN
 using Dates
-using JSON
+using JSON3
 
 # Include the compatibility utilities
 include("compatibility_utils.jl")

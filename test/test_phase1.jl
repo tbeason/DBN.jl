@@ -8,14 +8,6 @@
         @test DBN isa Module
     end
     
-    @testset "Required dependencies are available" begin
-        # Check that all dependencies can be imported
-        @test isdefined(DBN, :Dates)
-        @test isdefined(DBN, :CRC32c)
-        @test isdefined(DBN, :CodecZstd) 
-        @test isdefined(DBN, :TranscodingStreams)
-    end
-    
     @testset "All exports are properly defined" begin
         # Check each exported symbol
         exports = [
