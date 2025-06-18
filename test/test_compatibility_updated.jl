@@ -19,11 +19,11 @@ using .CompatibilityUtils
         @testset "Read Rust-generated files" begin
             # Test various schemas - exclude fragment files
             test_patterns = [
-                ("trades", ".*trades.*\\.dbn"),
-                ("mbp-1", ".*mbp-1.*\\.dbn"),
-                ("ohlcv", ".*ohlcv.*\\.dbn"),
-                ("definition", ".*definition.*\\.dbn"),
-                ("status", ".*status.*\\.dbn")
+                ("trades", ".*trades.*dbn"),
+                ("mbp-1", ".*mbp-1.*dbn"),
+                ("ohlcv", ".*ohlcv.*dbn"),
+                ("definition", ".*definition.*dbn"),
+                ("status", ".*status.*dbn")
             ]
             
             for (schema_name, pattern) in test_patterns

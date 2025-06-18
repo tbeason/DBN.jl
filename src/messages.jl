@@ -662,7 +662,11 @@ end
 
 
 # StructTypes definitions for JSON serialization
+# RecordHeader excludes length field (implementation detail, not semantic data)
 StructTypes.StructType(::Type{RecordHeader}) = StructTypes.Struct()
+StructTypes.excludes(::Type{RecordHeader}) = (:length,)
+
+
 StructTypes.StructType(::Type{MBOMsg}) = StructTypes.Struct()
 StructTypes.StructType(::Type{TradeMsg}) = StructTypes.Struct()
 StructTypes.StructType(::Type{MBP1Msg}) = StructTypes.Struct()
