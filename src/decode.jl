@@ -345,7 +345,7 @@ function read_record_header(io::IO)
         RType.T(rtype_raw)
     catch ArgumentError
         # Return special marker for unknown types - don't read more data
-        return nothing, rtype_raw, record_length_units * LENGTH_MULTIPLIER
+        return nothing, rtype_raw, record_length_units
     end
     
     # Always read the standard header fields
@@ -353,9 +353,8 @@ function read_record_header(io::IO)
     instrument_id = read(io, UInt32)
     ts_event = read(io, Int64)
     
-    # Convert length units back to bytes
-    record_length = record_length_units * LENGTH_MULTIPLIER
-    RecordHeader(record_length, rtype, publisher_id, instrument_id, ts_event)
+    # Store the raw length units value (not converted to bytes)
+    RecordHeader(record_length_units, rtype, publisher_id, instrument_id, ts_event)
 end
 
 """

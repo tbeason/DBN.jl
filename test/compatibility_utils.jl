@@ -65,8 +65,8 @@ function compare_json_output(julia_output::String, rust_output::String; toleranc
     end
     
     for (i, (jl_line, rs_line)) in enumerate(zip(julia_lines, rust_lines))
-        jl_obj = JSON.parse(jl_line)
-        rs_obj = JSON.parse(rs_line)
+        jl_obj = JSON3.read(jl_line)
+        rs_obj = JSON3.read(rs_line)
         
         if !compare_json_objects(jl_obj, rs_obj, tolerance)
             @warn "Mismatch at record $i"
@@ -182,7 +182,7 @@ function test_round_trip(test_file::String, output_dir::String)
     for record in records
         # Convert struct to dict for JSON serialization, handling nested structs
         record_dict = struct_to_dict(record)
-        JSON.print(julia_json, record_dict)
+        JSON3.print(julia_json, record_dict)
         println(julia_json)
     end
     julia_json_str = String(take!(julia_json))
@@ -208,7 +208,7 @@ function test_file_compatibility(test_file::String)
     for record in records
         # Convert struct to dict for JSON serialization, handling nested structs
         record_dict = struct_to_dict(record)
-        JSON.print(julia_json, record_dict)
+        JSON3.print(julia_json, record_dict)
         println(julia_json)
     end
     julia_json_str = String(take!(julia_json))

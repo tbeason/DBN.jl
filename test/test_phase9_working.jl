@@ -133,23 +133,22 @@ using Dates
                 trades = TradeMsg[]
                 for (i, price) in enumerate(prices)
                     trade = TradeMsg(
-                        hd=RecordHeader(
-                            sizeof(TradeMsg),
-                            RType.TRADE_MSG,
+                        RecordHeader(
+                            UInt8(sizeof(TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),
+                            RType.MBP_0_MSG,
                             UInt16(1),
                             UInt32(i),
                             1500000000
                         ),
-                        price=price,
-                        size=100,
-                        action=Action.ADD,
-                        side=Side.BID_SIDE,
-                        flags=0,
-                        depth=0,
-                        ts_recv=1500000000,
-                        ts_in_delta=0,
-                        sequence=UInt64(i),
-                        _reserved=zeros(UInt8, 4)
+                        price,               # price
+                        UInt32(100),         # size
+                        Action.ADD,          # action
+                        Side.BID,            # side
+                        UInt8(0),            # flags
+                        UInt8(0),            # depth
+                        Int64(1500000000),   # ts_recv
+                        Int32(0),            # ts_in_delta
+                        UInt32(i)            # sequence
                     )
                     push!(trades, trade)
                 end
@@ -207,23 +206,22 @@ using Dates
                 trades = TradeMsg[]
                 for (i, ts) in enumerate(timestamps)
                     trade = TradeMsg(
-                        hd=RecordHeader(
-                            sizeof(TradeMsg),
-                            RType.TRADE_MSG,
+                        RecordHeader(
+                            UInt8(sizeof(TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),
+                            RType.MBP_0_MSG,
                             UInt16(1),
                             UInt32(i),
                             ts
                         ),
-                        price=100000000,
-                        size=100,
-                        action=Action.ADD,
-                        side=Side.BID_SIDE,
-                        flags=0,
-                        depth=0,
-                        ts_recv=ts,
-                        ts_in_delta=0,
-                        sequence=UInt64(i),
-                        _reserved=zeros(UInt8, 4)
+                        Int64(100000000),    # price
+                        UInt32(100),         # size
+                        Action.ADD,          # action
+                        Side.BID,            # side
+                        UInt8(0),            # flags
+                        UInt8(0),            # depth
+                        ts,                  # ts_recv
+                        Int32(0),            # ts_in_delta
+                        UInt32(i)            # sequence
                     )
                     push!(trades, trade)
                 end
@@ -264,61 +262,59 @@ using Dates
             
             # Create different record types as vectors
             mbo = MBOMsg(
-                hd=RecordHeader(
-                    sizeof(MBOMsg),
+                RecordHeader(
+                    UInt8(sizeof(MBOMsg) ÷ DBN.LENGTH_MULTIPLIER),
                     RType.MBO_MSG,
                     UInt16(1),
                     UInt32(100),
                     1100000000
                 ),
-                order_id=1001,
-                price=100000000,
-                size=100,
-                flags=0,
-                channel_id=0,
-                action=Action.ADD,
-                side=Side.BID_SIDE,
-                ts_recv=1100000000,
-                ts_in_delta=0,
-                sequence=1
+                UInt64(1001),        # order_id
+                Int64(100000000),    # price
+                UInt32(100),         # size
+                UInt8(0),            # flags
+                UInt8(0),            # channel_id
+                Action.ADD,          # action
+                Side.BID,            # side
+                Int64(1100000000),   # ts_recv
+                Int32(0),            # ts_in_delta
+                UInt32(1)            # sequence
             )
             
             trade = TradeMsg(
-                hd=RecordHeader(
-                    sizeof(TradeMsg),
-                    RType.TRADE_MSG,
+                RecordHeader(
+                    UInt8(sizeof(TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),
+                    RType.MBP_0_MSG,
                     UInt16(1),
                     UInt32(100),
                     1200000000
                 ),
-                price=101000000,
-                size=50,
-                action=Action.TRADE,
-                side=Side.ASK_SIDE,
-                flags=0,
-                depth=0,
-                ts_recv=1200000000,
-                ts_in_delta=0,
-                sequence=2,
-                _reserved=zeros(UInt8, 4)
+                Int64(101000000),    # price
+                UInt32(50),          # size
+                Action.TRADE,        # action
+                Side.ASK,            # side
+                UInt8(0),            # flags
+                UInt8(0),            # depth
+                Int64(1200000000),   # ts_recv
+                Int32(0),            # ts_in_delta
+                UInt32(2)            # sequence
             )
             
             status = StatusMsg(
-                hd=RecordHeader(
-                    sizeof(StatusMsg),
+                RecordHeader(
+                    UInt8(sizeof(StatusMsg) ÷ DBN.LENGTH_MULTIPLIER),
                     RType.STATUS_MSG,
                     UInt16(1),
                     UInt32(100),
                     1300000000
                 ),
-                ts_recv=1300000000,
-                action=Action.HALT,
-                reason=1,
-                trading_event=2,
-                is_trading=TriState.FALSE,
-                is_quoting=TriState.FALSE,
-                is_short_sell_restricted=TriState.FALSE,
-                _reserved=zeros(UInt8, 4)
+                UInt64(1300000000),  # ts_recv
+                UInt16(3),           # action (using raw value for HALT)
+                UInt16(1),           # reason
+                UInt16(2),           # trading_event
+                UInt8(0),            # is_trading
+                UInt8(0),            # is_quoting
+                UInt8(0)             # is_short_sell_restricted
             )
             
             # For now, just test with compatible record types (MBO and Trade work well together)
@@ -373,23 +369,22 @@ using Dates
                 trades = TradeMsg[]
                 for i in 1:num_records
                     trade = TradeMsg(
-                        hd=RecordHeader(
-                            sizeof(TradeMsg),
-                            RType.TRADE_MSG,
+                        RecordHeader(
+                            UInt8(sizeof(TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),
+                            RType.MBP_0_MSG,
                             UInt16(1),
                             UInt32(i % 100 + 1),
                             1000000000 + i * 1000
                         ),
-                        price=100000000 + i,
-                        size=UInt32(i % 1000 + 1),
-                        action=Action.TRADE,
-                        side=i % 2 == 0 ? Side.BID_SIDE : Side.ASK_SIDE,
-                        flags=0,
-                        depth=0,
-                        ts_recv=1000000000 + i * 1000,
-                        ts_in_delta=0,
-                        sequence=UInt64(i),
-                        _reserved=zeros(UInt8, 4)
+                        Int64(100000000 + i),    # price
+                        UInt32(i % 1000 + 1),    # size
+                        Action.TRADE,            # action
+                        i % 2 == 0 ? Side.BID : Side.ASK,  # side
+                        UInt8(0),                # flags
+                        UInt8(0),                # depth
+                        Int64(1000000000 + i * 1000),  # ts_recv
+                        Int32(0),                # ts_in_delta
+                        UInt32(i)                # sequence
                     )
                     push!(trades, trade)
                 end

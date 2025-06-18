@@ -338,7 +338,7 @@ end
 Standard header present in all DBN record types.
 
 # Fields
-- `length::UInt8`: Length of the record in bytes (multiplied by LENGTH_MULTIPLIER)
+- `length::UInt8`: Length of the record in 4-byte units (multiply by LENGTH_MULTIPLIER for bytes)
 - `rtype::RType.T`: Record type identifier
 - `publisher_id::UInt16`: Publisher/venue identifier
 - `instrument_id::UInt32`: Instrument identifier
@@ -351,6 +351,14 @@ struct RecordHeader
     instrument_id::UInt32
     ts_event::Int64
 end
+
+"""
+    record_length_bytes(hd::RecordHeader)
+
+Get the actual record length in bytes from a RecordHeader.
+The length field stores 4-byte units, so multiply by LENGTH_MULTIPLIER.
+"""
+record_length_bytes(hd::RecordHeader) = hd.length * LENGTH_MULTIPLIER
 
 """
     BidAskPair

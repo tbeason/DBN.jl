@@ -25,7 +25,7 @@
     
     # Helper function to create test TradeMsg
     function create_test_trade_msg()
-        hd = RecordHeader(40, RType.MBP_0_MSG, 1, 12345, 1640995200000000000)
+        hd = RecordHeader(10, RType.MBP_0_MSG, 1, 12345, 1640995200000000000)  # 10 units = 40 bytes
         return TradeMsg(
             hd,                      # hd
             10055000000,             # price
@@ -125,7 +125,7 @@
                 trade_record = records[1]
                 original_trade = create_test_trade_msg()
                 
-                @test trade_record.hd.length == original_trade.hd.length
+                @test DBN.record_length_bytes(trade_record.hd) == DBN.record_length_bytes(original_trade.hd)
                 @test trade_record.hd.rtype == original_trade.hd.rtype
                 @test trade_record.hd.publisher_id == original_trade.hd.publisher_id
                 @test trade_record.hd.instrument_id == original_trade.hd.instrument_id

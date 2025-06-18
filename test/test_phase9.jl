@@ -81,7 +81,7 @@ using Dates
                     # Write a record header with invalid size
                     header = RecordHeader(
                         length=999999,  # Impossibly large
-                        rtype=RType.TRADE_MSG,
+                        rtype=RType.MBP_0_MSG,
                         publisher_id=1,
                         instrument_id=100,
                         ts_event=1000000000
@@ -123,7 +123,7 @@ using Dates
                 trade = TradeMsg(
                     hd=RecordHeader(
                         length=sizeof(TradeMsg),
-                        rtype=RType.TRADE_MSG,
+                        rtype=RType.MBP_0_MSG,
                         publisher_id=1,
                         instrument_id=100,
                         ts_event=1500000000
@@ -131,7 +131,7 @@ using Dates
                     price=100000000,
                     size=100,
                     action=reinterpret(Action.T, 0xFF),  # Invalid action
-                    side=Side.ASK_SIDE,
+                    side=Side.ASK,
                     flags=0,
                     depth=0,
                     ts_recv=1500000000,
@@ -265,7 +265,7 @@ using Dates
                     trade = TradeMsg(
                         hd=RecordHeader(
                             length=sizeof(TradeMsg),
-                            rtype=RType.TRADE_MSG,
+                            rtype=RType.MBP_0_MSG,
                             publisher_id=1,
                             instrument_id=UInt32(i),
                             ts_event=ts
@@ -333,7 +333,7 @@ using Dates
                     trade = TradeMsg(
                         hd=RecordHeader(
                             length=sizeof(TradeMsg),
-                            rtype=RType.TRADE_MSG,
+                            rtype=RType.MBP_0_MSG,
                             publisher_id=1,
                             instrument_id=UInt32(i),
                             ts_event=1500000000
@@ -662,7 +662,7 @@ using Dates
             trade = TradeMsg(
                 hd=RecordHeader(
                     length=sizeof(TradeMsg),
-                    rtype=RType.TRADE_MSG,
+                    rtype=RType.MBP_0_MSG,
                     publisher_id=1,
                     instrument_id=100,
                     ts_event=1200000000
@@ -774,7 +774,7 @@ using Dates
                     trade = TradeMsg(
                         hd=RecordHeader(
                             length=sizeof(TradeMsg),
-                            rtype=RType.TRADE_MSG,
+                            rtype=RType.MBP_0_MSG,
                             publisher_id=1,
                             instrument_id=UInt32(i % 100 + 1),
                             ts_event=1000000000 + i * 1000
@@ -840,7 +840,7 @@ using Dates
                     trade = TradeMsg(
                         hd=RecordHeader(
                             length=sizeof(TradeMsg),
-                            rtype=RType.TRADE_MSG,
+                            rtype=RType.MBP_0_MSG,
                             publisher_id=1,
                             instrument_id=1,  # Same instrument
                             ts_event=1000000000 + i * 1000
@@ -980,7 +980,7 @@ using Dates
                 trade = TradeMsg(
                     hd=RecordHeader(
                         length=sizeof(TradeMsg),
-                        rtype=RType.TRADE_MSG,
+                        rtype=RType.MBP_0_MSG,
                         publisher_id=1,
                         instrument_id=100,
                         ts_event=1500000000

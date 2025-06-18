@@ -68,7 +68,7 @@ using .CompatibilityUtils
                 
                 trade = DBN.TradeMsg(
                     DBN.RecordHeader(
-                        UInt8(sizeof(DBN.TradeMsg)),       # length
+                        UInt8(sizeof(DBN.TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),  # length in units
                         DBN.RType.MBP_0_MSG,               # rtype - correct for trades
                         UInt16(1),                         # publisher_id
                         UInt32(100),                       # instrument_id
@@ -112,12 +112,12 @@ using .CompatibilityUtils
                 
                 records = [
                     DBN.TradeMsg(
-                        DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg)), DBN.RType.MBP_0_MSG, UInt16(1), UInt32(100), UInt64(1500000000)),
+                        DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg) ÷ DBN.LENGTH_MULTIPLIER), DBN.RType.MBP_0_MSG, UInt16(1), UInt32(100), UInt64(1500000000)),
                         Int64(1234500000), UInt32(100), DBN.Action.TRADE, DBN.Side.BID, UInt8(0), UInt8(0), 
                         Int64(1500000000), Int32(0), UInt32(1)
                     ),
                     DBN.TradeMsg(
-                        DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg)), DBN.RType.MBP_0_MSG, UInt16(1), UInt32(101), UInt64(1500000001)),
+                        DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg) ÷ DBN.LENGTH_MULTIPLIER), DBN.RType.MBP_0_MSG, UInt16(1), UInt32(101), UInt64(1500000001)),
                         Int64(1234600000), UInt32(200), DBN.Action.TRADE, DBN.Side.ASK, UInt8(0), UInt8(0), 
                         Int64(1500000001), Int32(0), UInt32(2)
                     )
@@ -162,7 +162,7 @@ using .CompatibilityUtils
                 )
                 
                 trade = DBN.TradeMsg(
-                    DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg)), DBN.RType.MBP_0_MSG, UInt16(1), UInt32(100), UInt64(1500000000)),
+                    DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg) ÷ DBN.LENGTH_MULTIPLIER), DBN.RType.MBP_0_MSG, UInt16(1), UInt32(100), UInt64(1500000000)),
                     Int64(1234500000), UInt32(100), DBN.Action.TRADE, DBN.Side.BID, UInt8(0), UInt8(0), 
                     Int64(1500000000), Int32(0), UInt32(1)
                 )
@@ -252,7 +252,7 @@ using .CompatibilityUtils
                 )
                 
                 trade = DBN.TradeMsg(
-                    DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg)), DBN.RType.MBP_0_MSG, UInt16(42), UInt32(12345), UInt64(1600000000500000000)),
+                    DBN.RecordHeader(UInt8(sizeof(DBN.TradeMsg) ÷ DBN.LENGTH_MULTIPLIER), DBN.RType.MBP_0_MSG, UInt16(42), UInt32(12345), UInt64(1600000000500000000)),
                     Int64(9876543210),  # Specific price
                     UInt32(999),        # Specific size
                     DBN.Action.TRADE,

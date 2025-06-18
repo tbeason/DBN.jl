@@ -98,6 +98,7 @@ export DBNStream, DBNStreamWriter, write_record!, close_writer!
 export compress_dbn_file, compress_daily_files
 export Schema, Compression, Encoding, SType, RType, Action, Side, InstrumentClass
 export price_to_float, float_to_price, ts_to_datetime, datetime_to_ts, ts_to_date_time, date_time_to_ts, to_nanoseconds
+export record_length_bytes
 export DBN_VERSION, FIXED_PRICE_SCALE, UNDEF_PRICE, UNDEF_ORDER_SIZE, UNDEF_TIMESTAMP
 export BidAskPair, VersionUpgradePolicy, DatasetCondition
 export write_header, read_header!, write_record, read_record, finalize_encoder

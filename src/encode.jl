@@ -211,9 +211,8 @@ Writes the standard DBN record header fields in binary format:
 - Event timestamp (8 bytes)
 """
 function write_record_header(io::IO, hd::RecordHeader)
-    # Length field should be in units of 4 bytes (LENGTH_MULTIPLIER)
-    length_units = hd.length ÷ LENGTH_MULTIPLIER
-    write(io, UInt8(length_units))
+    # Length field is already in 4-byte units, write directly
+    write(io, hd.length)
     write(io, UInt8(hd.rtype))
     write(io, hd.publisher_id)
     write(io, hd.instrument_id)
