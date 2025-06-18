@@ -13,4 +13,11 @@ using Dates
     include("test_phase8.jl")
     include("test_phase9_working.jl")  # Edge cases and error handling
     include("test_phase10_complete.jl")  # Integration and performance testing
+    
+    # Run compatibility tests if the Rust CLI is available
+    if isfile("/workspace/dbn/target/release/dbn")
+        include("test_compatibility_updated.jl")  # Updated cross-implementation compatibility testing
+    else
+        @warn "Skipping compatibility tests - Rust dbn-cli not found. Build it with: cd /workspace/dbn/rust/dbn-cli && cargo build --release"
+    end
 end
