@@ -660,3 +660,25 @@ struct BBO1mMsg
     levels::BidAskPair
 end
 
+
+# StructTypes definitions for JSON serialization
+StructTypes.StructType(::Type{RecordHeader}) = StructTypes.Struct()
+StructTypes.StructType(::Type{MBOMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{TradeMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{MBP1Msg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{MBP10Msg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{OHLCVMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{StatusMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{ImbalanceMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{StatMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{CMBP1Msg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{CBBO1sMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{CBBO1mMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{TCBBOMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{BBO1sMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{BBO1mMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{ErrorMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{SymbolMappingMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{SystemMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{InstrumentDefMsg}) = StructTypes.Struct()
+StructTypes.StructType(::Type{BidAskPair}) = StructTypes.Struct()

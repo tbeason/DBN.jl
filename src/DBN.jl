@@ -78,6 +78,7 @@ using DataFrames
 using CSV
 using Parquet2
 using JSON3
+using StructTypes
 
 
 # Include all the component files

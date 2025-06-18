@@ -3,6 +3,7 @@ module CompatibilityUtils
 using DBN
 using Test
 using JSON3
+using StructTypes
 using DataFrames
 using CSV: CSV
 using Dates
@@ -180,9 +181,8 @@ function test_round_trip(test_file::String, output_dir::String)
     # Convert Julia records to JSON for comparison
     julia_json_lines = String[]
     for record in records
-        # Convert struct to dict for JSON serialization, handling nested structs
-        record_dict = struct_to_dict(record)
-        json_line = JSON3.write(record_dict)
+        # Use JSON3 + StructTypes for direct serialization
+        json_line = JSON3.write(record)
         push!(julia_json_lines, json_line)
     end
     julia_json_str = join(julia_json_lines, "\n") * "\n"
@@ -206,9 +206,8 @@ function test_file_compatibility(test_file::String)
     # Convert Julia records to JSON
     julia_json_lines = String[]
     for record in records
-        # Convert struct to dict for JSON serialization, handling nested structs
-        record_dict = struct_to_dict(record)
-        json_line = JSON3.write(record_dict)
+        # Use JSON3 + StructTypes for direct serialization
+        json_line = JSON3.write(record)
         push!(julia_json_lines, json_line)
     end
     julia_json_str = join(julia_json_lines, "\n") * "\n"
@@ -269,28 +268,5 @@ end
 
 # Helper function for mean calculation
 mean(x) = sum(x) / length(x)
-
-"""
-    struct_to_dict(obj)
-
-Convert a struct to a dictionary, handling nested structs recursively.
-"""
-function struct_to_dict(obj)
-    if isa(obj, Union{Number, String, Bool})
-        return obj
-    elseif isa(obj, Array)
-        return [struct_to_dict(item) for item in obj]
-    elseif isstructtype(typeof(obj)) && !isempty(fieldnames(typeof(obj)))
-        # It's a struct with fields
-        dict = Dict{String, Any}()
-        for field in fieldnames(typeof(obj))
-            dict[string(field)] = struct_to_dict(getfield(obj, field))
-        end
-        return dict
-    else
-        # For enums and other types, convert to string representation
-        return string(obj)
-    end
-end
 
 end # module
