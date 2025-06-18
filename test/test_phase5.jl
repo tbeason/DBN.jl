@@ -806,7 +806,7 @@
                             @test level.ask_ct >= 0
                             
                             # Verify record size matches length field
-                            expected_size = r.hd.length * 4
+                            expected_size = r.hd.length
                             @test expected_size == 80  # 16 (header) + 32 (MBP data) + 32 (BidAskPair)
                         end
                     end
@@ -851,7 +851,7 @@
                             end
                             
                             # Verify record size matches length field  
-                            expected_size = r.hd.length * 4
+                            expected_size = r.hd.length
                             @test expected_size == 368  # 16 (header) + 32 (MBP data) + 320 (10 × 32-byte BidAskPairs)
                         end
                     end
@@ -1038,7 +1038,7 @@
                             @test r.depth == 0  # Trades typically have depth 0
                             
                             # Verify record size matches length field (48 bytes total)
-                            expected_size = r.hd.length * 4
+                            expected_size = r.hd.length
                             @test expected_size == 48  # 16 (header) + 32 (trade data)
                         end
                     end
@@ -1299,7 +1299,7 @@
                             end
                             
                             # Verify record size matches length field (80 bytes total)
-                            expected_size = r.hd.length * 4
+                            expected_size = r.hd.length
                             @test expected_size == 80  # 16 (header) + 32 (BBO data) + 32 (BidAskPair)
                         end
                     end
