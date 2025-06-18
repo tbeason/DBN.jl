@@ -69,6 +69,7 @@ DBN data schemas representing different types of market data.
     TCBBO = 17
     BBO_1S = 18
     BBO_1M = 19
+    MIX = 0xFFFF
 end
 
 """

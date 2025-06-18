@@ -10,4 +10,7 @@ using Dates
     include("test_phase5.jl")
     include("test_phase6.jl")
     include("test_phase7.jl")
+    include("test_phase8.jl")
+    include("test_phase9_working.jl")  # Edge cases and error handling
+    include("test_phase10_complete.jl")  # Integration and performance testing
 end

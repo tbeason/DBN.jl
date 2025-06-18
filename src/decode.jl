@@ -856,6 +856,7 @@ Reads the entire DBN file into memory, automatically handling:
 - Error recovery for unknown record types
 
 For large files, consider using `DBNStream` for memory-efficient streaming.
+For metadata access, use `read_dbn_with_metadata()`.
 
 # Example
 ```julia
@@ -889,4 +890,53 @@ function read_dbn(filename::String)
     end
     
     return records
+end
+
+"""
+    read_dbn_with_metadata(filename::String)
+
+Read a DBN file and return both metadata and records.
+
+# Arguments
+- `filename::String`: Path to the DBN file (compressed or uncompressed)
+
+# Returns
+- `Tuple{Metadata, Vector}`: A tuple containing the file metadata and array of all records
+
+# Details
+Similar to `read_dbn()` but also returns the file metadata containing dataset information,
+schema, timestamp ranges, symbol mappings, and other file properties.
+
+# Example
+```julia
+metadata, records = read_dbn_with_metadata("data.dbn")
+println("Dataset: \$(metadata.dataset)")
+println("Schema: \$(metadata.schema)")
+println("Records: \$(length(records))")
+```
+"""
+function read_dbn_with_metadata(filename::String)
+    records = []
+    decoder = DBNDecoder(filename)  # This now handles compression automatically
+    
+    try
+        while !eof(decoder.io)
+            record = read_record(decoder)
+            if record !== nothing
+                push!(records, record)
+            end
+        end
+    finally
+        # Clean up resources
+        if decoder.io !== decoder.base_io
+            # Close the TranscodingStream first
+            close(decoder.io)
+        end
+        # Always close the base IO
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
+    end
+    
+    return decoder.metadata, records
 end
