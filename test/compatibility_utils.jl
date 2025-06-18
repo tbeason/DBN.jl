@@ -178,14 +178,14 @@ function test_round_trip(test_file::String, output_dir::String)
     rust_json = run_dbn_cli([julia_output, "--json"])
     
     # Convert Julia records to JSON for comparison
-    julia_json = IOBuffer()
+    julia_json_lines = String[]
     for record in records
         # Convert struct to dict for JSON serialization, handling nested structs
         record_dict = struct_to_dict(record)
-        JSON3.print(julia_json, record_dict)
-        println(julia_json)
+        json_line = JSON3.write(record_dict)
+        push!(julia_json_lines, json_line)
     end
-    julia_json_str = String(take!(julia_json))
+    julia_json_str = join(julia_json_lines, "\n") * "\n"
     
     # Compare outputs
     return compare_json_output(julia_json_str, rust_json)
@@ -204,14 +204,14 @@ function test_file_compatibility(test_file::String)
     metadata, records = DBN.read_dbn_with_metadata(test_file)
     
     # Convert Julia records to JSON
-    julia_json = IOBuffer()
+    julia_json_lines = String[]
     for record in records
         # Convert struct to dict for JSON serialization, handling nested structs
         record_dict = struct_to_dict(record)
-        JSON3.print(julia_json, record_dict)
-        println(julia_json)
+        json_line = JSON3.write(record_dict)
+        push!(julia_json_lines, json_line)
     end
-    julia_json_str = String(take!(julia_json))
+    julia_json_str = join(julia_json_lines, "\n") * "\n"
     
     # Compare outputs
     return compare_json_output(julia_json_str, rust_json)
@@ -280,7 +280,7 @@ function struct_to_dict(obj)
         return obj
     elseif isa(obj, Array)
         return [struct_to_dict(item) for item in obj]
-    elseif isdefined(Base, :hasmethod) && hasmethod(fieldnames, typeof(obj))
+    elseif isstructtype(typeof(obj)) && !isempty(fieldnames(typeof(obj)))
         # It's a struct with fields
         dict = Dict{String, Any}()
         for field in fieldnames(typeof(obj))
