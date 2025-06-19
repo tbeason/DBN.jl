@@ -20,4 +20,6 @@ using Dates
     else
         @warn "Skipping compatibility tests - Rust dbn-cli not found. Build it with: cd /workspace/dbn/rust/dbn-cli && cargo build --release"
     end
+
+    include("test_import.jl")
 end

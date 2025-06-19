@@ -469,7 +469,7 @@ Convert a DateTime with optional nanosecond precision to nanosecond timestamp.
 # Returns
 - `Int64`: Nanoseconds since Unix epoch
 """
-function datetime_to_ts(dt::DateTime, nanoseconds::Int32=0)
+function datetime_to_ts(dt::DateTime, nanoseconds::Union{Int32,Int64}=0)
     # Convert DateTime to nanoseconds, preserving additional precision
     seconds = Int64(round(datetime2unix(dt)))
     return seconds * 1_000_000_000 + nanoseconds
