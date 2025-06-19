@@ -40,7 +40,7 @@ function main()
     trades = [
         TradeMsg(
             RecordHeader(
-                UInt8(sizeof(TradeMsg) ÷ LENGTH_MULTIPLIER),
+                UInt8(sizeof(TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),
                 RType.MBP_0_MSG,
                 UInt16(1),           # publisher_id
                 UInt32(12345),       # instrument_id
@@ -58,7 +58,7 @@ function main()
         ),
         TradeMsg(
             RecordHeader(
-                UInt8(sizeof(TradeMsg) ÷ LENGTH_MULTIPLIER),
+                UInt8(sizeof(TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),
                 RType.MBP_0_MSG,
                 UInt16(1),
                 UInt32(12345),
@@ -76,7 +76,7 @@ function main()
         ),
         TradeMsg(
             RecordHeader(
-                UInt8(sizeof(TradeMsg) ÷ LENGTH_MULTIPLIER),
+                UInt8(sizeof(TradeMsg) ÷ DBN.LENGTH_MULTIPLIER),
                 RType.MBP_0_MSG,
                 UInt16(1),
                 UInt32(12345),
