@@ -62,9 +62,7 @@ function structured_json_to_dbn(data::Dict, output_file::String)
     # Parse records
     records = []
     for record_data in data["records"]
-        # Convert dict back to JSON string for parsing
-        json_str = JSON3.write(record_data)
-        record = parse_json_record(json_str)
+        record = parse_json_record(record_data)
         push!(records, record)
     end
     
@@ -151,13 +149,12 @@ end
 Parse a JSON record string into the appropriate DBN struct.
 This reuses the parsing logic from compatibility testing.
 """
-function parse_json_record(json_str::String)
-    json_dict = JSON3.read(json_str, Dict{String, Any})
+function parse_json_record(json_dict::Dict)
     
     # Extract header info
     hd_dict = json_dict["hd"]
     rtype_val = hd_dict["rtype"]
-    rtype = RType.T(rtype_val)
+    rtype = rtype_from_value(rtype_val)
     
     # Determine record size
     record_size = get_record_size_for_rtype(rtype)
@@ -178,8 +175,8 @@ function parse_json_record(json_str::String)
             hd,
             parse_price(json_dict["price"]),
             UInt32(json_dict["size"]),
-            action_from_string(json_dict["action"]),
-            side_from_string(json_dict["side"]),
+            action_from_value(json_dict["action"]),
+            side_from_value(json_dict["side"]),
             UInt8(json_dict["flags"]),
             UInt8(json_dict["depth"]),
             parse_timestamp(json_dict["ts_recv"]),
@@ -202,8 +199,8 @@ function parse_json_record(json_str::String)
             hd,
             parse_price(json_dict["price"]),
             UInt32(json_dict["size"]),
-            action_from_string(json_dict["action"]),
-            side_from_string(json_dict["side"]),
+            action_from_value(json_dict["action"]),
+            side_from_value(json_dict["side"]),
             UInt8(json_dict["flags"]),
             UInt8(get(json_dict, "depth", 0)),
             parse_timestamp(json_dict["ts_recv"]),
@@ -220,8 +217,8 @@ function parse_json_record(json_str::String)
             hd,
             parse_price(json_dict["price"]),
             UInt32(json_dict["size"]),
-            action_from_string(json_dict["action"]),
-            side_from_string(json_dict["side"]),
+            action_from_value(json_dict["action"]),
+            side_from_value(json_dict["side"]),
             UInt8(json_dict["flags"]),
             UInt8(json_dict["depth"]),
             parse_timestamp(json_dict["ts_recv"]),
@@ -258,8 +255,8 @@ function parse_json_record(json_str::String)
             UInt32(json_dict["size"]),
             UInt8(json_dict["flags"]),
             UInt8(json_dict["channel_id"]),
-            action_from_string(json_dict["action"]),
-            side_from_string(json_dict["side"]),
+            action_from_value(json_dict["action"]),
+            side_from_value(json_dict["side"]),
             parse_timestamp(json_dict["ts_recv"]),
             Int32(json_dict["ts_in_delta"]),
             UInt32(json_dict["sequence"])
@@ -306,6 +303,11 @@ function parquet_to_dbn(input_file::String, output_file::String;
     return length(records)
 end
 
+function parse_json_record(json_str::String)
+    json_dict = JSON3.read(json_str, Dict{String, Any})
+    return parse_json_record(json_dict)
+end
+
 """
     csv_to_dbn(input_file, output_file; schema=nothing, dataset="")
 
@@ -332,7 +334,7 @@ function csv_to_dbn(input_file::String, output_file::String;
     end
     
     # Read CSV file
-    df = CSV.read(input_file, DataFrame)
+    df = CSV.read(input_file, DataFrame;header=true,truestrings=["true","True","TRUE"], falsestrings=["false","False","FALSE"])
     
     # Convert DataFrame to records
     records = dataframe_to_records(df, schema)
@@ -379,7 +381,63 @@ function parse_char_field(field)
     end
 end
 
-function action_from_string(s::String)
+function rtype_from_value(val)
+    if isa(val, String)
+        return rtype_from_string(val)
+    else
+        return RType.T(UInt8(val))
+    end
+end
+
+function rtype_from_string(s::String)
+    if s == "MBP_0_MSG"
+        return RType.MBP_0_MSG
+    elseif s == "MBP_1_MSG"
+        return RType.MBP_1_MSG
+    elseif s == "MBP_10_MSG"
+        return RType.MBP_10_MSG
+    elseif s == "MBO_MSG"
+        return RType.MBO_MSG
+    elseif s == "STATUS_MSG"
+        return RType.STATUS_MSG
+    elseif s == "OHLCV_1S_MSG"
+        return RType.OHLCV_1S_MSG
+    elseif s == "OHLCV_1M_MSG"
+        return RType.OHLCV_1M_MSG
+    elseif s == "OHLCV_1H_MSG"
+        return RType.OHLCV_1H_MSG
+    elseif s == "OHLCV_1D_MSG"
+        return RType.OHLCV_1D_MSG
+    elseif s == "INSTRUMENT_DEF_MSG"
+        return RType.INSTRUMENT_DEF_MSG
+    elseif s == "IMBALANCE_MSG"
+        return RType.IMBALANCE_MSG
+    elseif s == "ERROR_MSG"
+        return RType.ERROR_MSG
+    elseif s == "SYMBOL_MAPPING_MSG"
+        return RType.SYMBOL_MAPPING_MSG
+    elseif s == "SYSTEM_MSG"
+        return RType.SYSTEM_MSG
+    elseif s == "STAT_MSG"
+        return RType.STAT_MSG
+    elseif s == "CMBP_1_MSG"
+        return RType.CMBP_1_MSG
+    elseif s == "CBBO_1S_MSG"
+        return RType.CBBO_1S_MSG
+    elseif s == "CBBO_1M_MSG"
+        return RType.CBBO_1M_MSG
+    elseif s == "TCBBO_MSG"
+        return RType.TCBBO_MSG
+    elseif s == "BBO_1S_MSG"
+        return RType.BBO_1S_MSG
+    elseif s == "BBO_1M_MSG"
+        return RType.BBO_1M_MSG
+    else
+        error("Unknown record type: $s")
+    end
+end
+
+function action_from_string(s::AbstractString)
     if s == "A" || s == "ADD"
         return Action.ADD
     elseif s == "C" || s == "CANCEL"
@@ -395,7 +453,15 @@ function action_from_string(s::String)
     end
 end
 
-function side_from_string(s::String)
+function action_from_value(val)
+    if isa(val, String)
+        return action_from_string(val)
+    else
+        return Action.T(UInt8(val))
+    end
+end
+
+function side_from_string(s::AbstractString)
     if s == "A" || s == "ASK"
         return Side.ASK
     elseif s == "B" || s == "BID"
@@ -404,6 +470,14 @@ function side_from_string(s::String)
         return Side.NONE
     else
         error("Unknown side: $s")
+    end
+end
+
+function side_from_value(val)
+    if isa(val, String)
+        return side_from_string(val)
+    else
+        return Side.T(UInt8(val))
     end
 end
 
@@ -505,7 +579,9 @@ end
 
 function dataframe_to_trade_records(df::DataFrame)
     records = TradeMsg[]
+    # println(df)
     for row in eachrow(df)
+        # println(row)
         # Handle nested column names like "hd.ts_event"
         ts_event = haskey(row, "hd.ts_event") ? row["hd.ts_event"] : get(row, :ts_event, 0)
         publisher_id = haskey(row, "hd.publisher_id") ? row["hd.publisher_id"] : get(row, :publisher_id, 1)
@@ -527,8 +603,8 @@ function dataframe_to_trade_records(df::DataFrame)
             hd,
             float_to_price(price_val),
             UInt32(row.size),
-            action_from_string(string(row.action)),
-            side_from_string(string(row.side)),
+            action_from_string(row.action),
+            side_from_string(row.side),
             UInt8(get(row, :flags, 0)),
             UInt8(get(row, :depth, 0)),
             ts_recv,
@@ -637,12 +713,12 @@ function dict_to_metadata(dict::Dict)
     return Metadata(
         UInt8(dict["version"]),
         string(dict["dataset"]),
-        schema_from_string(dict["schema"]),
+        schema_from_value(dict["schema"]),
         parse_timestamp(dict["start_ts"]),
         parse_timestamp(dict["end_ts"]),
         UInt64(dict["limit"]),
-        stype_from_string(dict["stype_in"]),
-        stype_from_string(dict["stype_out"]),
+        stype_from_value(dict["stype_in"]),
+        stype_from_value(dict["stype_out"]),
         Bool(dict["ts_out"]),
         Vector{String}(dict["symbols"]),
         Vector{String}(dict["partial"]),
@@ -676,5 +752,21 @@ function stype_from_string(s::String)
         return SType.INSTRUMENT_ID
     else
         return SType.RAW_SYMBOL
+    end
+end
+
+function schema_from_value(val)
+    if isa(val, String)
+        return schema_from_string(val)
+    else
+        return Schema.T(UInt16(val))
+    end
+end
+
+function stype_from_value(val)
+    if isa(val, String)
+        return stype_from_string(val)
+    else
+        return SType.T(UInt8(val))
     end
 end
