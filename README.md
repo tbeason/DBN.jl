@@ -11,7 +11,7 @@ For more details, read the [introduction to DBN](https://databento.com/docs/stan
 - ✅ Complete DBN v3 Format Support
 - ✅ Efficient streaming support (read and write)
 - ✅ Zstd file compression support (read and write)
-- ✅ Convert to Parquet, CSV, JSON
+- ✅ Bidirectional format conversion (DBN ↔ JSON/Parquet/CSV)
 - ✅ Byte-for-byte compatibility with official implementations
 - ✅ All DBN message types (Trades, MBO, MBP, OHLCV, Status, etc.)
 - ✅ High-precision timestamp handling
@@ -119,6 +119,18 @@ dbn_to_parquet("trades.dbn", "output_dir/")
 
 # Convert to DataFrame for analysis
 df = records_to_dataframe(records)
+```
+
+### Data Import
+
+```julia
+# Convert other formats to DBN
+json_to_dbn(\"trades.json\", \"trades.dbn\")
+parquet_to_dbn(\"trades.parquet\", \"trades.dbn\", schema=Schema.TRADES, dataset=\"XNAS\")
+csv_to_dbn(\"trades.csv\", \"trades.dbn\", schema=Schema.TRADES, dataset=\"XNAS\")
+
+# JSONL format (one record per line) is also supported
+json_to_dbn(\"trades.jsonl\", \"trades.dbn\")
 ```
 
 ### Compression

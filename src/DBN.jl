@@ -28,6 +28,14 @@ DBN.jl provides complete support for reading and writing DBN v3 format files wit
 - `compress_dbn_file(input, output)`: Compress single file
 - `compress_daily_files(date, directory)`: Batch compress files
 
+## Format Conversion
+- `dbn_to_csv(input, output)`: Convert DBN to CSV
+- `dbn_to_json(input, output)`: Convert DBN to JSON
+- `dbn_to_parquet(input, output)`: Convert DBN to Parquet
+- `json_to_dbn(input, output)`: Convert JSON to DBN
+- `parquet_to_dbn(input, output)`: Convert Parquet to DBN
+- `csv_to_dbn(input, output)`: Convert CSV to DBN
+
 ## Utilities
 - `price_to_float(price)` / `float_to_price(value)`: Price conversions
 - `ts_to_datetime(ts)` / `datetime_to_ts(dt)`: Timestamp conversions
@@ -88,6 +96,7 @@ include("decode.jl")
 include("encode.jl")
 include("streaming.jl")
 include("export.jl")
+include("import.jl")
 
 # Exports
 export DBNDecoder, DBNEncoder, read_dbn, read_dbn_with_metadata, write_dbn
@@ -104,5 +113,6 @@ export DBN_VERSION, FIXED_PRICE_SCALE, UNDEF_PRICE, UNDEF_ORDER_SIZE, UNDEF_TIME
 export BidAskPair, VersionUpgradePolicy, DatasetCondition
 export write_header, read_header!, write_record, read_record, finalize_encoder
 export dbn_to_csv, dbn_to_json, dbn_to_parquet, records_to_dataframe
+export json_to_dbn, parquet_to_dbn, csv_to_dbn
 
 end  # module DBN
