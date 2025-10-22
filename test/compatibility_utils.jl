@@ -10,17 +10,13 @@ using Dates
 
 # Path to the Rust DBN CLI executable (cross-platform)
 const DBN_CLI_PATH = if Sys.iswindows()
-    "C:\\workspace\\dbn\\target\\release\\dbn.exe"
+    joinpath(homedir(), "dbn-workspace", "dbn", "target", "release", "dbn.exe")
 else
-    "/workspace/dbn/target/release/dbn"
+    joinpath(homedir(), "dbn-workspace", "dbn", "target", "release", "dbn")
 end
 
 # Path to test data directory (cross-platform)
-const TEST_DATA_DIR = if Sys.iswindows()
-    "C:\\workspace\\dbn\\tests\\data"
-else
-    "/workspace/dbn/tests/data"
-end
+const TEST_DATA_DIR = joinpath(homedir(), "dbn-workspace", "dbn", "tests", "data")
 
 """
     run_dbn_cli(args::Vector{String})

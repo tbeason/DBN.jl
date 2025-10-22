@@ -45,7 +45,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            /workspace/dbn/target/
+            ~/dbn-workspace/dbn/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -60,7 +60,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            C:\workspace\dbn\target\
+            ~\dbn-workspace\dbn\target\
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -69,22 +69,23 @@ jobs:
       - name: Build dbn-cli (Unix)
         if: runner.os != 'Windows'
         run: |
-          mkdir -p /workspace
-          if [ ! -d "/workspace/dbn" ]; then
-            git clone --depth 1 https://github.com/databento/dbn /workspace/dbn
+          mkdir -p $HOME/dbn-workspace
+          if [ ! -d "$HOME/dbn-workspace/dbn" ]; then
+            git clone --depth 1 https://github.com/databento/dbn $HOME/dbn-workspace/dbn
           fi
-          cd /workspace/dbn/rust/dbn-cli
+          cd $HOME/dbn-workspace/dbn/rust/dbn-cli
           cargo build --release
 
       - name: Build dbn-cli (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path "C:\workspace" | Out-Null
-          if (-not (Test-Path "C:\workspace\dbn")) {
-            git clone --depth 1 https://github.com/databento/dbn "C:\workspace\dbn"
+          $workspace = "$env:USERPROFILE\dbn-workspace"
+          New-Item -ItemType Directory -Force -Path $workspace | Out-Null
+          if (-not (Test-Path "$workspace\dbn")) {
+            git clone --depth 1 https://github.com/databento/dbn "$workspace\dbn"
           }
-          cd "C:\workspace\dbn\rust\dbn-cli"
+          cd "$workspace\dbn\rust\dbn-cli"
           cargo build --release
 
       - uses: julia-actions/setup-julia@v2

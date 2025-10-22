@@ -19,9 +19,9 @@ include("test_utils.jl")
     
     # Run compatibility tests if the Rust CLI is available
     dbn_cli_path = if Sys.iswindows()
-        "C:\\workspace\\dbn\\target\\release\\dbn.exe"
+        joinpath(homedir(), "dbn-workspace", "dbn", "target", "release", "dbn.exe")
     else
-        "/workspace/dbn/target/release/dbn"
+        joinpath(homedir(), "dbn-workspace", "dbn", "target", "release", "dbn")
     end
 
     if isfile(dbn_cli_path)
