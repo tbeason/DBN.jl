@@ -538,12 +538,12 @@ function read_record(decoder::DBNDecoder)
         
         instrument_class = safe_instrument_class(read(decoder.io, UInt8))
         strike_price = read(decoder.io, Int64)
-        match_algorithm = Char(read(decoder.io, UInt8))  # Single-byte C char
+        match_algorithm = read(decoder.io, Char)
         main_fraction = read(decoder.io, UInt8)
         price_display_format = read(decoder.io, UInt8)
         sub_fraction = read(decoder.io, UInt8)
         underlying_product = read(decoder.io, UInt8)
-        security_update_action = Char(read(decoder.io, UInt8))  # Single-byte C char
+        security_update_action = read(decoder.io, Char)
         maturity_month = read(decoder.io, UInt8)
         maturity_day = read(decoder.io, UInt8)
         maturity_week = read(decoder.io, UInt8)
@@ -555,14 +555,11 @@ function read_record(decoder::DBNDecoder)
         # New strategy leg fields in DBN v3
         leg_count = read(decoder.io, UInt8)
         leg_index = read(decoder.io, UInt8)
-        _ = read(decoder.io, 2)  # Padding for alignment before UInt32
         leg_instrument_id = read(decoder.io, UInt32)
         leg_raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
         leg_side = safe_side(read(decoder.io, UInt8))
-        _ = read(decoder.io, 3)  # Padding for alignment before UInt32
         leg_underlying_id = read(decoder.io, UInt32)
         leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
-        _ = read(decoder.io, 3)  # Padding for alignment before UInt32
         leg_ratio_qty_numerator = read(decoder.io, UInt32)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_ratio_price_numerator = read(decoder.io, UInt32)
