@@ -420,6 +420,7 @@ function write_record(encoder::DBNEncoder, record)
         # Write new strategy leg fields in DBN v3
         write(io, record.leg_count)
         write(io, record.leg_index)
+        write(io, zeros(UInt8, 2))  # Padding for alignment before UInt32
         write(io, record.leg_instrument_id)
         write_fixed_string(io, record.leg_raw_symbol, 22)
         write(io, UInt8(record.leg_side))

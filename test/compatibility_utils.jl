@@ -445,7 +445,7 @@ function parse_rust_json_record(rust_json_str)
         # Use the same pattern as import.jl's create_mbp10_levels function
         json_levels = get(json_dict, "levels", [])
 
-        @info "MBP10Msg parsing debug:" num_levels=length(json_levels)
+        @info "MBP10Msg parsing debug: num_levels=$(length(json_levels))"
 
         padded_levels = []
         for i in 1:10
@@ -465,8 +465,8 @@ function parse_rust_json_record(rust_json_str)
         end
         levels = tuple(padded_levels...)
 
-        @info "Created levels tuple" typeof_levels=typeof(levels) length_levels=length(levels)
-        @info "First level" levels[1]
+        @info "Created levels tuple: typeof=$(typeof(levels)), length=$(length(levels))"
+        @info "First level: $(levels[1])"
 
         msg = DBN.MBP10Msg(
             hd,
