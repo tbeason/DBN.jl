@@ -2,6 +2,8 @@ using Test
 using DBN
 using Dates
 
+include("test_utils.jl")
+
 @testset "Phase 9: Edge Cases and Error Handling" begin
     
     @testset "Invalid/Corrupted Files" begin
@@ -17,7 +19,7 @@ using Dates
                 @test_throws ErrorException read_dbn(corrupted_file)
                 @test_throws ErrorException DBNDecoder(corrupted_file)
             finally
-                rm(corrupted_file, force=true)
+                safe_rm(corrupted_file)
             end
         end
         
@@ -31,7 +33,7 @@ using Dates
                 
                 @test_throws Exception read_dbn(truncated_file)
             finally
-                rm(truncated_file, force=true)
+                safe_rm(truncated_file)
             end
         end
         
@@ -48,7 +50,7 @@ using Dates
                 
                 @test_throws Exception read_dbn(invalid_version_file)
             finally
-                rm(invalid_version_file, force=true)
+                safe_rm(invalid_version_file)
             end
         end
     end
@@ -62,7 +64,7 @@ using Dates
                 @test_throws Exception read_dbn(empty_file)
                 @test_throws Exception DBNDecoder(empty_file)
             finally
-                rm(empty_file, force=true)
+                safe_rm(empty_file)
             end
         end
         
@@ -96,7 +98,7 @@ using Dates
                 stream_records = collect(DBNStream(header_only_file))
                 @test isempty(stream_records)
             finally
-                rm(header_only_file, force=true)
+                safe_rm(header_only_file)
             end
         end
     end
@@ -172,7 +174,7 @@ using Dates
                     end
                 end
             finally
-                rm(price_boundary_file, force=true)
+                safe_rm(price_boundary_file)
             end
         end
         
@@ -236,7 +238,7 @@ using Dates
                     @test record.ts_recv == timestamps[i]
                 end
             finally
-                rm(timestamp_file, force=true)
+                safe_rm(timestamp_file)
             end
         end
     end
@@ -340,7 +342,7 @@ using Dates
             @test typeof(stream_records[1]) == typeof(read_records[1])
             @test typeof(stream_records[2]) == typeof(read_records[2])
         finally
-            rm(mixed_file, force=true)
+            safe_rm(mixed_file)
         end
     end
     
@@ -407,7 +409,7 @@ using Dates
                 @test file_size > expected_size * 0.9  # Within 10% of expected
                 @test file_size < expected_size * 1.1
             finally
-                rm(large_file, force=true)
+                safe_rm(large_file)
             end
         end
     end
