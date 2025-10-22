@@ -577,10 +577,12 @@ function read_record(decoder::DBNDecoder)
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
 
-        # Always seek to the exact end position specified by the header
-        # This handles any padding differences between Julia and Rust implementations
-        expected_end_pos = start_pos + body_size
-        seek(decoder.io, expected_end_pos)
+        # Skip any remaining bytes (e.g., reserved bytes at end)
+        # This handles padding differences between Julia and Rust implementations
+        bytes_read = position(decoder.io) - start_pos
+        if bytes_read < body_size
+            skip(decoder.io, body_size - bytes_read)
+        end
 
         return InstrumentDefMsg(
             hd, ts_recv, min_price_increment, display_factor, expiration, activation,

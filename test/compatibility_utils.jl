@@ -442,26 +442,24 @@ function parse_rust_json_record(rust_json_str)
         )
     elseif rtype == DBN.RType.MBP_10_MSG
         # Parse all 10 levels from the JSON
-        # Use the same pattern as import.jl's create_mbp10_levels function
         json_levels = get(json_dict, "levels", [])
 
-        padded_levels = []
-        for i in 1:10
+        # Use ntuple like the binary decoder does
+        levels = ntuple(10) do i
             if i <= length(json_levels)
                 level_dict = json_levels[i]
-                push!(padded_levels, DBN.BidAskPair(
+                DBN.BidAskPair(
                     parse(Int64, level_dict["bid_px"]),
                     parse(Int64, level_dict["ask_px"]),
                     UInt32(level_dict["bid_sz"]),
                     UInt32(level_dict["ask_sz"]),
                     UInt32(get(level_dict, "bid_ct", 0)),
                     UInt32(get(level_dict, "ask_ct", 0))
-                ))
+                )
             else
-                push!(padded_levels, DBN.BidAskPair(0, 0, 0, 0, 0, 0))
+                DBN.BidAskPair(0, 0, 0, 0, 0, 0)
             end
         end
-        levels = tuple(padded_levels...)
 
         return DBN.MBP10Msg(
             hd,
