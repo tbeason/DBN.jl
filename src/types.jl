@@ -608,6 +608,11 @@ Safely convert a raw byte value to a Side enum, with fallback handling.
 - `Side.T`: Corresponding Side enum value, or Side.NONE as fallback
 """
 function safe_side(raw_val::UInt8)
+    # Special case: 0 might indicate no side for certain record types
+    if raw_val == 0
+        return Side.NONE
+    end
+
     try
         return Side.T(raw_val)
     catch ArgumentError

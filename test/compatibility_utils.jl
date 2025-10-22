@@ -416,30 +416,31 @@ function parse_rust_json_record(rust_json_str)
             levels
         )
     elseif rtype == DBN.RType.MBP_10_MSG
-        # For MBP_10_MSG, we only need the first level (top-of-book)
-        # Create a simple 10-tuple with the first level and pad with zeros
-        first_level = if haskey(json_dict, "levels") && !isempty(json_dict["levels"])
-            level_dict = json_dict["levels"][1]  # First level is top-of-book
-            DBN.BidAskPair(
-                parse(Int64, level_dict["bid_px"]),
-                parse(Int64, level_dict["ask_px"]),
-                UInt32(level_dict["bid_sz"]),
-                UInt32(level_dict["ask_sz"]),
-                UInt32(get(level_dict, "bid_ct", get(level_dict, "bid_pb", 0))),
-                UInt32(get(level_dict, "ask_ct", get(level_dict, "ask_pb", 0)))
-            )
-        else
-            DBN.BidAskPair(0, 0, 0, 0, 0, 0)
+        # Parse all 10 levels from the JSON
+        json_levels = get(json_dict, "levels", [])
+
+        # Create array of 10 BidAskPairs, padding with zeros if needed
+        levels_array = DBN.BidAskPair[]
+        for i in 1:10
+            if i <= length(json_levels)
+                level_dict = json_levels[i]
+                push!(levels_array, DBN.BidAskPair(
+                    parse(Int64, level_dict["bid_px"]),
+                    parse(Int64, level_dict["ask_px"]),
+                    UInt32(level_dict["bid_sz"]),
+                    UInt32(level_dict["ask_sz"]),
+                    UInt32(get(level_dict, "bid_ct", get(level_dict, "bid_pb", 0))),
+                    UInt32(get(level_dict, "ask_ct", get(level_dict, "ask_pb", 0)))
+                ))
+            else
+                # Pad with empty BidAskPair for missing levels
+                push!(levels_array, DBN.BidAskPair(0, 0, 0, 0, 0, 0))
+            end
         end
-        
-        # Create NTuple{10,BidAskPair} with first level and padding
-        levels = (first_level, 
-                 DBN.BidAskPair(0, 0, 0, 0, 0, 0), DBN.BidAskPair(0, 0, 0, 0, 0, 0),
-                 DBN.BidAskPair(0, 0, 0, 0, 0, 0), DBN.BidAskPair(0, 0, 0, 0, 0, 0),
-                 DBN.BidAskPair(0, 0, 0, 0, 0, 0), DBN.BidAskPair(0, 0, 0, 0, 0, 0),
-                 DBN.BidAskPair(0, 0, 0, 0, 0, 0), DBN.BidAskPair(0, 0, 0, 0, 0, 0),
-                 DBN.BidAskPair(0, 0, 0, 0, 0, 0))
-        
+
+        # Convert to NTuple{10, BidAskPair}
+        levels = ntuple(i -> levels_array[i], 10)
+
         return DBN.MBP10Msg(
             hd,
             parse(Int64, json_dict["price"]),
@@ -453,6 +454,7 @@ function parse_rust_json_record(rust_json_str)
             UInt32(get(json_dict, "sequence", 0)),  # Default sequence to 0 if missing
             levels
         )
+    elseif rtype == DBN.RType.MBO_MSG
         return DBN.MBOMsg(
             hd,
             parse(UInt64, json_dict["order_id"]),
@@ -488,10 +490,85 @@ function parse_rust_json_record(rust_json_str)
             UInt8(json_dict["is_quoting"][1]),  # Convert single char to UInt8
             UInt8(json_dict["is_short_sell_restricted"][1])  # Convert single char to UInt8
         )
-    # Add more record types as needed
-    elseif rtype == DBN.RType.BBO_1M_MSG
-        # Parse levels for BBO messages (similar to MBP-1)
-        levels_dict = json_dict["levels"][1]  # First level
+    elseif rtype == DBN.RType.INSTRUMENT_DEF_MSG
+        # Parse InstrumentDefMsg - this is complex, so we'll parse the key fields
+        # Note: Many fields may be missing or default in JSON output
+        return DBN.InstrumentDefMsg(
+            hd,
+            parse(Int64, get(json_dict, "ts_recv", "0")),
+            parse(Int64, get(json_dict, "min_price_increment", "0")),
+            parse(Int64, get(json_dict, "display_factor", "0")),
+            parse(Int64, get(json_dict, "expiration", "0")),
+            parse(Int64, get(json_dict, "activation", "0")),
+            parse(Int64, get(json_dict, "high_limit_price", "0")),
+            parse(Int64, get(json_dict, "low_limit_price", "0")),
+            parse(Int64, get(json_dict, "max_price_variation", "0")),
+            parse(Int64, get(json_dict, "unit_of_measure_qty", "0")),
+            parse(Int64, get(json_dict, "min_price_increment_amount", "0")),
+            parse(Int64, get(json_dict, "price_ratio", "0")),
+            Int32(get(json_dict, "inst_attrib_value", 0)),
+            UInt32(get(json_dict, "underlying_id", 0)),
+            parse(UInt64, get(json_dict, "raw_instrument_id", "0")),
+            Int32(get(json_dict, "market_depth_implied", 0)),
+            Int32(get(json_dict, "market_depth", 0)),
+            UInt32(get(json_dict, "market_segment_id", 0)),
+            UInt32(get(json_dict, "max_trade_vol", 0)),
+            Int32(get(json_dict, "min_lot_size", 0)),
+            Int32(get(json_dict, "min_lot_size_block", 0)),
+            Int32(get(json_dict, "min_lot_size_round_lot", 0)),
+            UInt32(get(json_dict, "min_trade_vol", 0)),
+            Int32(get(json_dict, "contract_multiplier", 0)),
+            Int32(get(json_dict, "decay_quantity", 0)),
+            Int32(get(json_dict, "original_contract_size", 0)),
+            Int16(get(json_dict, "appl_id", 0)),
+            UInt16(get(json_dict, "maturity_year", 0)),
+            UInt16(get(json_dict, "decay_start_date", 0)),
+            UInt8(get(json_dict, "channel_id", 0)),
+            String(get(json_dict, "currency", "")),
+            String(get(json_dict, "settl_currency", "")),
+            String(get(json_dict, "secsubtype", "")),
+            String(get(json_dict, "raw_symbol", "")),
+            String(get(json_dict, "group", "")),
+            String(get(json_dict, "exchange", "")),
+            String(get(json_dict, "asset", "")),
+            String(get(json_dict, "cfi", "")),
+            String(get(json_dict, "security_type", "")),
+            String(get(json_dict, "unit_of_measure", "")),
+            String(get(json_dict, "underlying", "")),
+            String(get(json_dict, "strike_price_currency", "")),
+            haskey(json_dict, "instrument_class") ? DBN.safe_instrument_class(UInt8(json_dict["instrument_class"][1])) : DBN.InstrumentClass.OTHER,
+            parse(Int64, get(json_dict, "strike_price", "0")),
+            Char(get(json_dict, "match_algorithm", " ")[1]),
+            UInt8(get(json_dict, "main_fraction", 0)),
+            UInt8(get(json_dict, "price_display_format", 0)),
+            UInt8(get(json_dict, "sub_fraction", 0)),
+            UInt8(get(json_dict, "underlying_product", 0)),
+            Char(get(json_dict, "security_update_action", " ")[1]),
+            UInt8(get(json_dict, "maturity_month", 0)),
+            UInt8(get(json_dict, "maturity_day", 0)),
+            UInt8(get(json_dict, "maturity_week", 0)),
+            Bool(get(json_dict, "user_defined_instrument", false)),
+            Int8(get(json_dict, "contract_multiplier_unit", 0)),
+            Int8(get(json_dict, "flow_schedule_type", 0)),
+            UInt8(get(json_dict, "tick_rule", 0)),
+            UInt8(get(json_dict, "leg_count", 0)),
+            UInt8(get(json_dict, "leg_index", 0)),
+            UInt32(get(json_dict, "leg_instrument_id", 0)),
+            String(get(json_dict, "leg_raw_symbol", "")),
+            haskey(json_dict, "leg_side") ? side_from_string(json_dict["leg_side"]) : DBN.Side.NONE,
+            UInt32(get(json_dict, "leg_underlying_id", 0)),
+            haskey(json_dict, "leg_instrument_class") ? DBN.safe_instrument_class(UInt8(json_dict["leg_instrument_class"][1])) : DBN.InstrumentClass.OTHER,
+            UInt32(get(json_dict, "leg_ratio_qty_numerator", 0)),
+            UInt32(get(json_dict, "leg_ratio_qty_denominator", 0)),
+            UInt32(get(json_dict, "leg_ratio_price_numerator", 0)),
+            UInt32(get(json_dict, "leg_ratio_price_denominator", 0)),
+            parse(Int64, get(json_dict, "leg_price", "0")),
+            parse(Int64, get(json_dict, "leg_delta", "0"))
+        )
+    # BBO message types
+    elseif rtype == DBN.RType.BBO_1S_MSG
+        # Parse levels for BBO messages
+        levels_dict = json_dict["levels"][1]
         levels = DBN.BidAskPair(
             parse(Int64, levels_dict["bid_px"]),
             parse(Int64, levels_dict["ask_px"]),
@@ -500,18 +577,43 @@ function parse_rust_json_record(rust_json_str)
             UInt32(get(levels_dict, "bid_ct", get(levels_dict, "bid_pb", 0))),
             UInt32(get(levels_dict, "ask_ct", get(levels_dict, "ask_pb", 0)))
         )
-        
-        return DBN.MBP1Msg(  # Use MBP1Msg for BBO as they have similar structure
+
+        return DBN.BBO1sMsg(
             hd,
             parse(Int64, json_dict["price"]),
             UInt32(json_dict["size"]),
-            DBN.Action.NONE,  # BBO may not have action field
+            get(json_dict, "action", nothing) === nothing ? DBN.Action.NONE : action_from_string(json_dict["action"]),
             side_from_string(json_dict["side"]),
             UInt8(json_dict["flags"]),
-            UInt8(0),  # depth for BBO
+            UInt8(get(json_dict, "depth", 0)),
             parse(Int64, json_dict["ts_recv"]),
-            Int32(0),  # ts_in_delta not present in BBO
-            UInt32(get(json_dict, "sequence", 0)),  # Default sequence to 0 if missing
+            Int32(get(json_dict, "ts_in_delta", 0)),
+            UInt32(get(json_dict, "sequence", 0)),
+            levels
+        )
+    elseif rtype == DBN.RType.BBO_1M_MSG
+        # Parse levels for BBO messages
+        levels_dict = json_dict["levels"][1]
+        levels = DBN.BidAskPair(
+            parse(Int64, levels_dict["bid_px"]),
+            parse(Int64, levels_dict["ask_px"]),
+            UInt32(levels_dict["bid_sz"]),
+            UInt32(levels_dict["ask_sz"]),
+            UInt32(get(levels_dict, "bid_ct", get(levels_dict, "bid_pb", 0))),
+            UInt32(get(levels_dict, "ask_ct", get(levels_dict, "ask_pb", 0)))
+        )
+
+        return DBN.BBO1mMsg(
+            hd,
+            parse(Int64, json_dict["price"]),
+            UInt32(json_dict["size"]),
+            get(json_dict, "action", nothing) === nothing ? DBN.Action.NONE : action_from_string(json_dict["action"]),
+            side_from_string(json_dict["side"]),
+            UInt8(json_dict["flags"]),
+            UInt8(get(json_dict, "depth", 0)),
+            parse(Int64, json_dict["ts_recv"]),
+            Int32(get(json_dict, "ts_in_delta", 0)),
+            UInt32(get(json_dict, "sequence", 0)),
             levels
         )
     else
@@ -534,8 +636,12 @@ function get_record_size_for_rtype(rtype::DBN.RType.T)
         return sizeof(DBN.OHLCVMsg)
     elseif rtype == DBN.RType.STATUS_MSG
         return sizeof(DBN.StatusMsg)
+    elseif rtype == DBN.RType.INSTRUMENT_DEF_MSG
+        return sizeof(DBN.InstrumentDefMsg)
+    elseif rtype == DBN.RType.BBO_1S_MSG
+        return sizeof(DBN.BBO1sMsg)
     elseif rtype == DBN.RType.BBO_1M_MSG
-        return sizeof(DBN.MBP1Msg)  # Use MBP1Msg size for BBO
+        return sizeof(DBN.BBO1mMsg)
     else
         return 0  # Unknown, will need to handle
     end
