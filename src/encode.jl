@@ -424,8 +424,10 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.leg_instrument_id)
         write_fixed_string(io, record.leg_raw_symbol, 22)
         write(io, UInt8(record.leg_side))
+        write(io, zeros(UInt8, 1))  # Padding for alignment before UInt32
         write(io, record.leg_underlying_id)
         write(io, UInt8(record.leg_instrument_class))
+        write(io, zeros(UInt8, 3))  # Padding for alignment before UInt32
         write(io, record.leg_ratio_qty_numerator)
         write(io, record.leg_ratio_qty_denominator)
         write(io, record.leg_ratio_price_numerator)

@@ -496,8 +496,6 @@ function read_record(decoder::DBNDecoder)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16  # Subtract header size
 
-        @info "InstrumentDefMsg decode start" start_pos=start_pos record_size_bytes=record_size_bytes body_size=body_size length_field=hd.length
-
         # Read all fields for DBN v3 format
         ts_recv = read(decoder.io, Int64)
         min_price_increment = read(decoder.io, Int64)
@@ -568,8 +566,10 @@ function read_record(decoder::DBNDecoder)
         leg_instrument_id = read(decoder.io, UInt32)
         leg_raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
         leg_side = safe_side(read(decoder.io, UInt8))
+        skip(decoder.io, 1)  # Padding for alignment before UInt32
         leg_underlying_id = read(decoder.io, UInt32)
         leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
+        skip(decoder.io, 3)  # Padding for alignment before UInt32
         leg_ratio_qty_numerator = read(decoder.io, UInt32)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_ratio_price_numerator = read(decoder.io, UInt32)
@@ -579,12 +579,7 @@ function read_record(decoder::DBNDecoder)
 
         # Always seek to the exact end position specified by the header
         # This handles any padding differences between Julia and Rust implementations
-        current_pos = position(decoder.io)
-        bytes_read = current_pos - start_pos
         expected_end_pos = start_pos + body_size
-
-        @info "InstrumentDefMsg decode end" current_pos=current_pos bytes_read=bytes_read expected_end_pos=expected_end_pos body_size=body_size
-
         seek(decoder.io, expected_end_pos)
 
         return InstrumentDefMsg(
