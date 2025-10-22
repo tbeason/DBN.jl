@@ -61,8 +61,8 @@ using Dates
             @test filesize(dbn_file) > 0
             
         finally
-            rm(json_file, force=true)
-            rm(dbn_file, force=true)
+            safe_rm(json_file)
+            safe_rm(dbn_file)
         end
     end
     
@@ -79,8 +79,8 @@ using Dates
             @test_throws Exception json_to_dbn(json_file, dbn_file)
             
         finally
-            rm(json_file, force=true)
-            rm(dbn_file, force=true)
+            safe_rm(json_file)
+            safe_rm(dbn_file)
         end
         
         # Test missing file

@@ -1,7 +1,5 @@
 # Phase 4: Basic Read/Write Testing (No Compression)
 
-include("test_utils.jl")
-
 @testset "Phase 4: Basic Read/Write Testing (No Compression)" begin
 
     # Helper function to create test metadata

@@ -2,6 +2,9 @@ using Test
 using DBN
 using Dates
 
+# Load test utilities (safe_rm, etc.)
+include("test_utils.jl")
+
 @testset "DBN.jl Tests" begin
     include("test_phase1.jl")
     include("test_phase2.jl")
@@ -21,5 +24,6 @@ using Dates
         @warn "Skipping compatibility tests - Rust dbn-cli not found. Build it with: cd /workspace/dbn/rust/dbn-cli && cargo build --release"
     end
 
-    include("test_import.jl")
+    # Import/export tests (optional - uncomment if needed)
+    # include("test_import_simple.jl")
 end

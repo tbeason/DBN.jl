@@ -1,7 +1,5 @@
 # Phase 5: Record Type Read/Write Testing
 
-include("test_utils.jl")
-
 @testset "Phase 5: Record Type Read/Write Testing" begin
 
     # Helper function to create test metadata

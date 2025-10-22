@@ -4,8 +4,6 @@ using Dates
 using Statistics
 using BenchmarkTools
 
-include("test_utils.jl")
-
 # Phase 10: Complete Integration and Performance Testing
 @testset "Phase 10: Integration and Performance Testing" begin
     
