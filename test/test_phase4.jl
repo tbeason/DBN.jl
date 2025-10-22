@@ -1,9 +1,9 @@
 # Phase 4: Basic Read/Write Testing (No Compression)
 
-
+include("test_utils.jl")
 
 @testset "Phase 4: Basic Read/Write Testing (No Compression)" begin
-    
+
     # Helper function to create test metadata
     function create_test_metadata()
         return Metadata(
@@ -84,9 +84,7 @@
             
         finally
             # Clean up
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -141,14 +139,12 @@
                 @test trade_record.ts_in_delta == original_trade.ts_in_delta
                 @test trade_record.sequence == original_trade.sequence
             end
-            
+
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
-    
+
     @testset "Round-trip testing (write then read)" begin
         temp_file = tempname() * ".dbn"
         
@@ -210,14 +206,12 @@
                 @test ohlcv_record.close == 10065000000
                 @test ohlcv_record.volume == 125000
             end
-            
+
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
-    
+
     @testset "DBNEncoder and DBNDecoder direct testing" begin
         temp_file = tempname() * ".dbn"
         
@@ -256,14 +250,12 @@
                     @test next_record === nothing
                 end
             end
-            
+
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
-    
+
     @testset "Error handling and edge cases" begin
         @testset "Writing to invalid path" begin
             invalid_path = "/invalid/nonexistent/path/test.dbn"
@@ -280,34 +272,30 @@
         
         @testset "Reading invalid DBN file" begin
             temp_file = tempname() * ".dbn"
-            
+
             try
                 # Write invalid magic bytes
                 open(temp_file, "w") do f
                     write(f, b"INVALID")
                 end
-                
+
                 @test_throws Exception read_dbn(temp_file)
-                
+
             finally
-                if isfile(temp_file)
-                    rm(temp_file)
-                end
+                safe_rm(temp_file)
             end
         end
         
         @testset "Empty file handling" begin
             temp_file = tempname() * ".dbn"
-            
+
             try
                 # Create empty file
                 touch(temp_file)
                 @test_throws Exception read_dbn(temp_file)
-                
+
             finally
-                if isfile(temp_file)
-                    rm(temp_file)
-                end
+                safe_rm(temp_file)
             end
         end
     end
@@ -376,11 +364,9 @@
                     @test decoder.metadata.symbols[50] == "SYM50"
                 end
             end
-            
+
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
 end

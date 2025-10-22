@@ -4,6 +4,8 @@ using Dates
 using Statistics
 using BenchmarkTools
 
+include("test_utils.jl")
+
 # Phase 10: Complete Integration and Performance Testing
 @testset "Phase 10: Integration and Performance Testing" begin
     
@@ -98,7 +100,7 @@ using BenchmarkTools
                 @test write_time < 2.0
                 @test write_throughput > 0.5
                 
-                rm(temp_file, force=true)
+                safe_rm(temp_file)
             end
         end
     end

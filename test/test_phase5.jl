@@ -1,8 +1,9 @@
 # Phase 5: Record Type Read/Write Testing
 
+include("test_utils.jl")
 
 @testset "Phase 5: Record Type Read/Write Testing" begin
-    
+
     # Helper function to create test metadata
     function create_test_metadata(schema::Schema.T)
         return Metadata(
@@ -64,9 +65,7 @@
             @test read_msg.sequence == original_msg.sequence
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -110,9 +109,7 @@
             @test read_msg.sequence == original_msg.sequence
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -167,9 +164,7 @@
             @test read_msg.levels.ask_ct == levels.ask_ct
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -236,9 +231,7 @@
             end
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -274,9 +267,7 @@
             @test read_msg.volume == original_msg.volume
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -316,9 +307,7 @@
             @test read_msg.is_short_sell_restricted == original_msg.is_short_sell_restricted
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -371,9 +360,7 @@
             @test read_msg.side == original_msg.side
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -419,9 +406,7 @@
             @test read_msg.stat_flags == original_msg.stat_flags
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -538,9 +523,7 @@
             @test read_msg.leg_delta == original_msg.leg_delta
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -576,9 +559,7 @@
             @test read_records[3].volume == ohlcv_msg.volume
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -627,9 +608,7 @@
             @test all(r isa TradeMsg for r in read_records)
             
         finally
-            if isfile(temp_file)
-                rm(temp_file)
-            end
+            safe_rm(temp_file)
         end
     end
     
@@ -764,7 +743,7 @@
                 
             finally
                 if isfile(temp_file)
-                    rm(temp_file)
+                    safe_rm(temp_file)
                 end
             end
         end
@@ -956,7 +935,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1002,7 +981,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1126,7 +1105,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1185,7 +1164,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1237,7 +1216,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1383,7 +1362,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1431,7 +1410,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1476,7 +1455,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1539,7 +1518,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end
@@ -1564,7 +1543,7 @@
                     
                 finally
                     if isfile(temp_file)
-                        rm(temp_file)
+                        safe_rm(temp_file)
                     end
                 end
             end

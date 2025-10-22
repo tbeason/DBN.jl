@@ -1,6 +1,6 @@
 # Phase 6: Compression Testing
 
-
+include("test_utils.jl")
 
 @testset "Phase 6: Compression Features" begin
     
@@ -39,7 +39,7 @@
                         @test length(records) > 0
                     end
                 finally
-                    rm(temp_file, force=true)
+                    safe_rm(temp_file)
                 end
             end
         end
