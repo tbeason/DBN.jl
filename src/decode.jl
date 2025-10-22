@@ -491,6 +491,11 @@ function read_record(decoder::DBNDecoder)
         return StatusMsg(hd, ts_recv, action, reason, trading_event, is_trading, is_quoting, is_short_sell_restricted)
         
     elseif hd.rtype == RType.INSTRUMENT_DEF_MSG
+        # Track position to ensure we read exactly the right amount
+        start_pos = position(decoder.io)
+        record_size_bytes = hd.length * LENGTH_MULTIPLIER
+        body_size = record_size_bytes - 16  # Subtract header size
+
         # Read all fields for DBN v3 format
         ts_recv = read(decoder.io, Int64)
         min_price_increment = read(decoder.io, Int64)
@@ -567,7 +572,16 @@ function read_record(decoder::DBNDecoder)
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
         _ = read(decoder.io, 8)  # Reserved for alignment
-        
+
+        # Check if we've read the correct amount
+        bytes_read = position(decoder.io) - start_pos
+        if bytes_read < body_size
+            # Skip remaining bytes (padding or unknown fields)
+            skip(decoder.io, body_size - bytes_read)
+        elseif bytes_read > body_size
+            @warn "Read more bytes than expected for InstrumentDefMsg: $bytes_read vs $body_size"
+        end
+
         return InstrumentDefMsg(
             hd, ts_recv, min_price_increment, display_factor, expiration, activation,
             high_limit_price, low_limit_price, max_price_variation,
