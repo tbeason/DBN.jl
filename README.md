@@ -17,6 +17,11 @@ For more details, read the [introduction to DBN](https://databento.com/docs/stan
 - ✅ High-precision timestamp handling
 - ✅ Fixed-point price arithmetic
 
+**Note**: This package supports DBN v2 and v3 formats only. DBN v1 files are not supported. To convert DBN v1 files, use the official Databento CLI:
+```bash
+dbn version1.dbn --output version2.dbn --upgrade
+```
+
 ## Installation
 
 This package is not yet registered. Install directly from GitHub:
