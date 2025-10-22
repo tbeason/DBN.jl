@@ -403,12 +403,12 @@ function write_record(encoder::DBNEncoder, record)
         
         write(io, UInt8(record.instrument_class))
         write(io, record.strike_price)
-        write(io, record.match_algorithm)
+        write(io, UInt8(record.match_algorithm))  # Write as UInt8, not Char
         write(io, record.main_fraction)
         write(io, record.price_display_format)
         write(io, record.sub_fraction)
         write(io, record.underlying_product)
-        write(io, record.security_update_action)
+        write(io, UInt8(record.security_update_action))  # Write as UInt8, not Char
         write(io, record.maturity_month)
         write(io, record.maturity_day)
         write(io, record.maturity_week)

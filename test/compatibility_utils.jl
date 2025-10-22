@@ -441,15 +441,14 @@ function parse_rust_json_record(rust_json_str)
             levels
         )
     elseif rtype == DBN.RType.MBP_10_MSG
-        # Parse all 10 levels from the JSON
+        # Parse all 10 levels from the JSON, creating BidAskPairs directly
         json_levels = get(json_dict, "levels", [])
 
-        # Create array of BidAskPairs, padding with zeros if needed
-        levels_vec = Vector{DBN.BidAskPair}(undef, 10)
-        for i in 1:10
-            if i <= length(json_levels)
-                level_dict = json_levels[i]
-                levels_vec[i] = DBN.BidAskPair(
+        # Helper function to create a BidAskPair from level dict or zeros
+        function make_level(idx)
+            if idx <= length(json_levels)
+                level_dict = json_levels[idx]
+                return DBN.BidAskPair(
                     parse(Int64, level_dict["bid_px"]),
                     parse(Int64, level_dict["ask_px"]),
                     UInt32(level_dict["bid_sz"]),
@@ -458,13 +457,12 @@ function parse_rust_json_record(rust_json_str)
                     UInt32(get(level_dict, "ask_ct", 0))
                 )
             else
-                # Pad with empty BidAskPair for missing levels
-                levels_vec[i] = DBN.BidAskPair(0, 0, 0, 0, 0, 0)
+                return DBN.BidAskPair(0, 0, 0, 0, 0, 0)
             end
         end
 
-        # Convert to NTuple{10, BidAskPair} using ntuple indexing
-        levels = ntuple(i -> levels_vec[i], 10)
+        # Create tuple directly using ntuple with helper function
+        levels = ntuple(make_level, 10)
 
         return DBN.MBP10Msg(
             hd,
