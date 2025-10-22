@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.10'  # LTS
+          - '1.12'  # Minimum supported version
           - '1'     # Latest stable
         os:
           - ubuntu-latest
