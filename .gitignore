@@ -1,5 +1,10 @@
-/target
-dbn
-Cargo.lock
-Cargo.toml
+# Julia
+Manifest.toml
 
+# IDE
+.vscode/
+.idea/
+
+# Test artifacts
+*.dbn
+*.dbn.zst
