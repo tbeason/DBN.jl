@@ -888,8 +888,11 @@ function read_dbn(filename::String)
         if isa(decoder.base_io, IOStream)
             close(decoder.base_io)
         end
+        # Force garbage collection to ensure file handles are released on Windows
+        # Windows may not immediately release file locks even after close()
+        GC.gc()
     end
-    
+
     return records
 end
 
@@ -919,7 +922,7 @@ println("Records: \$(length(records))")
 function read_dbn_with_metadata(filename::String)
     records = []
     decoder = DBNDecoder(filename)  # This now handles compression automatically
-    
+
     try
         while !eof(decoder.io)
             record = read_record(decoder)
@@ -937,7 +940,10 @@ function read_dbn_with_metadata(filename::String)
         if isa(decoder.base_io, IOStream)
             close(decoder.base_io)
         end
+        # Force garbage collection to ensure file handles are released on Windows
+        # Windows may not immediately release file locks even after close()
+        GC.gc()
     end
-    
+
     return decoder.metadata, records
 end

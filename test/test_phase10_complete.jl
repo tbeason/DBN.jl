@@ -98,7 +98,7 @@ using BenchmarkTools
                 @test write_time < 2.0
                 @test write_throughput > 0.5
                 
-                rm(temp_file, force=true)
+                safe_rm(temp_file)
             end
         end
     end

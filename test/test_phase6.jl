@@ -1,7 +1,5 @@
 # Phase 6: Compression Testing
 
-
-
 @testset "Phase 6: Compression Features" begin
     
     @testset "Compressed File Reading" begin
@@ -39,7 +37,7 @@
                         @test length(records) > 0
                     end
                 finally
-                    rm(temp_file, force=true)
+                    safe_rm(temp_file)
                 end
             end
         end
@@ -122,8 +120,8 @@
                 end
                 
             finally
-                rm(test_input, force=true)
-                rm(test_output, force=true)
+                safe_rm(test_input)
+                safe_rm(test_output)
             end
         end
         
@@ -149,8 +147,8 @@
                 @test isfile(test_output)   # Compressed file should exist
                 
             finally
-                rm(test_input, force=true)
-                rm(test_output, force=true)
+                safe_rm(test_input)
+                safe_rm(test_output)
             end
         end
         
@@ -171,7 +169,7 @@
                 @test_throws SystemError compress_dbn_file(test_input, "/invalid/path/output.dbn.zst")
                 
             finally
-                rm(test_input, force=true)
+                safe_rm(test_input)
             end
         end
     end
@@ -338,8 +336,8 @@
                 println("Space saved: $(stats.space_saved) bytes")
                 
             finally
-                rm(test_input, force=true)
-                rm(test_output, force=true)
+                safe_rm(test_input)
+                safe_rm(test_output)
             end
         end
         
@@ -385,7 +383,7 @@
                 @test_throws Exception read_dbn(corrupted_file)
                 
             finally
-                rm(corrupted_file, force=true)
+                safe_rm(corrupted_file)
             end
         end
         
@@ -413,8 +411,8 @@
                 @test length(records) == 0
                 
             finally
-                rm(test_input, force=true)
-                rm(test_output, force=true)
+                safe_rm(test_input)
+                safe_rm(test_output)
             end
         end
         
@@ -459,8 +457,8 @@
                 @test isa(compressed_records[2], TradeMsg)
                 
             finally
-                rm(test_input, force=true)
-                rm(test_output, force=true)
+                safe_rm(test_input)
+                safe_rm(test_output)
             end
         end
     end

@@ -64,6 +64,8 @@ Base.iterate(stream::DBNStream, state) = begin
         if isa(decoder.base_io, IOStream)
             close(decoder.base_io)
         end
+        # Force garbage collection to ensure file handles are released on Windows
+        GC.gc()
         return nothing
     end
     record = read_record(decoder)
@@ -344,14 +346,19 @@ function compress_dbn_file(input_file::String, output_file::String;
             close(compressed_io)
         end
     end
-    
+
+    # Force garbage collection to ensure file handles are released on Windows
+    GC.gc()
+
     # Get stats before potentially deleting original
     original_size = filesize(input_file)
     compressed_size = filesize(output_file)
     compression_ratio = 1.0 - (compressed_size / original_size)
-    
+
     # Optionally delete original
     if delete_original
+        # Force GC again before deletion to ensure handles are released
+        GC.gc()
         rm(input_file)
     end
     
