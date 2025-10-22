@@ -573,12 +573,11 @@ function read_record(decoder::DBNDecoder)
         leg_ratio_price_denominator = read(decoder.io, UInt32)
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
-        _ = read(decoder.io, 8)  # Reserved for alignment
 
         # Check if we've read the correct amount
         bytes_read = position(decoder.io) - start_pos
         if bytes_read < body_size
-            # Skip remaining bytes (padding or unknown fields)
+            # Skip remaining bytes (reserved/padding bytes that Rust or Julia may have added)
             skip(decoder.io, body_size - bytes_read)
         elseif bytes_read > body_size
             @warn "Read more bytes than expected for InstrumentDefMsg: $bytes_read vs $body_size"

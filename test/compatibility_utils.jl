@@ -441,28 +441,29 @@ function parse_rust_json_record(rust_json_str)
             levels
         )
     elseif rtype == DBN.RType.MBP_10_MSG
-        # Parse all 10 levels from the JSON, creating BidAskPairs directly
+        # Parse all 10 levels from the JSON
         json_levels = get(json_dict, "levels", [])
 
-        # Helper function to create a BidAskPair from level dict or zeros
-        function make_level(idx)
-            if idx <= length(json_levels)
-                level_dict = json_levels[idx]
-                return DBN.BidAskPair(
+        # Build levels array first, then convert to tuple
+        # This avoids world age and closure capture issues
+        levels_array = DBN.BidAskPair[]
+        for i in 1:10
+            if i <= length(json_levels)
+                level_dict = json_levels[i]
+                push!(levels_array, DBN.BidAskPair(
                     parse(Int64, level_dict["bid_px"]),
                     parse(Int64, level_dict["ask_px"]),
                     UInt32(level_dict["bid_sz"]),
                     UInt32(level_dict["ask_sz"]),
                     UInt32(get(level_dict, "bid_ct", 0)),
                     UInt32(get(level_dict, "ask_ct", 0))
-                )
+                ))
             else
-                return DBN.BidAskPair(0, 0, 0, 0, 0, 0)
+                push!(levels_array, DBN.BidAskPair(0, 0, 0, 0, 0, 0))
             end
         end
-
-        # Create tuple directly using ntuple with helper function
-        levels = ntuple(make_level, 10)
+        levels = (levels_array[1], levels_array[2], levels_array[3], levels_array[4], levels_array[5],
+                  levels_array[6], levels_array[7], levels_array[8], levels_array[9], levels_array[10])
 
         return DBN.MBP10Msg(
             hd,
