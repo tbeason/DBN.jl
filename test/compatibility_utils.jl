@@ -463,9 +463,8 @@ function parse_rust_json_record(rust_json_str)
             end
         end
 
-        # Convert vector to NTuple{10, BidAskPair}
-        levels = (levels_vec[1], levels_vec[2], levels_vec[3], levels_vec[4], levels_vec[5],
-                  levels_vec[6], levels_vec[7], levels_vec[8], levels_vec[9], levels_vec[10])
+        # Convert vector to NTuple{10, BidAskPair} using Tuple()
+        levels = Tuple(levels_vec)
 
         return DBN.MBP10Msg(
             hd,
