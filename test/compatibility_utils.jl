@@ -445,6 +445,8 @@ function parse_rust_json_record(rust_json_str)
         # Use the same pattern as import.jl's create_mbp10_levels function
         json_levels = get(json_dict, "levels", [])
 
+        @info "MBP10Msg parsing debug:" num_levels=length(json_levels)
+
         padded_levels = []
         for i in 1:10
             if i <= length(json_levels)
@@ -463,7 +465,10 @@ function parse_rust_json_record(rust_json_str)
         end
         levels = tuple(padded_levels...)
 
-        return DBN.MBP10Msg(
+        @info "Created levels tuple" typeof_levels=typeof(levels) length_levels=length(levels)
+        @info "First level" levels[1]
+
+        msg = DBN.MBP10Msg(
             hd,
             parse(Int64, json_dict["price"]),
             UInt32(json_dict["size"]),
@@ -476,6 +481,8 @@ function parse_rust_json_record(rust_json_str)
             UInt32(get(json_dict, "sequence", 0)),  # Default sequence to 0 if missing
             levels
         )
+        @info "Successfully created MBP10Msg"
+        return msg
     elseif rtype == DBN.RType.MBO_MSG
         return DBN.MBOMsg(
             hd,
