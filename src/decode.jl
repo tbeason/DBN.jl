@@ -538,12 +538,12 @@ function read_record(decoder::DBNDecoder)
         
         instrument_class = safe_instrument_class(read(decoder.io, UInt8))
         strike_price = read(decoder.io, Int64)
-        match_algorithm = read(decoder.io, Char)
+        match_algorithm = Char(read(decoder.io, UInt8))  # Single-byte C char
         main_fraction = read(decoder.io, UInt8)
         price_display_format = read(decoder.io, UInt8)
         sub_fraction = read(decoder.io, UInt8)
         underlying_product = read(decoder.io, UInt8)
-        security_update_action = read(decoder.io, Char)
+        security_update_action = Char(read(decoder.io, UInt8))  # Single-byte C char
         maturity_month = read(decoder.io, UInt8)
         maturity_day = read(decoder.io, UInt8)
         maturity_week = read(decoder.io, UInt8)

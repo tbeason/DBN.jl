@@ -389,7 +389,7 @@ function parse_rust_json_record(rust_json_str)
             Int32(json_dict["ts_in_delta"]),
             UInt32(json_dict["sequence"])
         )
-    elseif rtype == DBN.RType.MBP_1_MSG || rtype == DBN.RType.CMBP_1_MSG
+    elseif rtype == DBN.RType.MBP_1_MSG
         # Parse levels array for MBP-1 messages
         levels_dict = json_dict["levels"][1]  # First level for MBP-1
         levels = DBN.BidAskPair(
@@ -397,11 +397,10 @@ function parse_rust_json_record(rust_json_str)
             parse(Int64, levels_dict["ask_px"]),
             UInt32(levels_dict["bid_sz"]),
             UInt32(levels_dict["ask_sz"]),
-            # CMBP_1_MSG uses bid_pb/ask_pb instead of bid_ct/ask_ct
-            UInt32(get(levels_dict, "bid_ct", get(levels_dict, "bid_pb", 0))),
-            UInt32(get(levels_dict, "ask_ct", get(levels_dict, "ask_pb", 0)))
+            UInt32(get(levels_dict, "bid_ct", 0)),
+            UInt32(get(levels_dict, "ask_ct", 0))
         )
-        
+
         return DBN.MBP1Msg(
             hd,
             parse(Int64, json_dict["price"]),
@@ -415,31 +414,53 @@ function parse_rust_json_record(rust_json_str)
             UInt32(get(json_dict, "sequence", 0)),  # Default sequence to 0 if missing
             levels
         )
+    elseif rtype == DBN.RType.CMBP_1_MSG
+        # Parse levels array for CMBP-1 messages (consolidated market-by-price)
+        levels_dict = json_dict["levels"][1]  # First level
+        levels = DBN.BidAskPair(
+            parse(Int64, levels_dict["bid_px"]),
+            parse(Int64, levels_dict["ask_px"]),
+            UInt32(levels_dict["bid_sz"]),
+            UInt32(levels_dict["ask_sz"]),
+            # CMBP uses bid_pb/ask_pb (publisher count) instead of bid_ct/ask_ct
+            UInt32(get(levels_dict, "bid_pb", 0)),
+            UInt32(get(levels_dict, "ask_pb", 0))
+        )
+
+        return DBN.CMBP1Msg(
+            hd,
+            parse(Int64, json_dict["price"]),
+            UInt32(json_dict["size"]),
+            action_from_string(json_dict["action"]),
+            side_from_string(json_dict["side"]),
+            UInt8(json_dict["flags"]),
+            UInt8(get(json_dict, "depth", 0)),  # Default depth to 0 if missing
+            parse(Int64, json_dict["ts_recv"]),
+            Int32(json_dict["ts_in_delta"]),
+            UInt32(get(json_dict, "sequence", 0)),  # Default sequence to 0 if missing (CMBP may not have sequence)
+            levels
+        )
     elseif rtype == DBN.RType.MBP_10_MSG
         # Parse all 10 levels from the JSON
         json_levels = get(json_dict, "levels", [])
 
-        # Create array of 10 BidAskPairs, padding with zeros if needed
-        levels_array = DBN.BidAskPair[]
-        for i in 1:10
+        # Create tuple of 10 BidAskPairs using ntuple, padding with zeros if needed
+        levels = ntuple(10) do i
             if i <= length(json_levels)
                 level_dict = json_levels[i]
-                push!(levels_array, DBN.BidAskPair(
+                DBN.BidAskPair(
                     parse(Int64, level_dict["bid_px"]),
                     parse(Int64, level_dict["ask_px"]),
                     UInt32(level_dict["bid_sz"]),
                     UInt32(level_dict["ask_sz"]),
-                    UInt32(get(level_dict, "bid_ct", get(level_dict, "bid_pb", 0))),
-                    UInt32(get(level_dict, "ask_ct", get(level_dict, "ask_pb", 0)))
-                ))
+                    UInt32(get(level_dict, "bid_ct", 0)),
+                    UInt32(get(level_dict, "ask_ct", 0))
+                )
             else
                 # Pad with empty BidAskPair for missing levels
-                push!(levels_array, DBN.BidAskPair(0, 0, 0, 0, 0, 0))
+                DBN.BidAskPair(0, 0, 0, 0, 0, 0)
             end
         end
-
-        # Convert to NTuple{10, BidAskPair}
-        levels = ntuple(i -> levels_array[i], 10)
 
         return DBN.MBP10Msg(
             hd,
