@@ -574,18 +574,10 @@ function read_record(decoder::DBNDecoder)
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
 
-        # Ensure we've read exactly the right amount of bytes
-        # This handles differences in struct padding between Julia and Rust implementations
-        bytes_read = position(decoder.io) - start_pos
-
-        if bytes_read < body_size
-            # Skip remaining bytes (padding or reserved bytes)
-            skip(decoder.io, body_size - bytes_read)
-        elseif bytes_read > body_size
-            # We've read too many bytes - this shouldn't happen but handle it
-            # Seek backward to the correct position
-            seek(decoder.io, start_pos + body_size)
-        end
+        # Always seek to the exact end position specified by the header
+        # This handles any padding differences between Julia and Rust implementations
+        expected_end_pos = start_pos + body_size
+        seek(decoder.io, expected_end_pos)
 
         return InstrumentDefMsg(
             hd, ts_recv, min_price_increment, display_factor, expiration, activation,
