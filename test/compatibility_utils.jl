@@ -444,26 +444,25 @@ function parse_rust_json_record(rust_json_str)
         # Parse all 10 levels from the JSON
         json_levels = get(json_dict, "levels", [])
 
-        # Build levels array first, then convert to tuple
-        # This avoids world age and closure capture issues
-        levels_array = DBN.BidAskPair[]
+        # Build levels array with exactly 10 elements
+        levels_array = Vector{DBN.BidAskPair}(undef, 10)
         for i in 1:10
             if i <= length(json_levels)
                 level_dict = json_levels[i]
-                push!(levels_array, DBN.BidAskPair(
+                levels_array[i] = DBN.BidAskPair(
                     parse(Int64, level_dict["bid_px"]),
                     parse(Int64, level_dict["ask_px"]),
                     UInt32(level_dict["bid_sz"]),
                     UInt32(level_dict["ask_sz"]),
                     UInt32(get(level_dict, "bid_ct", 0)),
                     UInt32(get(level_dict, "ask_ct", 0))
-                ))
+                )
             else
-                push!(levels_array, DBN.BidAskPair(0, 0, 0, 0, 0, 0))
+                levels_array[i] = DBN.BidAskPair(0, 0, 0, 0, 0, 0)
             end
         end
-        levels = (levels_array[1], levels_array[2], levels_array[3], levels_array[4], levels_array[5],
-                  levels_array[6], levels_array[7], levels_array[8], levels_array[9], levels_array[10])
+        # Convert to tuple using tuple() with splatting
+        levels = tuple(levels_array...)
 
         return DBN.MBP10Msg(
             hd,
