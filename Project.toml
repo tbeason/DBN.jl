@@ -17,6 +17,7 @@ StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 TranscodingStreams = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 
 [compat]
+julia = "1.12"
 BenchmarkTools = "1.6.0"
 CSV = "0.10.15"
 CodecZstd = "0.8.6"

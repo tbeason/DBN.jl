@@ -1,0 +1,27 @@
+name: CompatHelper
+on:
+  schedule:
+    - cron: '00 00 * * *'  # Daily at midnight
+  workflow_dispatch:
+
+jobs:
+  CompatHelper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if Julia is already available in the PATH
+        id: julia_in_path
+        run: which julia
+        continue-on-error: true
+
+      - name: Install Julia, but only if it is not already available in the PATH
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+          arch: x64
+        if: steps.julia_in_path.outcome != 'success'
+
+      - name: Run CompatHelper
+        run: julia -e 'using Pkg; Pkg.add("CompatHelper"); using CompatHelper; CompatHelper.main()'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPATHELPER_PRIV: ${{ secrets.DOCUMENTER_KEY }}
