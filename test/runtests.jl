@@ -18,10 +18,16 @@ include("test_utils.jl")
     include("test_phase10_complete.jl")  # Integration and performance testing
     
     # Run compatibility tests if the Rust CLI is available
-    if isfile("/workspace/dbn/target/release/dbn")
+    dbn_cli_path = if Sys.iswindows()
+        "C:\\workspace\\dbn\\target\\release\\dbn.exe"
+    else
+        "/workspace/dbn/target/release/dbn"
+    end
+
+    if isfile(dbn_cli_path)
         include("test_compatibility_updated.jl")  # Updated cross-implementation compatibility testing
     else
-        @warn "Skipping compatibility tests - Rust dbn-cli not found. Build it with: cd /workspace/dbn/rust/dbn-cli && cargo build --release"
+        @warn "Skipping compatibility tests - Rust dbn-cli not found at $dbn_cli_path"
     end
 
     # Import/export tests (optional - uncomment if needed)

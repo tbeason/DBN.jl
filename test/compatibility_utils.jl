@@ -8,8 +8,12 @@ using DataFrames
 using CSV: CSV
 using Dates
 
-# Path to the Rust DBN CLI executable
-const DBN_CLI_PATH = "/workspace/dbn/target/release/dbn"
+# Path to the Rust DBN CLI executable (cross-platform)
+const DBN_CLI_PATH = if Sys.iswindows()
+    "C:\\workspace\\dbn\\target\\release\\dbn.exe"
+else
+    "/workspace/dbn/target/release/dbn"
+end
 
 """
     run_dbn_cli(args::Vector{String})
