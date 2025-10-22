@@ -29,6 +29,65 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install Rust for compatibility tests with official dbn-cli
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      # Cache Rust dependencies (Unix)
+      - name: Cache Rust dependencies (Unix)
+        if: runner.os != 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/dbn-workspace/dbn/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Cache Rust dependencies (Windows)
+      - name: Cache Rust dependencies (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~\dbn-workspace\dbn\target\
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Clone and build official dbn-cli for compatibility tests
+      - name: Build dbn-cli (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p $HOME/dbn-workspace
+          if [ ! -d "$HOME/dbn-workspace/dbn" ]; then
+            git clone --depth 1 https://github.com/databento/dbn $HOME/dbn-workspace/dbn
+          fi
+          cd $HOME/dbn-workspace/dbn/rust/dbn-cli
+          cargo build --release
+
+      - name: Build dbn-cli (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $workspace = "$env:USERPROFILE\dbn-workspace"
+          New-Item -ItemType Directory -Force -Path $workspace | Out-Null
+          if (-not (Test-Path "$workspace\dbn")) {
+            git clone --depth 1 https://github.com/databento/dbn "$workspace\dbn"
+          }
+          cd "$workspace\dbn\rust\dbn-cli"
+          cargo build --release
+
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}

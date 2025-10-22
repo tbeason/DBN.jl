@@ -8,8 +8,15 @@ using DataFrames
 using CSV: CSV
 using Dates
 
-# Path to the Rust DBN CLI executable
-const DBN_CLI_PATH = "/workspace/dbn/target/release/dbn"
+# Path to the Rust DBN CLI executable (cross-platform)
+const DBN_CLI_PATH = if Sys.iswindows()
+    joinpath(homedir(), "dbn-workspace", "dbn", "target", "release", "dbn.exe")
+else
+    joinpath(homedir(), "dbn-workspace", "dbn", "target", "release", "dbn")
+end
+
+# Path to test data directory (cross-platform)
+const TEST_DATA_DIR = joinpath(homedir(), "dbn-workspace", "dbn", "tests", "data")
 
 """
     run_dbn_cli(args::Vector{String})
@@ -284,13 +291,12 @@ end
 Get all test DBN files matching the pattern.
 """
 function get_test_files(pattern::String="*.dbn")
-    test_data_dir = "/workspace/dbn/tests/data"
-    if !isdir(test_data_dir)
-        error("Test data directory not found: $test_data_dir")
+    if !isdir(TEST_DATA_DIR)
+        error("Test data directory not found: $TEST_DATA_DIR")
     end
-    
+
     files = String[]
-    for (root, dirs, filenames) in walkdir(test_data_dir)
+    for (root, dirs, filenames) in walkdir(TEST_DATA_DIR)
         for filename in filenames
             # Convert glob pattern to regex
             pattern_regex = replace(pattern, "*" => ".*")
