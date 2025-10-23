@@ -563,7 +563,7 @@ function read_record(decoder::DBNDecoder)
         leg_count = read(decoder.io, UInt8)
         leg_index = read(decoder.io, UInt8)
         leg_instrument_id = read(decoder.io, UInt32)
-        leg_raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
+        leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
         leg_side = safe_side(read(decoder.io, UInt8))
         leg_underlying_id = read(decoder.io, UInt32)
         leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
@@ -574,8 +574,7 @@ function read_record(decoder::DBNDecoder)
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
 
-        # Skip any remaining bytes (e.g., reserved bytes at end)
-        # This handles padding differences between Julia and Rust implementations
+        # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos
         if bytes_read < body_size
             skip(decoder.io, body_size - bytes_read)
