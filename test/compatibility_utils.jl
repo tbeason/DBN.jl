@@ -322,6 +322,26 @@ function safe_parse_int64(s::String)
     end
 end
 
+function parse_bool_from_json(value)
+    if isa(value, Bool)
+        return value
+    elseif isa(value, String)
+        # Handle string representations: "Y"/"N", "true"/"false", or single-byte char
+        if value == "Y" || value == "y" || value == "true"
+            return true
+        elseif value == "N" || value == "n" || value == "false"
+            return false
+        else
+            # Convert string to UInt8 and check if non-zero
+            byte_val = UInt8(value[1])
+            return byte_val != 0x00
+        end
+    else
+        # For numeric types, convert to bool (non-zero = true)
+        return value != 0
+    end
+end
+
 # Helper function to create MBP10 levels tuple
 function create_mbp10_levels_from_json(json_levels::Vector)
     return ntuple(10) do i
@@ -582,7 +602,7 @@ function parse_rust_json_record(rust_json_str)
             UInt8(get(json_dict, "maturity_month", 0)),
             UInt8(get(json_dict, "maturity_day", 0)),
             UInt8(get(json_dict, "maturity_week", 0)),
-            Bool(get(json_dict, "user_defined_instrument", false)),
+            parse_bool_from_json(get(json_dict, "user_defined_instrument", false)),
             Int8(get(json_dict, "contract_multiplier_unit", 0)),
             Int8(get(json_dict, "flow_schedule_type", 0)),
             UInt8(get(json_dict, "tick_rule", 0)),
