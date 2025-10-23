@@ -386,11 +386,10 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.decay_start_date)
         write(io, record.channel_id)
         
-        # Write fixed-length strings with null padding
-        
+        # Write fixed-length strings with null padding (in binary file order)
+
         write_fixed_string(io, record.currency, 4)
         write_fixed_string(io, record.settl_currency, 4)
-        write_fixed_string(io, record.secsubtype, 6)
         write_fixed_string(io, record.raw_symbol, 22)
         write_fixed_string(io, record.group, 21)
         write_fixed_string(io, record.exchange, 5)
@@ -399,6 +398,7 @@ function write_record(encoder::DBNEncoder, record)
         write_fixed_string(io, record.security_type, 7)
         write_fixed_string(io, record.unit_of_measure, 31)
         write_fixed_string(io, record.underlying, 21)
+        write_fixed_string(io, record.secsubtype, 6)
         write_fixed_string(io, record.strike_price_currency, 4)
         
         write(io, UInt8(record.instrument_class))
