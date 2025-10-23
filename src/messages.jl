@@ -422,7 +422,7 @@ struct InstrumentDefMsg
     appl_id::Int16
     maturity_year::UInt16
     decay_start_date::UInt16
-    channel_id::UInt8
+    channel_id::UInt16  # uint16_t per Databento docs
     currency::String
     settl_currency::String
     secsubtype::String
@@ -451,8 +451,8 @@ struct InstrumentDefMsg
     flow_schedule_type::Int8
     tick_rule::UInt8
     # New strategy leg fields in DBN v3
-    leg_count::UInt8
-    leg_index::UInt8
+    leg_count::UInt16  # uint16_t per Databento docs
+    leg_index::UInt16  # uint16_t per Databento docs
     leg_instrument_id::UInt32
     leg_raw_symbol::String
     leg_side::Side.T

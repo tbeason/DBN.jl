@@ -496,8 +496,12 @@ function read_record(decoder::DBNDecoder)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16  # Subtract header size
 
-        # Read all fields for DBN v3 format
+        # Read fields in binary file order (per Databento docs)
         ts_recv = read(decoder.io, Int64)
+        raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
+        security_update_action_byte = read(decoder.io, UInt8)
+        security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
+        instrument_class = safe_instrument_class(read(decoder.io, UInt8))
         min_price_increment = read(decoder.io, Int64)
         display_factor = read(decoder.io, Int64)
         expiration = read(decoder.io, Int64)
@@ -525,12 +529,12 @@ function read_record(decoder::DBNDecoder)
         appl_id = read(decoder.io, Int16)
         maturity_year = read(decoder.io, UInt16)
         decay_start_date = read(decoder.io, UInt16)
-        channel_id = read(decoder.io, UInt8)
-        
-        # Read string fields (in binary file order)
+        channel_id = read(decoder.io, UInt16)  # uint16_t per docs, not uint8_t!
+
+        # String fields
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
+        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
         group = String(strip(String(read(decoder.io, 21)), '\0'))
         exchange = String(strip(String(read(decoder.io, 5)), '\0'))
         asset = String(strip(String(read(decoder.io, 11)), '\0'))  # Expanded to 11 bytes in v3
@@ -538,10 +542,8 @@ function read_record(decoder::DBNDecoder)
         security_type = String(strip(String(read(decoder.io, 7)), '\0'))
         unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
         underlying = String(strip(String(read(decoder.io, 21)), '\0'))
-        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
         strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        
-        instrument_class = safe_instrument_class(read(decoder.io, UInt8))
+
         strike_price = read(decoder.io, Int64)
         match_algorithm_byte = read(decoder.io, UInt8)
         match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
@@ -549,8 +551,6 @@ function read_record(decoder::DBNDecoder)
         price_display_format = read(decoder.io, UInt8)
         sub_fraction = read(decoder.io, UInt8)
         underlying_product = read(decoder.io, UInt8)
-        security_update_action_byte = read(decoder.io, UInt8)
-        security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
         maturity_month = read(decoder.io, UInt8)
         maturity_day = read(decoder.io, UInt8)
         maturity_week = read(decoder.io, UInt8)
@@ -558,21 +558,21 @@ function read_record(decoder::DBNDecoder)
         contract_multiplier_unit = read(decoder.io, Int8)
         flow_schedule_type = read(decoder.io, Int8)
         tick_rule = read(decoder.io, UInt8)
-        
+
         # New strategy leg fields in DBN v3
-        leg_count = read(decoder.io, UInt8)
-        leg_index = read(decoder.io, UInt8)
+        leg_count = read(decoder.io, UInt16)  # uint16_t per docs, not uint8_t!
+        leg_index = read(decoder.io, UInt16)  # uint16_t per docs, not uint8_t!
         leg_instrument_id = read(decoder.io, UInt32)
         leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
-        leg_side = safe_side(read(decoder.io, UInt8))
-        leg_underlying_id = read(decoder.io, UInt32)
         leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
-        leg_ratio_qty_numerator = read(decoder.io, UInt32)
-        leg_ratio_qty_denominator = read(decoder.io, UInt32)
-        leg_ratio_price_numerator = read(decoder.io, UInt32)
-        leg_ratio_price_denominator = read(decoder.io, UInt32)
+        leg_side = safe_side(read(decoder.io, UInt8))
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
+        leg_ratio_price_numerator = read(decoder.io, UInt32)
+        leg_ratio_price_denominator = read(decoder.io, UInt32)
+        leg_ratio_qty_numerator = read(decoder.io, UInt32)
+        leg_ratio_qty_denominator = read(decoder.io, UInt32)
+        leg_underlying_id = read(decoder.io, UInt32)
 
         # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos
@@ -602,7 +602,7 @@ function read_record(decoder::DBNDecoder)
             leg_ratio_qty_denominator, leg_ratio_price_numerator, leg_ratio_price_denominator,
             leg_price, leg_delta
         )
-        
+
     elseif hd.rtype == RType.IMBALANCE_MSG
         ts_recv = read(decoder.io, UInt64)
         ref_price = read(decoder.io, Int64)

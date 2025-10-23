@@ -356,7 +356,11 @@ function write_record(encoder::DBNEncoder, record)
         
     elseif isa(record, InstrumentDefMsg)
         write_record_header(io, record.hd)
+        # Write fields in binary file order (per Databento docs)
         write(io, record.ts_recv)
+        write_fixed_string(io, record.raw_symbol, 22)
+        write(io, UInt8(record.security_update_action))  # Write as UInt8, not Char
+        write(io, UInt8(record.instrument_class))
         write(io, record.min_price_increment)
         write(io, record.display_factor)
         write(io, record.expiration)
@@ -384,13 +388,12 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.appl_id)
         write(io, record.maturity_year)
         write(io, record.decay_start_date)
-        write(io, record.channel_id)
-        
-        # Write fixed-length strings with null padding (in binary file order)
+        write(io, record.channel_id)  # Now UInt16
 
+        # String fields
         write_fixed_string(io, record.currency, 4)
         write_fixed_string(io, record.settl_currency, 4)
-        write_fixed_string(io, record.raw_symbol, 22)
+        write_fixed_string(io, record.secsubtype, 6)
         write_fixed_string(io, record.group, 21)
         write_fixed_string(io, record.exchange, 5)
         write_fixed_string(io, record.asset, 11)  # Expanded to 11 bytes in v3
@@ -398,17 +401,14 @@ function write_record(encoder::DBNEncoder, record)
         write_fixed_string(io, record.security_type, 7)
         write_fixed_string(io, record.unit_of_measure, 31)
         write_fixed_string(io, record.underlying, 21)
-        write_fixed_string(io, record.secsubtype, 6)
         write_fixed_string(io, record.strike_price_currency, 4)
-        
-        write(io, UInt8(record.instrument_class))
+
         write(io, record.strike_price)
         write(io, UInt8(record.match_algorithm))  # Write as UInt8, not Char
         write(io, record.main_fraction)
         write(io, record.price_display_format)
         write(io, record.sub_fraction)
         write(io, record.underlying_product)
-        write(io, UInt8(record.security_update_action))  # Write as UInt8, not Char
         write(io, record.maturity_month)
         write(io, record.maturity_day)
         write(io, record.maturity_week)
@@ -416,23 +416,22 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.contract_multiplier_unit)
         write(io, record.flow_schedule_type)
         write(io, record.tick_rule)
-        
+
         # Write new strategy leg fields in DBN v3
-        write(io, record.leg_count)
-        write(io, record.leg_index)
+        write(io, record.leg_count)  # Now UInt16
+        write(io, record.leg_index)  # Now UInt16
         write(io, record.leg_instrument_id)
         write_fixed_string(io, record.leg_raw_symbol, 20)
-        write(io, UInt8(record.leg_side))
-        write(io, record.leg_underlying_id)
         write(io, UInt8(record.leg_instrument_class))
-        write(io, record.leg_ratio_qty_numerator)
-        write(io, record.leg_ratio_qty_denominator)
-        write(io, record.leg_ratio_price_numerator)
-        write(io, record.leg_ratio_price_denominator)
+        write(io, UInt8(record.leg_side))
         write(io, record.leg_price)
         write(io, record.leg_delta)
-        # Note: No reserved bytes at end for Rust compatibility
-        
+        write(io, record.leg_ratio_price_numerator)
+        write(io, record.leg_ratio_price_denominator)
+        write(io, record.leg_ratio_qty_numerator)
+        write(io, record.leg_ratio_qty_denominator)
+        write(io, record.leg_underlying_id)
+
     elseif isa(record, ImbalanceMsg)
         write_record_header(io, record.hd)
         write(io, record.ts_recv)
