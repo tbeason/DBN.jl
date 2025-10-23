@@ -312,6 +312,25 @@ end
 # Helper function for mean calculation
 mean(x) = sum(x) / length(x)
 
+# Helper function to create MBP10 levels tuple
+function create_mbp10_levels_from_json(json_levels::Vector)
+    return ntuple(10) do i
+        if i <= length(json_levels)
+            level_dict = json_levels[i]
+            DBN.BidAskPair(
+                parse(Int64, level_dict["bid_px"]),
+                parse(Int64, level_dict["ask_px"]),
+                UInt32(level_dict["bid_sz"]),
+                UInt32(level_dict["ask_sz"]),
+                UInt32(get(level_dict, "bid_ct", 0)),
+                UInt32(get(level_dict, "ask_ct", 0))
+            )
+        else
+            DBN.BidAskPair(0, 0, 0, 0, 0, 0)
+        end
+    end
+end
+
 """
     records_equal(r1, r2)
 
@@ -444,22 +463,8 @@ function parse_rust_json_record(rust_json_str)
         # Parse all 10 levels from the JSON
         json_levels = get(json_dict, "levels", [])
 
-        # Use ntuple like the binary decoder does
-        levels = ntuple(10) do i
-            if i <= length(json_levels)
-                level_dict = json_levels[i]
-                DBN.BidAskPair(
-                    parse(Int64, level_dict["bid_px"]),
-                    parse(Int64, level_dict["ask_px"]),
-                    UInt32(level_dict["bid_sz"]),
-                    UInt32(level_dict["ask_sz"]),
-                    UInt32(get(level_dict, "bid_ct", 0)),
-                    UInt32(get(level_dict, "ask_ct", 0))
-                )
-            else
-                DBN.BidAskPair(0, 0, 0, 0, 0, 0)
-            end
-        end
+        # Use helper function to avoid world age issues
+        levels = create_mbp10_levels_from_json(json_levels)
 
         return DBN.MBP10Msg(
             hd,

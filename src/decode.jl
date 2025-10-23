@@ -582,6 +582,8 @@ function read_record(decoder::DBNDecoder)
         bytes_read = position(decoder.io) - start_pos
         if bytes_read < body_size
             skip(decoder.io, body_size - bytes_read)
+        elseif bytes_read > body_size
+            error("InstrumentDefMsg: Read $bytes_read bytes but expected $body_size (over by $(bytes_read - body_size))")
         end
 
         return InstrumentDefMsg(
