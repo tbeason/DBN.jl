@@ -543,7 +543,7 @@ function parse_rust_json_record(rust_json_str)
             safe_parse_int64(get(json_dict, "price_ratio", "0")),
             Int32(get(json_dict, "inst_attrib_value", 0)),
             UInt32(get(json_dict, "underlying_id", 0)),
-            parse(UInt64, get(json_dict, "raw_instrument_id", "0")),
+            UInt64(get(json_dict, "raw_instrument_id", 0)),
             Int32(get(json_dict, "market_depth_implied", 0)),
             Int32(get(json_dict, "market_depth", 0)),
             UInt32(get(json_dict, "market_segment_id", 0)),
