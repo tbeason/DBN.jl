@@ -566,10 +566,8 @@ function read_record(decoder::DBNDecoder)
         leg_instrument_id = read(decoder.io, UInt32)
         leg_raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
         leg_side = safe_side(read(decoder.io, UInt8))
-        skip(decoder.io, 1)  # Padding for alignment before UInt32
         leg_underlying_id = read(decoder.io, UInt32)
         leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
-        skip(decoder.io, 3)  # Padding for alignment before UInt32
         leg_ratio_qty_numerator = read(decoder.io, UInt32)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_ratio_price_numerator = read(decoder.io, UInt32)
