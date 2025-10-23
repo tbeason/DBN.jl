@@ -312,6 +312,16 @@ end
 # Helper function for mean calculation
 mean(x) = sum(x) / length(x)
 
+# Helper function to safely parse Int64 fields that may contain UInt64::max sentinel values
+function safe_parse_int64(s::String)
+    try
+        return parse(Int64, s)
+    catch OverflowError
+        # Rust uses UInt64::max as sentinel, convert to Int64::max
+        return typemax(Int64)
+    end
+end
+
 # Helper function to create MBP10 levels tuple
 function create_mbp10_levels_from_json(json_levels::Vector)
     return ntuple(10) do i
@@ -520,17 +530,17 @@ function parse_rust_json_record(rust_json_str)
         # Note: Many fields may be missing or default in JSON output
         return DBN.InstrumentDefMsg(
             hd,
-            parse(Int64, get(json_dict, "ts_recv", "0")),
-            parse(Int64, get(json_dict, "min_price_increment", "0")),
-            parse(Int64, get(json_dict, "display_factor", "0")),
-            parse(Int64, get(json_dict, "expiration", "0")),
-            parse(Int64, get(json_dict, "activation", "0")),
-            parse(Int64, get(json_dict, "high_limit_price", "0")),
-            parse(Int64, get(json_dict, "low_limit_price", "0")),
-            parse(Int64, get(json_dict, "max_price_variation", "0")),
-            parse(Int64, get(json_dict, "unit_of_measure_qty", "0")),
-            parse(Int64, get(json_dict, "min_price_increment_amount", "0")),
-            parse(Int64, get(json_dict, "price_ratio", "0")),
+            safe_parse_int64(get(json_dict, "ts_recv", "0")),
+            safe_parse_int64(get(json_dict, "min_price_increment", "0")),
+            safe_parse_int64(get(json_dict, "display_factor", "0")),
+            safe_parse_int64(get(json_dict, "expiration", "0")),
+            safe_parse_int64(get(json_dict, "activation", "0")),
+            safe_parse_int64(get(json_dict, "high_limit_price", "0")),
+            safe_parse_int64(get(json_dict, "low_limit_price", "0")),
+            safe_parse_int64(get(json_dict, "max_price_variation", "0")),
+            safe_parse_int64(get(json_dict, "unit_of_measure_qty", "0")),
+            safe_parse_int64(get(json_dict, "min_price_increment_amount", "0")),
+            safe_parse_int64(get(json_dict, "price_ratio", "0")),
             Int32(get(json_dict, "inst_attrib_value", 0)),
             UInt32(get(json_dict, "underlying_id", 0)),
             parse(UInt64, get(json_dict, "raw_instrument_id", "0")),
@@ -562,7 +572,7 @@ function parse_rust_json_record(rust_json_str)
             String(get(json_dict, "underlying", "")),
             String(get(json_dict, "strike_price_currency", "")),
             haskey(json_dict, "instrument_class") ? DBN.safe_instrument_class(UInt8(json_dict["instrument_class"][1])) : DBN.InstrumentClass.OTHER,
-            parse(Int64, get(json_dict, "strike_price", "0")),
+            safe_parse_int64(get(json_dict, "strike_price", "0")),
             Char(get(json_dict, "match_algorithm", " ")[1]),
             UInt8(get(json_dict, "main_fraction", 0)),
             UInt8(get(json_dict, "price_display_format", 0)),
@@ -587,8 +597,8 @@ function parse_rust_json_record(rust_json_str)
             UInt32(get(json_dict, "leg_ratio_qty_denominator", 0)),
             UInt32(get(json_dict, "leg_ratio_price_numerator", 0)),
             UInt32(get(json_dict, "leg_ratio_price_denominator", 0)),
-            parse(Int64, get(json_dict, "leg_price", "0")),
-            parse(Int64, get(json_dict, "leg_delta", "0"))
+            safe_parse_int64(get(json_dict, "leg_price", "0")),
+            safe_parse_int64(get(json_dict, "leg_delta", "0"))
         )
     # BBO message types
     elseif rtype == DBN.RType.BBO_1S_MSG
