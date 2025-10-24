@@ -395,19 +395,27 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.leg_ratio_qty_denominator)
         write(io, record.leg_underlying_id)
 
-        # All 2-byte fields
+        # 2-byte fields - channel_id, leg_count, leg_index are version-dependent
         write(io, record.appl_id)
         write(io, record.maturity_year)
         write(io, record.decay_start_date)
-        write(io, record.channel_id)
-        write(io, record.leg_count)
-        write(io, record.leg_index)
 
-        # All string fields (char arrays)
+        # v2 uses UInt8 (1 byte), v3 uses UInt16 (2 bytes) for these fields
+        if encoder.metadata.version == 2
+            write(io, UInt8(record.channel_id))
+            write(io, UInt8(record.leg_count))
+            write(io, UInt8(record.leg_index))
+        else
+            write(io, record.channel_id)
+            write(io, record.leg_count)
+            write(io, record.leg_index)
+        end
+
+        # All string fields (char arrays) - matching Rust #[repr(C)] struct
         write_fixed_string(io, record.currency, 4)
         write_fixed_string(io, record.settl_currency, 4)
         write_fixed_string(io, record.secsubtype, 6)
-        write_fixed_string(io, record.raw_symbol, 19)  # Trying 19 bytes
+        write_fixed_string(io, record.raw_symbol, 22)  # Always 22 bytes per Rust struct
         write_fixed_string(io, record.group, 21)
         write_fixed_string(io, record.exchange, 5)
         write_fixed_string(io, record.asset, 11)

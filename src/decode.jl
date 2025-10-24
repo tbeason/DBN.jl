@@ -496,16 +496,8 @@ function read_record(decoder::DBNDecoder)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16  # Subtract header size
 
-        # Determine raw_symbol length based on DBN version from metadata
-        # Different DBN versions have different string field sizes
-        # v2: raw_symbol=19 bytes, total body=384 bytes
-        # v3: raw_symbol=22 bytes, total body=387+ bytes
-        file_version = decoder.metadata !== nothing ? decoder.metadata.version : 3
-        raw_symbol_len = if file_version == 2
-            19  # v2 format (smaller raw_symbol)
-        else
-            22  # v3 format (default, larger raw_symbol)
-        end
+        # raw_symbol is always 22 bytes in the Rust #[repr(C)] struct
+        raw_symbol_len = 22
 
         # Read fields following Rust #[repr(C)] struct declaration order
         # All 8-byte fields first (15 fields = 120 bytes)
@@ -546,13 +538,23 @@ function read_record(decoder::DBNDecoder)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_underlying_id = read(decoder.io, UInt32)
 
-        # All 2-byte fields (6 fields = 12 bytes, total 208)
+        # 2-byte fields - note that channel_id, leg_count, leg_index are version-dependent
         appl_id = read(decoder.io, Int16)
         maturity_year = read(decoder.io, UInt16)
         decay_start_date = read(decoder.io, UInt16)
-        channel_id = read(decoder.io, UInt16)
-        leg_count = read(decoder.io, UInt16)
-        leg_index = read(decoder.io, UInt16)
+
+        # These fields are UInt8 in v2 (body=384) and UInt16 in v3 (body≥387)
+        if body_size <= 384
+            # v2: single bytes (3 × 1 = 3 bytes)
+            channel_id = UInt16(read(decoder.io, UInt8))
+            leg_count = UInt16(read(decoder.io, UInt8))
+            leg_index = UInt16(read(decoder.io, UInt8))
+        else
+            # v3: two bytes each (3 × 2 = 6 bytes)
+            channel_id = read(decoder.io, UInt16)
+            leg_count = read(decoder.io, UInt16)
+            leg_index = read(decoder.io, UInt16)
+        end
 
         # All string fields - using version-specific raw_symbol length
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
