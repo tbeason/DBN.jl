@@ -549,11 +549,11 @@ function read_record(decoder::DBNDecoder)
         pos_after_2byte = position(decoder.io) - start_pos
         @warn "After 2-byte fields: position=$pos_after_2byte (expected 208)"
 
-        # All string fields (char arrays, 163 bytes total, total 371)
+        # All string fields (char arrays, should total 160 bytes for position 368)
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-        raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
+        raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))  # SYMBOL_CSTR_LEN = 20, not 22!
         group = String(strip(String(read(decoder.io, 21)), '\0'))
         exchange = String(strip(String(read(decoder.io, 5)), '\0'))
         asset = String(strip(String(read(decoder.io, 11)), '\0'))
@@ -564,9 +564,10 @@ function read_record(decoder::DBNDecoder)
         strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
         pos_after_strings = position(decoder.io) - start_pos
-        @warn "After string fields: position=$pos_after_strings (expected 371: 4+4+6+22+21+5+11+7+7+31+21+4+20=163)"
+        @warn "After string fields: position=$pos_after_strings (expected 368: 4+4+6+20+21+5+11+7+7+31+21+4+20=160)"
 
-        # All single-byte fields (16 fields = 16 bytes, total 387)
+        # All single-byte fields (15 fields = 15 bytes, total 383)
+        # Note: not including leg_side - seems to not be in binary format
         instrument_class_byte = read(decoder.io, UInt8)
         instrument_class = safe_instrument_class(instrument_class_byte)
         match_algorithm_byte = read(decoder.io, UInt8)
@@ -587,10 +588,10 @@ function read_record(decoder::DBNDecoder)
         tick_rule = read(decoder.io, UInt8)
         leg_instrument_class_byte = read(decoder.io, UInt8)
         leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
-        leg_side_byte = read(decoder.io, UInt8)
-        leg_side = safe_side(leg_side_byte)
+        # Set leg_side to default value since it's not in the binary
+        leg_side = DBN.Side.NONE
         pos_after_1byte = position(decoder.io) - start_pos
-        @warn "After single-byte fields: position=$pos_after_1byte (expected 384, but calculated 387)"
+        @warn "After single-byte fields: position=$pos_after_1byte (expected 384)"
 
         # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos

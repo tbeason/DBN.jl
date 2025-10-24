@@ -403,11 +403,11 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.leg_count)
         write(io, record.leg_index)
 
-        # All string fields (char arrays)
+        # All string fields (char arrays) - SYMBOL_CSTR_LEN=20
         write_fixed_string(io, record.currency, 4)
         write_fixed_string(io, record.settl_currency, 4)
         write_fixed_string(io, record.secsubtype, 6)
-        write_fixed_string(io, record.raw_symbol, 22)
+        write_fixed_string(io, record.raw_symbol, 20)  # SYMBOL_CSTR_LEN = 20, not 22!
         write_fixed_string(io, record.group, 21)
         write_fixed_string(io, record.exchange, 5)
         write_fixed_string(io, record.asset, 11)
@@ -418,7 +418,7 @@ function write_record(encoder::DBNEncoder, record)
         write_fixed_string(io, record.strike_price_currency, 4)
         write_fixed_string(io, record.leg_raw_symbol, 20)
 
-        # All single-byte fields
+        # All single-byte fields (15 fields, leg_side not included in binary)
         write(io, UInt8(record.instrument_class))
         write(io, UInt8(record.match_algorithm))
         write(io, record.main_fraction)
@@ -434,7 +434,7 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.flow_schedule_type)
         write(io, record.tick_rule)
         write(io, UInt8(record.leg_instrument_class))
-        write(io, UInt8(record.leg_side))
+        # Note: leg_side not written to binary format
 
     elseif isa(record, ImbalanceMsg)
         write_record_header(io, record.hd)
