@@ -403,11 +403,11 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.leg_count)
         write(io, record.leg_index)
 
-        # All string fields (char arrays) - raw_symbol always 22 bytes
+        # All string fields (char arrays) - following Rust struct field order (raw_symbol FIRST!)
+        write_fixed_string(io, record.raw_symbol, 22)  # Always 22 bytes
         write_fixed_string(io, record.currency, 4)
         write_fixed_string(io, record.settl_currency, 4)
         write_fixed_string(io, record.secsubtype, 6)
-        write_fixed_string(io, record.raw_symbol, 22)  # Always 22 bytes
         write_fixed_string(io, record.group, 21)
         write_fixed_string(io, record.exchange, 5)
         write_fixed_string(io, record.asset, 11)

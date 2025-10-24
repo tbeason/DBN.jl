@@ -547,11 +547,11 @@ function read_record(decoder::DBNDecoder)
         leg_count = read(decoder.io, UInt16)
         leg_index = read(decoder.io, UInt16)
 
-        # All string fields - version-specific sizes
+        # All string fields - following Rust struct field order (raw_symbol comes FIRST!)
+        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
         group = String(strip(String(read(decoder.io, 21)), '\0'))
         exchange = String(strip(String(read(decoder.io, 5)), '\0'))
         asset = String(strip(String(read(decoder.io, 11)), '\0'))
