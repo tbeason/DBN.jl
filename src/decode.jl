@@ -726,22 +726,22 @@ function read_record(decoder::DBNDecoder)
         return InstrumentDefMsg(
             hd, ts_recv, min_price_increment, display_factor, expiration, activation,
             high_limit_price, low_limit_price, max_price_variation,
-            unit_of_measure_qty, min_price_increment_amount, price_ratio, inst_attrib_value,
-            underlying_id, raw_instrument_id, market_depth_implied, market_depth,
-            market_segment_id, max_trade_vol, min_lot_size, min_lot_size_block,
-            min_lot_size_round_lot, min_trade_vol, contract_multiplier, decay_quantity,
-            original_contract_size, appl_id, maturity_year,
-            decay_start_date, channel_id, currency, settl_currency, secsubtype,
-            raw_symbol, group, exchange, asset, cfi, security_type, unit_of_measure,
-            underlying, strike_price_currency, instrument_class, strike_price,
-            match_algorithm, main_fraction, price_display_format,
-            sub_fraction, underlying_product, security_update_action,
-            maturity_month, maturity_day, maturity_week, user_defined_instrument,
-            contract_multiplier_unit, flow_schedule_type, tick_rule,
-            leg_count, leg_index, leg_instrument_id, leg_raw_symbol, leg_side,
-            leg_underlying_id, leg_instrument_class, leg_ratio_qty_numerator,
-            leg_ratio_qty_denominator, leg_ratio_price_numerator, leg_ratio_price_denominator,
-            leg_price, leg_delta
+            trading_reference_price, unit_of_measure_qty, min_price_increment_amount,
+            price_ratio, inst_attrib_value, underlying_id, raw_instrument_id,
+            market_depth_implied, market_depth, market_segment_id, max_trade_vol,
+            min_lot_size, min_lot_size_block, min_lot_size_round_lot, min_trade_vol,
+            contract_multiplier, decay_quantity, original_contract_size,
+            trading_reference_date, appl_id, maturity_year, decay_start_date, channel_id,
+            currency, settl_currency, secsubtype, raw_symbol, group, exchange, asset,
+            cfi, security_type, unit_of_measure, underlying, strike_price_currency,
+            instrument_class, strike_price, match_algorithm, md_security_trading_status,
+            main_fraction, price_display_format, settl_price_type, sub_fraction,
+            underlying_product, security_update_action, maturity_month, maturity_day,
+            maturity_week, user_defined_instrument, contract_multiplier_unit,
+            flow_schedule_type, tick_rule, leg_count, leg_index, leg_instrument_id,
+            leg_raw_symbol, leg_side, leg_underlying_id, leg_instrument_class,
+            leg_ratio_qty_numerator, leg_ratio_qty_denominator, leg_ratio_price_numerator,
+            leg_ratio_price_denominator, leg_price, leg_delta
         )
 
     elseif hd.rtype == RType.IMBALANCE_MSG
