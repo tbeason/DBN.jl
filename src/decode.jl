@@ -498,24 +498,11 @@ function read_record(decoder::DBNDecoder)
 
         if body_size == 384
             # ===== DBN V2 InstrumentDefMsg =====
+            # V2 ONLY has encode_order(0) for ts_recv. All other fields in struct order!
             # encode_order 0: ts_recv
             ts_recv = read(decoder.io, Int64)
 
-            # encode_order 2: raw_symbol (19 bytes in v2)
-            raw_symbol = String(strip(String(read(decoder.io, 19)), '\0'))
-
-            # encode_order 3: security_update_action
-            security_update_action_byte = read(decoder.io, UInt8)
-            security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
-
-            # encode_order 4: instrument_class
-            instrument_class_byte = read(decoder.io, UInt8)
-            instrument_class = safe_instrument_class(instrument_class_byte)
-
-            # encode_order 46: strike_price
-            strike_price = read(decoder.io, Int64)
-
-            # Fields without encode_order, in struct declaration order
+            # All remaining fields in struct declaration order (no more encode_order!)
             min_price_increment = read(decoder.io, Int64)
             display_factor = read(decoder.io, Int64)
             expiration = read(decoder.io, Int64)
@@ -549,10 +536,11 @@ function read_record(decoder::DBNDecoder)
             decay_start_date = read(decoder.io, UInt16)
             channel_id = read(decoder.io, UInt16)
 
-            # String fields
+            # String fields (in struct order)
             currency = String(strip(String(read(decoder.io, 4)), '\0'))
             settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
             secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
+            raw_symbol = String(strip(String(read(decoder.io, 19)), '\0'))  # 19 bytes in v2!
             group = String(strip(String(read(decoder.io, 21)), '\0'))
             exchange = String(strip(String(read(decoder.io, 5)), '\0'))
             asset = String(strip(String(read(decoder.io, 7)), '\0'))  # 7 bytes in v2, 11 in v3!
@@ -562,7 +550,12 @@ function read_record(decoder::DBNDecoder)
             underlying = String(strip(String(read(decoder.io, 21)), '\0'))
             strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
 
-            # Single-byte fields
+            # Enum and Int64 fields after strings (in struct order)
+            instrument_class_byte = read(decoder.io, UInt8)
+            instrument_class = safe_instrument_class(instrument_class_byte)
+            strike_price = read(decoder.io, Int64)
+
+            # Single-byte fields (in struct order)
             match_algorithm_byte = read(decoder.io, UInt8)
             match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
             md_security_trading_status = read(decoder.io, UInt8)  # v2 only
@@ -571,6 +564,8 @@ function read_record(decoder::DBNDecoder)
             settl_price_type = read(decoder.io, UInt8)  # v2 only
             sub_fraction = read(decoder.io, UInt8)
             underlying_product = read(decoder.io, UInt8)
+            security_update_action_byte = read(decoder.io, UInt8)
+            security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
             maturity_month = read(decoder.io, UInt8)
             maturity_day = read(decoder.io, UInt8)
             maturity_week = read(decoder.io, UInt8)
@@ -580,8 +575,8 @@ function read_record(decoder::DBNDecoder)
             flow_schedule_type = read(decoder.io, Int8)
             tick_rule = read(decoder.io, UInt8)
 
-            # v2: 62 bytes _reserved (322 bytes read, 384 total, 62 remaining)
-            skip(decoder.io, 62)
+            # v2: 63 bytes _reserved (321 bytes read, 384 total, 63 remaining)
+            skip(decoder.io, 63)
 
             # V2 has NO leg fields - set ALL to defaults
             leg_price = Int64(0)
