@@ -403,13 +403,11 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.leg_count)
         write(io, record.leg_index)
 
-        # All string fields (char arrays) - version-specific raw_symbol size
+        # All string fields (char arrays) - raw_symbol always 22 bytes
         write_fixed_string(io, record.currency, 4)
         write_fixed_string(io, record.settl_currency, 4)
         write_fixed_string(io, record.secsubtype, 6)
-        # v2: 19 bytes, v3: 22 bytes
-        raw_symbol_len = encoder.metadata.version == 2 ? 19 : 22
-        write_fixed_string(io, record.raw_symbol, raw_symbol_len)
+        write_fixed_string(io, record.raw_symbol, 22)  # Always 22 bytes
         write_fixed_string(io, record.group, 21)
         write_fixed_string(io, record.exchange, 5)
         write_fixed_string(io, record.asset, 11)
@@ -418,7 +416,17 @@ function write_record(encoder::DBNEncoder, record)
         write_fixed_string(io, record.unit_of_measure, 31)
         write_fixed_string(io, record.underlying, 21)
         write_fixed_string(io, record.strike_price_currency, 4)
-        write_fixed_string(io, record.leg_raw_symbol, 20)
+
+        # leg_raw_symbol only exists in v3 (20 bytes)
+        # v2 has _reserved padding (17 bytes) instead
+        if encoder.metadata.version >= 3
+            write_fixed_string(io, record.leg_raw_symbol, 20)
+        else
+            # v2: write 17 bytes of padding instead of leg_raw_symbol
+            for _ in 1:17
+                write(io, UInt8(0))
+            end
+        end
 
         # All single-byte fields (16 fields)
         write(io, UInt8(record.instrument_class))

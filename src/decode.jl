@@ -496,10 +496,9 @@ function read_record(decoder::DBNDecoder)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16  # Subtract header size
 
-        # raw_symbol size varies by version:
-        # v2 (body≤384): 19 bytes (to account for 3 bytes saved from UInt8 fields)
-        # v3 (body>384): 22 bytes
-        raw_symbol_len = body_size <= 384 ? 19 : 22
+        # raw_symbol is always 22 bytes in both v2 and v3
+        # The 3-byte difference comes from leg_raw_symbol (v3 only) vs _reserved padding (v2 only)
+        raw_symbol_len = 22
 
         # Read fields following Rust #[repr(C)] struct declaration order
         # All 8-byte fields first (15 fields = 120 bytes)
@@ -548,7 +547,7 @@ function read_record(decoder::DBNDecoder)
         leg_count = read(decoder.io, UInt16)
         leg_index = read(decoder.io, UInt16)
 
-        # All string fields - using version-specific raw_symbol length
+        # All string fields - version-specific sizes
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
@@ -561,7 +560,13 @@ function read_record(decoder::DBNDecoder)
         unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
         underlying = String(strip(String(read(decoder.io, 21)), '\0'))
         strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
+
+        # leg_raw_symbol only exists in v3 files
+        leg_raw_symbol = if body_size > 384
+            String(strip(String(read(decoder.io, 20)), '\0'))
+        else
+            ""  # v2 files don't have this field
+        end
 
         # All single-byte fields (16 fields = 16 bytes, total 384)
         instrument_class_byte = read(decoder.io, UInt8)
