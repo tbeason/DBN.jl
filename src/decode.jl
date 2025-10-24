@@ -496,11 +496,12 @@ function read_record(decoder::DBNDecoder)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16  # Subtract header size
 
-        # Determine raw_symbol length based on record size
+        # Determine raw_symbol length based on DBN version from metadata
         # Different DBN versions have different string field sizes
-        # v2: body_size=384, raw_symbol=19 bytes
-        # v3: body_size larger, raw_symbol=22 bytes
-        raw_symbol_len = if body_size == 384
+        # v2: raw_symbol=19 bytes, total body=384 bytes
+        # v3: raw_symbol=22 bytes, total body=387+ bytes
+        file_version = decoder.metadata !== nothing ? decoder.metadata.version : 3
+        raw_symbol_len = if file_version == 2
             19  # v2 format (smaller raw_symbol)
         else
             22  # v3 format (default, larger raw_symbol)
