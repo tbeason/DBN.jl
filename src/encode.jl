@@ -438,8 +438,11 @@ function write_record(encoder::DBNEncoder, record)
             write(io, record.flow_schedule_type)
             write(io, record.tick_rule)
 
-            # v2: 10 bytes _reserved
-            for _ in 1:10
+            # V2 has leg_raw_symbol but not the other leg fields
+            write_fixed_string(io, record.leg_raw_symbol, 20)
+
+            # v2: 32 bytes _reserved (not 10!)
+            for _ in 1:32
                 write(io, UInt8(0))
             end
 

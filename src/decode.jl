@@ -580,16 +580,18 @@ function read_record(decoder::DBNDecoder)
             flow_schedule_type = read(decoder.io, Int8)
             tick_rule = read(decoder.io, UInt8)
 
-            # v2: 10 bytes _reserved
-            skip(decoder.io, 10)
+            # V2 has leg_raw_symbol but not the other leg fields
+            leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
 
-            # V2 has NO leg fields - set to defaults
+            # v2: 32 bytes _reserved (not 10!)
+            skip(decoder.io, 32)
+
+            # V2 has NO other leg fields - set to defaults
             leg_price = Int64(0)
             leg_delta = Int64(0)
             leg_count = UInt16(0)
             leg_index = UInt16(0)
             leg_instrument_id = UInt32(0)
-            leg_raw_symbol = ""
             leg_instrument_class = InstrumentClass.UNKNOWN_0
             leg_side = Side.NONE
             leg_ratio_price_numerator = UInt32(0)
