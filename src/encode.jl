@@ -417,21 +417,21 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.flow_schedule_type)
         write(io, record.tick_rule)
 
-        # Write new strategy leg fields in DBN v3
-        write(io, record.leg_count)  # Now UInt16
-        write(io, record.leg_index)  # Now UInt16
+        # Write new strategy leg fields in DBN v3 (following docs table order)
+        write(io, record.leg_count)
+        write(io, record.leg_index)
         write(io, record.leg_instrument_id)
         write_fixed_string(io, record.leg_raw_symbol, 20)
+        write(io, UInt8(record.leg_instrument_class))
+        write(io, UInt8(record.leg_side))
+        write(io, zeros(UInt8, 2))  # 2 bytes padding for 4-byte struct alignment
+        write(io, record.leg_price)
+        write(io, record.leg_delta)
         write(io, record.leg_ratio_price_numerator)
         write(io, record.leg_ratio_price_denominator)
         write(io, record.leg_ratio_qty_numerator)
         write(io, record.leg_ratio_qty_denominator)
         write(io, record.leg_underlying_id)
-        write(io, UInt8(record.leg_instrument_class))
-        write(io, UInt8(record.leg_side))
-        write(io, zeros(UInt8, 2))  # 2 bytes padding for alignment
-        write(io, record.leg_price)
-        write(io, record.leg_delta)
 
     elseif isa(record, ImbalanceMsg)
         write_record_header(io, record.hd)

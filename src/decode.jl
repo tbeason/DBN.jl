@@ -559,21 +559,21 @@ function read_record(decoder::DBNDecoder)
         flow_schedule_type = read(decoder.io, Int8)
         tick_rule = read(decoder.io, UInt8)
 
-        # New strategy leg fields in DBN v3
-        leg_count = read(decoder.io, UInt16)  # uint16_t per docs, not uint8_t!
-        leg_index = read(decoder.io, UInt16)  # uint16_t per docs, not uint8_t!
+        # New strategy leg fields in DBN v3 (following docs table order)
+        leg_count = read(decoder.io, UInt16)
+        leg_index = read(decoder.io, UInt16)
         leg_instrument_id = read(decoder.io, UInt32)
         leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
+        leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
+        leg_side = safe_side(read(decoder.io, UInt8))
+        skip(decoder.io, 2)  # 2 bytes padding for 4-byte struct alignment
+        leg_price = read(decoder.io, Int64)
+        leg_delta = read(decoder.io, Int64)
         leg_ratio_price_numerator = read(decoder.io, UInt32)
         leg_ratio_price_denominator = read(decoder.io, UInt32)
         leg_ratio_qty_numerator = read(decoder.io, UInt32)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_underlying_id = read(decoder.io, UInt32)
-        leg_instrument_class = safe_instrument_class(read(decoder.io, UInt8))
-        leg_side = safe_side(read(decoder.io, UInt8))
-        skip(decoder.io, 2)  # 2 bytes padding to align leg_price to 8-byte boundary
-        leg_price = read(decoder.io, Int64)
-        leg_delta = read(decoder.io, Int64)
 
         # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos
