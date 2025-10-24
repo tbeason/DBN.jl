@@ -422,18 +422,18 @@ function write_record(encoder::DBNEncoder, record)
         write(io, UInt8(record.leg_side))
 
         # All string fields AFTER single-byte fields
-        # Note: group comes BEFORE secsubtype in the binary!
-        write_fixed_string(io, record.raw_symbol, 22)  # Always 22 bytes
+        # Order based on byte position analysis
         write_fixed_string(io, record.currency, 4)
-        write_fixed_string(io, record.settl_currency, 4)
-        write_fixed_string(io, record.group, 21)
-        write_fixed_string(io, record.secsubtype, 6)
+        write_fixed_string(io, record.raw_symbol, 22)
         write_fixed_string(io, record.exchange, 5)
         write_fixed_string(io, record.asset, 11)
+        write_fixed_string(io, record.settl_currency, 4)
         write_fixed_string(io, record.cfi, 7)
         write_fixed_string(io, record.security_type, 7)
         write_fixed_string(io, record.unit_of_measure, 31)
         write_fixed_string(io, record.underlying, 21)
+        write_fixed_string(io, record.group, 21)
+        write_fixed_string(io, record.secsubtype, 6)
         write_fixed_string(io, record.strike_price_currency, 4)
 
         # leg_raw_symbol only exists in v3 (20 bytes)

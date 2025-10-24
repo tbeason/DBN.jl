@@ -576,18 +576,18 @@ function read_record(decoder::DBNDecoder)
         @warn "Position after all numeric/single-byte fields, before strings: $pos_before_strings bytes (expected 224 = 120+76+12+16)"
 
         # All string fields AFTER single-byte fields
-        # Note: group comes BEFORE secsubtype in the binary!
-        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
+        # Trying different order based on corruption pattern
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        group = String(strip(String(read(decoder.io, 21)), '\0'))
-        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
+        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
         exchange = String(strip(String(read(decoder.io, 5)), '\0'))
         asset = String(strip(String(read(decoder.io, 11)), '\0'))
+        settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         cfi = String(strip(String(read(decoder.io, 7)), '\0'))
         security_type = String(strip(String(read(decoder.io, 7)), '\0'))
         unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
         underlying = String(strip(String(read(decoder.io, 21)), '\0'))
+        group = String(strip(String(read(decoder.io, 21)), '\0'))
+        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
         strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
 
         # leg_raw_symbol only exists in v3 files
