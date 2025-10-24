@@ -411,11 +411,13 @@ function write_record(encoder::DBNEncoder, record)
             write(io, record.leg_index)
         end
 
-        # All string fields (char arrays) - matching Rust #[repr(C)] struct
+        # All string fields (char arrays) - version-specific raw_symbol size
         write_fixed_string(io, record.currency, 4)
         write_fixed_string(io, record.settl_currency, 4)
         write_fixed_string(io, record.secsubtype, 6)
-        write_fixed_string(io, record.raw_symbol, 22)  # Always 22 bytes per Rust struct
+        # v2: 19 bytes, v3: 22 bytes
+        raw_symbol_len = encoder.metadata.version == 2 ? 19 : 22
+        write_fixed_string(io, record.raw_symbol, raw_symbol_len)
         write_fixed_string(io, record.group, 21)
         write_fixed_string(io, record.exchange, 5)
         write_fixed_string(io, record.asset, 11)
