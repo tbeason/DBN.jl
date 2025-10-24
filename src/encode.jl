@@ -385,10 +385,8 @@ function write_record(encoder::DBNEncoder, record)
         # encode_order 160: leg_instrument_id
         write(io, record.leg_instrument_id)
 
-        # encode_order 161: leg_raw_symbol (only in v3)
-        if encoder.metadata.version >= 3
-            write_fixed_string(io, record.leg_raw_symbol, 20)
-        end
+        # encode_order 161: leg_raw_symbol (both v2 and v3 have this!)
+        write_fixed_string(io, record.leg_raw_symbol, 20)
 
         # encode_order 163: leg_instrument_class
         write(io, UInt8(record.leg_instrument_class))
@@ -467,11 +465,9 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.flow_schedule_type)
         write(io, record.tick_rule)
 
-        # v2: write 17 bytes of padding
-        if encoder.metadata.version < 3
-            for _ in 1:17
-                write(io, UInt8(0))
-            end
+        # Both v2 and v3: write 17 bytes of _reserved padding
+        for _ in 1:17
+            write(io, UInt8(0))
         end
 
     elseif isa(record, ImbalanceMsg)

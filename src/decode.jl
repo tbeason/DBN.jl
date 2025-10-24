@@ -528,12 +528,8 @@ function read_record(decoder::DBNDecoder)
         # encode_order 160: leg_instrument_id
         leg_instrument_id = read(decoder.io, UInt32)
 
-        # encode_order 161: leg_raw_symbol (only in v3)
-        leg_raw_symbol = if body_size > 384
-            String(strip(String(read(decoder.io, 20)), '\0'))
-        else
-            ""  # v2 doesn't have this
-        end
+        # encode_order 161: leg_raw_symbol (both v2 and v3 have this!)
+        leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
 
         # encode_order 163: leg_instrument_class
         leg_instrument_class_byte = read(decoder.io, UInt8)
