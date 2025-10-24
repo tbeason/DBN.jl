@@ -497,7 +497,7 @@ function read_record(decoder::DBNDecoder)
         body_size = record_size_bytes - 16  # Subtract header size
 
         # Read fields following Rust #[repr(C)] struct declaration order
-        # All 8-byte fields first
+        # All 8-byte fields first (15 fields = 120 bytes)
         ts_recv = read(decoder.io, Int64)
         min_price_increment = read(decoder.io, Int64)
         display_factor = read(decoder.io, Int64)
@@ -513,8 +513,10 @@ function read_record(decoder::DBNDecoder)
         raw_instrument_id = read(decoder.io, UInt64)
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
+        pos_after_8byte = position(decoder.io) - start_pos
+        @warn "After 8-byte fields: position=$pos_after_8byte (expected 120)"
 
-        # All 4-byte fields
+        # All 4-byte fields (19 fields = 76 bytes, total 196)
         inst_attrib_value = read(decoder.io, Int32)
         underlying_id = read(decoder.io, UInt32)
         market_depth_implied = read(decoder.io, Int32)
@@ -534,16 +536,20 @@ function read_record(decoder::DBNDecoder)
         leg_ratio_qty_numerator = read(decoder.io, UInt32)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_underlying_id = read(decoder.io, UInt32)
+        pos_after_4byte = position(decoder.io) - start_pos
+        @warn "After 4-byte fields: position=$pos_after_4byte (expected 196)"
 
-        # All 2-byte fields
+        # All 2-byte fields (6 fields = 12 bytes, total 208)
         appl_id = read(decoder.io, Int16)
         maturity_year = read(decoder.io, UInt16)
         decay_start_date = read(decoder.io, UInt16)
         channel_id = read(decoder.io, UInt16)
         leg_count = read(decoder.io, UInt16)
         leg_index = read(decoder.io, UInt16)
+        pos_after_2byte = position(decoder.io) - start_pos
+        @warn "After 2-byte fields: position=$pos_after_2byte (expected 208)"
 
-        # All string fields (char arrays)
+        # All string fields (char arrays, 163 bytes total, total 371)
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
@@ -557,8 +563,10 @@ function read_record(decoder::DBNDecoder)
         underlying = String(strip(String(read(decoder.io, 21)), '\0'))
         strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
+        pos_after_strings = position(decoder.io) - start_pos
+        @warn "After string fields: position=$pos_after_strings (expected 371: 4+4+6+22+21+5+11+7+7+31+21+4+20=163)"
 
-        # All single-byte fields
+        # All single-byte fields (16 fields = 16 bytes, total 387)
         instrument_class_byte = read(decoder.io, UInt8)
         instrument_class = safe_instrument_class(instrument_class_byte)
         match_algorithm_byte = read(decoder.io, UInt8)
@@ -581,6 +589,8 @@ function read_record(decoder::DBNDecoder)
         leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
         leg_side_byte = read(decoder.io, UInt8)
         leg_side = safe_side(leg_side_byte)
+        pos_after_1byte = position(decoder.io) - start_pos
+        @warn "After single-byte fields: position=$pos_after_1byte (expected 384, but calculated 387)"
 
         # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos
