@@ -425,6 +425,7 @@
                 15000000000,                 # high_limit_price
                 5000000000,                  # low_limit_price
                 1000000000,                  # max_price_variation
+                0,                           # trading_reference_price (v2 only)
                 100,                         # unit_of_measure_qty
                 1000000,                     # min_price_increment_amount
                 1000000000,                  # price_ratio
@@ -442,6 +443,7 @@
                 100,                         # contract_multiplier
                 0,                           # decay_quantity
                 100,                         # original_contract_size
+                0,                           # trading_reference_date (v2 only)
                 10,                          # appl_id
                 2025,                        # maturity_year
                 0,                           # decay_start_date
@@ -461,8 +463,10 @@
                 InstrumentClass.STOCK,       # instrument_class
                 0,                           # strike_price
                 'P',                         # match_algorithm
+                0,                           # md_security_trading_status (v2 only)
                 2,                           # main_fraction
                 0,                           # price_display_format
+                0,                           # settl_price_type (v2 only)
                 0,                           # sub_fraction
                 0,                           # underlying_product
                 'A',                         # security_update_action

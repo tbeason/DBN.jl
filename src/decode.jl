@@ -530,7 +530,7 @@ function read_record(decoder::DBNDecoder)
 
             inst_attrib_value = read(decoder.io, Int32)
             underlying_id = read(decoder.io, UInt32)
-            raw_instrument_id = read(decoder.io, UInt32)  # u32 in v2, u64 in v3!
+            raw_instrument_id = UInt64(read(decoder.io, UInt32))  # u32 in v2, convert to u64 for struct
             market_depth_implied = read(decoder.io, Int32)
             market_depth = read(decoder.io, Int32)
             market_segment_id = read(decoder.io, UInt32)
