@@ -496,6 +496,16 @@ function read_record(decoder::DBNDecoder)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16  # Subtract header size
 
+        # Determine raw_symbol length based on record size
+        # Different DBN versions have different string field sizes
+        # v2: body_size=384, raw_symbol=19 bytes
+        # v3: body_size larger, raw_symbol=22 bytes
+        raw_symbol_len = if body_size == 384
+            19  # v2 format (smaller raw_symbol)
+        else
+            22  # v3 format (default, larger raw_symbol)
+        end
+
         # Read fields following Rust #[repr(C)] struct declaration order
         # All 8-byte fields first (15 fields = 120 bytes)
         ts_recv = read(decoder.io, Int64)
@@ -553,7 +563,7 @@ function read_record(decoder::DBNDecoder)
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-        raw_symbol = String(strip(String(read(decoder.io, 19)), '\0'))  # Trying 19 bytes
+        raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
         group = String(strip(String(read(decoder.io, 21)), '\0'))
         exchange = String(strip(String(read(decoder.io, 5)), '\0'))
         asset = String(strip(String(read(decoder.io, 11)), '\0'))
@@ -595,9 +605,14 @@ function read_record(decoder::DBNDecoder)
         # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos
         if bytes_read < body_size
-            skip(decoder.io, body_size - bytes_read)
+            # Skip any remaining bytes (like _reserved padding)
+            bytes_to_skip = body_size - bytes_read
+            @warn "Skipping $bytes_to_skip reserved/padding bytes"
+            skip(decoder.io, bytes_to_skip)
         elseif bytes_read > body_size
             error("InstrumentDefMsg: Read $bytes_read bytes but expected $body_size (over by $(bytes_read - body_size))")
+        else
+            @warn "Perfect match: read exactly $bytes_read bytes as expected!"
         end
 
         return InstrumentDefMsg(
