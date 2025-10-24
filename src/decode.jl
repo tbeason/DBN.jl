@@ -491,134 +491,236 @@ function read_record(decoder::DBNDecoder)
         return StatusMsg(hd, ts_recv, action, reason, trading_event, is_trading, is_quoting, is_short_sell_restricted)
         
     elseif hd.rtype == RType.INSTRUMENT_DEF_MSG
-        # InstrumentDefMsg uses encode_order attributes, NOT struct declaration order!
-        # Read fields in encode_order sequence
+        # V2 and V3 have COMPLETELY different structures!
         start_pos = position(decoder.io)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16
 
-        # v2 uses 19-byte raw_symbol, v3 uses 22-byte (SYMBOL_CSTR_LEN may vary)
-        raw_symbol_len = body_size == 384 ? 19 : 22
+        if body_size == 384
+            # ===== DBN V2 InstrumentDefMsg =====
+            # encode_order 0: ts_recv
+            ts_recv = read(decoder.io, Int64)
 
-        # encode_order 0: ts_recv
-        ts_recv = read(decoder.io, Int64)
+            # encode_order 2: raw_symbol (19 bytes in v2)
+            raw_symbol = String(strip(String(read(decoder.io, 19)), '\0'))
 
-        # encode_order 2: raw_symbol
-        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
+            # encode_order 3: security_update_action
+            security_update_action_byte = read(decoder.io, UInt8)
+            security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
 
-        # encode_order 3: security_update_action
-        security_update_action_byte = read(decoder.io, UInt8)
-        security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
+            # encode_order 4: instrument_class
+            instrument_class_byte = read(decoder.io, UInt8)
+            instrument_class = safe_instrument_class(instrument_class_byte)
 
-        # encode_order 4: instrument_class
-        instrument_class_byte = read(decoder.io, UInt8)
-        instrument_class = safe_instrument_class(instrument_class_byte)
+            # encode_order 46: strike_price
+            strike_price = read(decoder.io, Int64)
 
-        # encode_order 20: raw_instrument_id
-        raw_instrument_id = read(decoder.io, UInt64)
+            # Fields without encode_order, in struct declaration order
+            min_price_increment = read(decoder.io, Int64)
+            display_factor = read(decoder.io, Int64)
+            expiration = read(decoder.io, Int64)
+            activation = read(decoder.io, Int64)
+            high_limit_price = read(decoder.io, Int64)
+            low_limit_price = read(decoder.io, Int64)
+            max_price_variation = read(decoder.io, Int64)
+            trading_reference_price = read(decoder.io, Int64)  # v2 only
+            unit_of_measure_qty = read(decoder.io, Int64)
+            min_price_increment_amount = read(decoder.io, Int64)
+            price_ratio = read(decoder.io, Int64)
 
-        # encode_order 54: strike_price
-        strike_price = read(decoder.io, Int64)
+            inst_attrib_value = read(decoder.io, Int32)
+            underlying_id = read(decoder.io, UInt32)
+            raw_instrument_id = read(decoder.io, UInt32)  # u32 in v2, u64 in v3!
+            market_depth_implied = read(decoder.io, Int32)
+            market_depth = read(decoder.io, Int32)
+            market_segment_id = read(decoder.io, UInt32)
+            max_trade_vol = read(decoder.io, UInt32)
+            min_lot_size = read(decoder.io, Int32)
+            min_lot_size_block = read(decoder.io, Int32)
+            min_lot_size_round_lot = read(decoder.io, Int32)
+            min_trade_vol = read(decoder.io, UInt32)
+            contract_multiplier = read(decoder.io, Int32)
+            decay_quantity = read(decoder.io, Int32)
+            original_contract_size = read(decoder.io, Int32)
 
-        # encode_order 158: leg_count
-        leg_count = read(decoder.io, UInt16)
+            trading_reference_date = read(decoder.io, UInt16)  # v2 only
+            appl_id = read(decoder.io, Int16)
+            maturity_year = read(decoder.io, UInt16)
+            decay_start_date = read(decoder.io, UInt16)
+            channel_id = read(decoder.io, UInt16)
 
-        # encode_order 159: leg_index
-        leg_index = read(decoder.io, UInt16)
+            # String fields
+            currency = String(strip(String(read(decoder.io, 4)), '\0'))
+            settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+            secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
+            group = String(strip(String(read(decoder.io, 21)), '\0'))
+            exchange = String(strip(String(read(decoder.io, 5)), '\0'))
+            asset = String(strip(String(read(decoder.io, 7)), '\0'))  # 7 bytes in v2, 11 in v3!
+            cfi = String(strip(String(read(decoder.io, 7)), '\0'))
+            security_type = String(strip(String(read(decoder.io, 7)), '\0'))
+            unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
+            underlying = String(strip(String(read(decoder.io, 21)), '\0'))
+            strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
 
-        # encode_order 160: leg_instrument_id
-        leg_instrument_id = read(decoder.io, UInt32)
+            # Single-byte fields
+            match_algorithm_byte = read(decoder.io, UInt8)
+            match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
+            md_security_trading_status = read(decoder.io, UInt8)  # v2 only
+            main_fraction = read(decoder.io, UInt8)
+            price_display_format = read(decoder.io, UInt8)
+            settl_price_type = read(decoder.io, UInt8)  # v2 only
+            sub_fraction = read(decoder.io, UInt8)
+            underlying_product = read(decoder.io, UInt8)
+            maturity_month = read(decoder.io, UInt8)
+            maturity_day = read(decoder.io, UInt8)
+            maturity_week = read(decoder.io, UInt8)
+            user_defined_instrument_byte = read(decoder.io, UInt8)
+            user_defined_instrument = user_defined_instrument_byte != 0x00 && user_defined_instrument_byte != UInt8('N')
+            contract_multiplier_unit = read(decoder.io, Int8)
+            flow_schedule_type = read(decoder.io, Int8)
+            tick_rule = read(decoder.io, UInt8)
 
-        # encode_order 161: leg_raw_symbol (both v2 and v3 have this!)
-        leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
+            # v2: 10 bytes _reserved
+            skip(decoder.io, 10)
 
-        # encode_order 163: leg_instrument_class
-        leg_instrument_class_byte = read(decoder.io, UInt8)
-        leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
+            # V2 has NO leg fields - set to defaults
+            leg_price = Int64(0)
+            leg_delta = Int64(0)
+            leg_count = UInt16(0)
+            leg_index = UInt16(0)
+            leg_instrument_id = UInt32(0)
+            leg_raw_symbol = ""
+            leg_instrument_class = InstrumentClass.UNKNOWN_0
+            leg_side = Side.NONE
+            leg_ratio_price_numerator = UInt32(0)
+            leg_ratio_price_denominator = UInt32(0)
+            leg_ratio_qty_numerator = UInt32(0)
+            leg_ratio_qty_denominator = UInt32(0)
+            leg_underlying_id = UInt32(0)
 
-        # encode_order 164: leg_side
-        leg_side_byte = read(decoder.io, UInt8)
-        leg_side = safe_side(leg_side_byte)
+        else
+            # ===== DBN V3 InstrumentDefMsg =====
+            # encode_order 0: ts_recv
+            ts_recv = read(decoder.io, Int64)
 
-        # encode_order 165: leg_price
-        leg_price = read(decoder.io, Int64)
+            # encode_order 2: raw_symbol (22 bytes in v3)
+            raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
 
-        # encode_order 166: leg_delta
-        leg_delta = read(decoder.io, Int64)
+            # encode_order 3: security_update_action
+            security_update_action_byte = read(decoder.io, UInt8)
+            security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
 
-        # encode_order 167-171: leg ratio fields
-        leg_ratio_price_numerator = read(decoder.io, UInt32)
-        leg_ratio_price_denominator = read(decoder.io, UInt32)
-        leg_ratio_qty_numerator = read(decoder.io, UInt32)
-        leg_ratio_qty_denominator = read(decoder.io, UInt32)
-        leg_underlying_id = read(decoder.io, UInt32)
+            # encode_order 4: instrument_class
+            instrument_class_byte = read(decoder.io, UInt8)
+            instrument_class = safe_instrument_class(instrument_class_byte)
 
-        # Now all fields WITHOUT encode_order, in struct declaration order
-        min_price_increment = read(decoder.io, Int64)
-        display_factor = read(decoder.io, Int64)
-        expiration = read(decoder.io, Int64)
-        activation = read(decoder.io, Int64)
-        high_limit_price = read(decoder.io, Int64)
-        low_limit_price = read(decoder.io, Int64)
-        max_price_variation = read(decoder.io, Int64)
-        unit_of_measure_qty = read(decoder.io, Int64)
-        min_price_increment_amount = read(decoder.io, Int64)
-        price_ratio = read(decoder.io, Int64)
+            # encode_order 20: raw_instrument_id (u64 in v3)
+            raw_instrument_id = read(decoder.io, UInt64)
 
-        inst_attrib_value = read(decoder.io, Int32)
-        underlying_id = read(decoder.io, UInt32)
-        market_depth_implied = read(decoder.io, Int32)
-        market_depth = read(decoder.io, Int32)
-        market_segment_id = read(decoder.io, UInt32)
-        max_trade_vol = read(decoder.io, UInt32)
-        min_lot_size = read(decoder.io, Int32)
-        min_lot_size_block = read(decoder.io, Int32)
-        min_lot_size_round_lot = read(decoder.io, Int32)
-        min_trade_vol = read(decoder.io, UInt32)
-        contract_multiplier = read(decoder.io, Int32)
-        decay_quantity = read(decoder.io, Int32)
-        original_contract_size = read(decoder.io, Int32)
+            # encode_order 54: strike_price
+            strike_price = read(decoder.io, Int64)
 
-        appl_id = read(decoder.io, Int16)
-        maturity_year = read(decoder.io, UInt16)
-        decay_start_date = read(decoder.io, UInt16)
-        channel_id = read(decoder.io, UInt16)
+            # encode_order 158: leg_count
+            leg_count = read(decoder.io, UInt16)
 
-        # String fields without encode_order
-        currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-        group = String(strip(String(read(decoder.io, 21)), '\0'))
-        exchange = String(strip(String(read(decoder.io, 5)), '\0'))
-        asset = String(strip(String(read(decoder.io, 11)), '\0'))
-        cfi = String(strip(String(read(decoder.io, 7)), '\0'))
-        security_type = String(strip(String(read(decoder.io, 7)), '\0'))
-        unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
-        underlying = String(strip(String(read(decoder.io, 21)), '\0'))
-        strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+            # encode_order 159: leg_index
+            leg_index = read(decoder.io, UInt16)
 
-        # Single-byte fields without encode_order
-        match_algorithm_byte = read(decoder.io, UInt8)
-        match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
-        main_fraction = read(decoder.io, UInt8)
-        price_display_format = read(decoder.io, UInt8)
-        sub_fraction = read(decoder.io, UInt8)
-        underlying_product = read(decoder.io, UInt8)
-        maturity_month = read(decoder.io, UInt8)
-        maturity_day = read(decoder.io, UInt8)
-        maturity_week = read(decoder.io, UInt8)
-        user_defined_instrument_byte = read(decoder.io, UInt8)
-        user_defined_instrument = user_defined_instrument_byte != 0x00 && user_defined_instrument_byte != UInt8('N')
-        contract_multiplier_unit = read(decoder.io, Int8)
-        flow_schedule_type = read(decoder.io, Int8)
-        tick_rule = read(decoder.io, UInt8)
+            # encode_order 160: leg_instrument_id
+            leg_instrument_id = read(decoder.io, UInt32)
 
-        # Handle remaining bytes (v2 has 17-byte _reserved padding)
-        bytes_read = position(decoder.io) - start_pos
-        if bytes_read < body_size
-            skip(decoder.io, body_size - bytes_read)
-        elseif bytes_read > body_size
-            error("InstrumentDefMsg: Read $bytes_read bytes but expected $body_size")
+            # encode_order 161: leg_raw_symbol (20 bytes)
+            leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
+
+            # encode_order 163: leg_instrument_class
+            leg_instrument_class_byte = read(decoder.io, UInt8)
+            leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
+
+            # encode_order 164: leg_side
+            leg_side_byte = read(decoder.io, UInt8)
+            leg_side = safe_side(leg_side_byte)
+
+            # encode_order 165: leg_price
+            leg_price = read(decoder.io, Int64)
+
+            # encode_order 166: leg_delta
+            leg_delta = read(decoder.io, Int64)
+
+            # encode_order 167-171: leg ratio fields
+            leg_ratio_price_numerator = read(decoder.io, UInt32)
+            leg_ratio_price_denominator = read(decoder.io, UInt32)
+            leg_ratio_qty_numerator = read(decoder.io, UInt32)
+            leg_ratio_qty_denominator = read(decoder.io, UInt32)
+            leg_underlying_id = read(decoder.io, UInt32)
+
+            # Now all fields WITHOUT encode_order, in struct declaration order
+            min_price_increment = read(decoder.io, Int64)
+            display_factor = read(decoder.io, Int64)
+            expiration = read(decoder.io, Int64)
+            activation = read(decoder.io, Int64)
+            high_limit_price = read(decoder.io, Int64)
+            low_limit_price = read(decoder.io, Int64)
+            max_price_variation = read(decoder.io, Int64)
+            unit_of_measure_qty = read(decoder.io, Int64)
+            min_price_increment_amount = read(decoder.io, Int64)
+            price_ratio = read(decoder.io, Int64)
+
+            inst_attrib_value = read(decoder.io, Int32)
+            underlying_id = read(decoder.io, UInt32)
+            market_depth_implied = read(decoder.io, Int32)
+            market_depth = read(decoder.io, Int32)
+            market_segment_id = read(decoder.io, UInt32)
+            max_trade_vol = read(decoder.io, UInt32)
+            min_lot_size = read(decoder.io, Int32)
+            min_lot_size_block = read(decoder.io, Int32)
+            min_lot_size_round_lot = read(decoder.io, Int32)
+            min_trade_vol = read(decoder.io, UInt32)
+            contract_multiplier = read(decoder.io, Int32)
+            decay_quantity = read(decoder.io, Int32)
+            original_contract_size = read(decoder.io, Int32)
+
+            appl_id = read(decoder.io, Int16)
+            maturity_year = read(decoder.io, UInt16)
+            decay_start_date = read(decoder.io, UInt16)
+            channel_id = read(decoder.io, UInt16)
+
+            # String fields without encode_order
+            currency = String(strip(String(read(decoder.io, 4)), '\0'))
+            settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+            secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
+            group = String(strip(String(read(decoder.io, 21)), '\0'))
+            exchange = String(strip(String(read(decoder.io, 5)), '\0'))
+            asset = String(strip(String(read(decoder.io, 11)), '\0'))  # 11 bytes in v3!
+            cfi = String(strip(String(read(decoder.io, 7)), '\0'))
+            security_type = String(strip(String(read(decoder.io, 7)), '\0'))
+            unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
+            underlying = String(strip(String(read(decoder.io, 21)), '\0'))
+            strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+
+            # Single-byte fields without encode_order
+            match_algorithm_byte = read(decoder.io, UInt8)
+            match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
+            main_fraction = read(decoder.io, UInt8)
+            price_display_format = read(decoder.io, UInt8)
+            sub_fraction = read(decoder.io, UInt8)
+            underlying_product = read(decoder.io, UInt8)
+            maturity_month = read(decoder.io, UInt8)
+            maturity_day = read(decoder.io, UInt8)
+            maturity_week = read(decoder.io, UInt8)
+            user_defined_instrument_byte = read(decoder.io, UInt8)
+            user_defined_instrument = user_defined_instrument_byte != 0x00 && user_defined_instrument_byte != UInt8('N')
+            contract_multiplier_unit = read(decoder.io, Int8)
+            flow_schedule_type = read(decoder.io, Int8)
+            tick_rule = read(decoder.io, UInt8)
+
+            # v3: 17 bytes _reserved
+            skip(decoder.io, 17)
+
+            # V3 has NO v2-only fields - set to defaults
+            trading_reference_price = Int64(0)
+            trading_reference_date = UInt16(0)
+            md_security_trading_status = UInt8(0)
+            settl_price_type = UInt8(0)
         end
 
         return InstrumentDefMsg(

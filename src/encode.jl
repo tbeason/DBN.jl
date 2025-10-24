@@ -356,119 +356,206 @@ function write_record(encoder::DBNEncoder, record)
         
     elseif isa(record, InstrumentDefMsg)
         write_record_header(io, record.hd)
-        # InstrumentDefMsg uses encode_order attributes, NOT struct declaration order!
+        # V2 and V3 have COMPLETELY different structures!
 
-        # encode_order 0: ts_recv
-        write(io, record.ts_recv)
+        if encoder.metadata.version == 2
+            # ===== DBN V2 InstrumentDefMsg =====
+            # encode_order 0: ts_recv
+            write(io, record.ts_recv)
 
-        # encode_order 2: raw_symbol (v2: 19 bytes, v3: 22 bytes)
-        raw_symbol_len = encoder.metadata.version == 2 ? 19 : 22
-        write_fixed_string(io, record.raw_symbol, raw_symbol_len)
+            # encode_order 2: raw_symbol (19 bytes in v2)
+            write_fixed_string(io, record.raw_symbol, 19)
 
-        # encode_order 3: security_update_action
-        write(io, UInt8(record.security_update_action))
+            # encode_order 3: security_update_action
+            write(io, UInt8(record.security_update_action))
 
-        # encode_order 4: instrument_class
-        write(io, UInt8(record.instrument_class))
+            # encode_order 4: instrument_class
+            write(io, UInt8(record.instrument_class))
 
-        # encode_order 20: raw_instrument_id
-        write(io, record.raw_instrument_id)
+            # encode_order 46: strike_price (different from v3's 54!)
+            write(io, record.strike_price)
 
-        # encode_order 54: strike_price
-        write(io, record.strike_price)
+            # Fields without encode_order, in struct declaration order
+            write(io, record.min_price_increment)
+            write(io, record.display_factor)
+            write(io, record.expiration)
+            write(io, record.activation)
+            write(io, record.high_limit_price)
+            write(io, record.low_limit_price)
+            write(io, record.max_price_variation)
+            write(io, record.trading_reference_price)  # v2 only
+            write(io, record.unit_of_measure_qty)
+            write(io, record.min_price_increment_amount)
+            write(io, record.price_ratio)
 
-        # encode_order 158: leg_count
-        write(io, record.leg_count)
+            write(io, record.inst_attrib_value)
+            write(io, record.underlying_id)
+            write(io, UInt32(record.raw_instrument_id))  # u32 in v2, u64 in v3!
+            write(io, record.market_depth_implied)
+            write(io, record.market_depth)
+            write(io, record.market_segment_id)
+            write(io, record.max_trade_vol)
+            write(io, record.min_lot_size)
+            write(io, record.min_lot_size_block)
+            write(io, record.min_lot_size_round_lot)
+            write(io, record.min_trade_vol)
+            write(io, record.contract_multiplier)
+            write(io, record.decay_quantity)
+            write(io, record.original_contract_size)
 
-        # encode_order 159: leg_index
-        write(io, record.leg_index)
+            write(io, record.trading_reference_date)  # v2 only
+            write(io, record.appl_id)
+            write(io, record.maturity_year)
+            write(io, record.decay_start_date)
+            write(io, record.channel_id)
 
-        # encode_order 160: leg_instrument_id
-        write(io, record.leg_instrument_id)
+            # String fields
+            write_fixed_string(io, record.currency, 4)
+            write_fixed_string(io, record.settl_currency, 4)
+            write_fixed_string(io, record.secsubtype, 6)
+            write_fixed_string(io, record.group, 21)
+            write_fixed_string(io, record.exchange, 5)
+            write_fixed_string(io, record.asset, 7)  # 7 bytes in v2, 11 in v3!
+            write_fixed_string(io, record.cfi, 7)
+            write_fixed_string(io, record.security_type, 7)
+            write_fixed_string(io, record.unit_of_measure, 31)
+            write_fixed_string(io, record.underlying, 21)
+            write_fixed_string(io, record.strike_price_currency, 4)
 
-        # encode_order 161: leg_raw_symbol (both v2 and v3 have this!)
-        write_fixed_string(io, record.leg_raw_symbol, 20)
+            # Single-byte fields
+            write(io, UInt8(record.match_algorithm))
+            write(io, record.md_security_trading_status)  # v2 only
+            write(io, record.main_fraction)
+            write(io, record.price_display_format)
+            write(io, record.settl_price_type)  # v2 only
+            write(io, record.sub_fraction)
+            write(io, record.underlying_product)
+            write(io, record.maturity_month)
+            write(io, record.maturity_day)
+            write(io, record.maturity_week)
+            write(io, record.user_defined_instrument ? UInt8('Y') : UInt8('N'))
+            write(io, record.contract_multiplier_unit)
+            write(io, record.flow_schedule_type)
+            write(io, record.tick_rule)
 
-        # encode_order 163: leg_instrument_class
-        write(io, UInt8(record.leg_instrument_class))
+            # v2: 10 bytes _reserved
+            for _ in 1:10
+                write(io, UInt8(0))
+            end
 
-        # encode_order 164: leg_side
-        write(io, UInt8(record.leg_side))
+        else  # v3
+            # ===== DBN V3 InstrumentDefMsg =====
+            # encode_order 0: ts_recv
+            write(io, record.ts_recv)
 
-        # encode_order 165: leg_price
-        write(io, record.leg_price)
+            # encode_order 2: raw_symbol (22 bytes in v3)
+            write_fixed_string(io, record.raw_symbol, 22)
 
-        # encode_order 166: leg_delta
-        write(io, record.leg_delta)
+            # encode_order 3: security_update_action
+            write(io, UInt8(record.security_update_action))
 
-        # encode_order 167-171: leg ratio fields
-        write(io, record.leg_ratio_price_numerator)
-        write(io, record.leg_ratio_price_denominator)
-        write(io, record.leg_ratio_qty_numerator)
-        write(io, record.leg_ratio_qty_denominator)
-        write(io, record.leg_underlying_id)
+            # encode_order 4: instrument_class
+            write(io, UInt8(record.instrument_class))
 
-        # Now all fields WITHOUT encode_order, in struct declaration order
-        write(io, record.min_price_increment)
-        write(io, record.display_factor)
-        write(io, record.expiration)
-        write(io, record.activation)
-        write(io, record.high_limit_price)
-        write(io, record.low_limit_price)
-        write(io, record.max_price_variation)
-        write(io, record.unit_of_measure_qty)
-        write(io, record.min_price_increment_amount)
-        write(io, record.price_ratio)
+            # encode_order 20: raw_instrument_id (u64 in v3)
+            write(io, record.raw_instrument_id)
 
-        write(io, record.inst_attrib_value)
-        write(io, record.underlying_id)
-        write(io, record.market_depth_implied)
-        write(io, record.market_depth)
-        write(io, record.market_segment_id)
-        write(io, record.max_trade_vol)
-        write(io, record.min_lot_size)
-        write(io, record.min_lot_size_block)
-        write(io, record.min_lot_size_round_lot)
-        write(io, record.min_trade_vol)
-        write(io, record.contract_multiplier)
-        write(io, record.decay_quantity)
-        write(io, record.original_contract_size)
+            # encode_order 54: strike_price
+            write(io, record.strike_price)
 
-        write(io, record.appl_id)
-        write(io, record.maturity_year)
-        write(io, record.decay_start_date)
-        write(io, record.channel_id)
+            # encode_order 158: leg_count
+            write(io, record.leg_count)
 
-        # String fields without encode_order
-        write_fixed_string(io, record.currency, 4)
-        write_fixed_string(io, record.settl_currency, 4)
-        write_fixed_string(io, record.secsubtype, 6)
-        write_fixed_string(io, record.group, 21)
-        write_fixed_string(io, record.exchange, 5)
-        write_fixed_string(io, record.asset, 11)
-        write_fixed_string(io, record.cfi, 7)
-        write_fixed_string(io, record.security_type, 7)
-        write_fixed_string(io, record.unit_of_measure, 31)
-        write_fixed_string(io, record.underlying, 21)
-        write_fixed_string(io, record.strike_price_currency, 4)
+            # encode_order 159: leg_index
+            write(io, record.leg_index)
 
-        # Single-byte fields without encode_order
-        write(io, UInt8(record.match_algorithm))
-        write(io, record.main_fraction)
-        write(io, record.price_display_format)
-        write(io, record.sub_fraction)
-        write(io, record.underlying_product)
-        write(io, record.maturity_month)
-        write(io, record.maturity_day)
-        write(io, record.maturity_week)
-        write(io, record.user_defined_instrument ? UInt8('Y') : UInt8('N'))
-        write(io, record.contract_multiplier_unit)
-        write(io, record.flow_schedule_type)
-        write(io, record.tick_rule)
+            # encode_order 160: leg_instrument_id
+            write(io, record.leg_instrument_id)
 
-        # Both v2 and v3: write 17 bytes of _reserved padding
-        for _ in 1:17
-            write(io, UInt8(0))
+            # encode_order 161: leg_raw_symbol (20 bytes)
+            write_fixed_string(io, record.leg_raw_symbol, 20)
+
+            # encode_order 163: leg_instrument_class
+            write(io, UInt8(record.leg_instrument_class))
+
+            # encode_order 164: leg_side
+            write(io, UInt8(record.leg_side))
+
+            # encode_order 165: leg_price
+            write(io, record.leg_price)
+
+            # encode_order 166: leg_delta
+            write(io, record.leg_delta)
+
+            # encode_order 167-171: leg ratio fields
+            write(io, record.leg_ratio_price_numerator)
+            write(io, record.leg_ratio_price_denominator)
+            write(io, record.leg_ratio_qty_numerator)
+            write(io, record.leg_ratio_qty_denominator)
+            write(io, record.leg_underlying_id)
+
+            # Now all fields WITHOUT encode_order, in struct declaration order
+            write(io, record.min_price_increment)
+            write(io, record.display_factor)
+            write(io, record.expiration)
+            write(io, record.activation)
+            write(io, record.high_limit_price)
+            write(io, record.low_limit_price)
+            write(io, record.max_price_variation)
+            write(io, record.unit_of_measure_qty)
+            write(io, record.min_price_increment_amount)
+            write(io, record.price_ratio)
+
+            write(io, record.inst_attrib_value)
+            write(io, record.underlying_id)
+            write(io, record.market_depth_implied)
+            write(io, record.market_depth)
+            write(io, record.market_segment_id)
+            write(io, record.max_trade_vol)
+            write(io, record.min_lot_size)
+            write(io, record.min_lot_size_block)
+            write(io, record.min_lot_size_round_lot)
+            write(io, record.min_trade_vol)
+            write(io, record.contract_multiplier)
+            write(io, record.decay_quantity)
+            write(io, record.original_contract_size)
+
+            write(io, record.appl_id)
+            write(io, record.maturity_year)
+            write(io, record.decay_start_date)
+            write(io, record.channel_id)
+
+            # String fields without encode_order
+            write_fixed_string(io, record.currency, 4)
+            write_fixed_string(io, record.settl_currency, 4)
+            write_fixed_string(io, record.secsubtype, 6)
+            write_fixed_string(io, record.group, 21)
+            write_fixed_string(io, record.exchange, 5)
+            write_fixed_string(io, record.asset, 11)  # 11 bytes in v3!
+            write_fixed_string(io, record.cfi, 7)
+            write_fixed_string(io, record.security_type, 7)
+            write_fixed_string(io, record.unit_of_measure, 31)
+            write_fixed_string(io, record.underlying, 21)
+            write_fixed_string(io, record.strike_price_currency, 4)
+
+            # Single-byte fields without encode_order
+            write(io, UInt8(record.match_algorithm))
+            write(io, record.main_fraction)
+            write(io, record.price_display_format)
+            write(io, record.sub_fraction)
+            write(io, record.underlying_product)
+            write(io, record.maturity_month)
+            write(io, record.maturity_day)
+            write(io, record.maturity_week)
+            write(io, record.user_defined_instrument ? UInt8('Y') : UInt8('N'))
+            write(io, record.contract_multiplier_unit)
+            write(io, record.flow_schedule_type)
+            write(io, record.tick_rule)
+
+            # v3: 17 bytes _reserved
+            for _ in 1:17
+                write(io, UInt8(0))
+            end
         end
 
     elseif isa(record, ImbalanceMsg)

@@ -558,6 +558,7 @@ function parse_rust_json_record(rust_json_str)
             safe_parse_int64(get(json_dict, "high_limit_price", "0")),
             safe_parse_int64(get(json_dict, "low_limit_price", "0")),
             safe_parse_int64(get(json_dict, "max_price_variation", "0")),
+            safe_parse_int64(get(json_dict, "trading_reference_price", "0")),  # v2 only
             safe_parse_int64(get(json_dict, "unit_of_measure_qty", "0")),
             safe_parse_int64(get(json_dict, "min_price_increment_amount", "0")),
             safe_parse_int64(get(json_dict, "price_ratio", "0")),
@@ -575,6 +576,7 @@ function parse_rust_json_record(rust_json_str)
             Int32(get(json_dict, "contract_multiplier", 0)),
             Int32(get(json_dict, "decay_quantity", 0)),
             Int32(get(json_dict, "original_contract_size", 0)),
+            UInt16(get(json_dict, "trading_reference_date", 0)),  # v2 only
             Int16(get(json_dict, "appl_id", 0)),
             UInt16(get(json_dict, "maturity_year", 0)),
             UInt16(get(json_dict, "decay_start_date", 0)),
@@ -594,8 +596,10 @@ function parse_rust_json_record(rust_json_str)
             haskey(json_dict, "instrument_class") ? DBN.safe_instrument_class(UInt8(json_dict["instrument_class"][1])) : DBN.InstrumentClass.OTHER,
             safe_parse_int64(get(json_dict, "strike_price", "0")),
             Char(get(json_dict, "match_algorithm", " ")[1]),
+            UInt8(get(json_dict, "md_security_trading_status", 0)),  # v2 only
             UInt8(get(json_dict, "main_fraction", 0)),
             UInt8(get(json_dict, "price_display_format", 0)),
+            UInt8(get(json_dict, "settl_price_type", 0)),  # v2 only
             UInt8(get(json_dict, "sub_fraction", 0)),
             UInt8(get(json_dict, "underlying_product", 0)),
             Char(get(json_dict, "security_update_action", " ")[1]),
