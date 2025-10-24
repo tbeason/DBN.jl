@@ -500,8 +500,6 @@ function read_record(decoder::DBNDecoder)
         # The 3-byte difference comes from leg_raw_symbol (v3 only) vs _reserved padding (v2 only)
         raw_symbol_len = 22
 
-        @warn "body_size=$body_size, raw_symbol_len=$raw_symbol_len, position before strings=$(position(decoder.io) - start_pos)"
-
         # Read fields following Rust #[repr(C)] struct declaration order
         # All 8-byte fields first (15 fields = 120 bytes)
         ts_recv = read(decoder.io, Int64)
@@ -572,6 +570,10 @@ function read_record(decoder::DBNDecoder)
         leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
         leg_side_byte = read(decoder.io, UInt8)
         leg_side = safe_side(leg_side_byte)
+
+        # Debug: check position before reading strings
+        pos_before_strings = position(decoder.io) - start_pos
+        @warn "Position after all numeric/single-byte fields, before strings: $pos_before_strings bytes (expected 224 = 120+76+12+16)"
 
         # All string fields AFTER single-byte fields
         # Note: group comes BEFORE secsubtype in the binary!
