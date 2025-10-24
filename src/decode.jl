@@ -547,28 +547,7 @@ function read_record(decoder::DBNDecoder)
         leg_count = read(decoder.io, UInt16)
         leg_index = read(decoder.io, UInt16)
 
-        # All string fields - following Rust struct field order (raw_symbol comes FIRST!)
-        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
-        currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-        group = String(strip(String(read(decoder.io, 21)), '\0'))
-        exchange = String(strip(String(read(decoder.io, 5)), '\0'))
-        asset = String(strip(String(read(decoder.io, 11)), '\0'))
-        cfi = String(strip(String(read(decoder.io, 7)), '\0'))
-        security_type = String(strip(String(read(decoder.io, 7)), '\0'))
-        unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
-        underlying = String(strip(String(read(decoder.io, 21)), '\0'))
-        strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-
-        # leg_raw_symbol only exists in v3 files
-        leg_raw_symbol = if body_size > 384
-            String(strip(String(read(decoder.io, 20)), '\0'))
-        else
-            ""  # v2 files don't have this field
-        end
-
-        # All single-byte fields (16 fields = 16 bytes, total 384)
+        # All single-byte fields BEFORE strings (16 fields = 16 bytes)
         instrument_class_byte = read(decoder.io, UInt8)
         instrument_class = safe_instrument_class(instrument_class_byte)
         match_algorithm_byte = read(decoder.io, UInt8)
@@ -591,6 +570,27 @@ function read_record(decoder::DBNDecoder)
         leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
         leg_side_byte = read(decoder.io, UInt8)
         leg_side = safe_side(leg_side_byte)
+
+        # All string fields AFTER single-byte fields
+        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
+        currency = String(strip(String(read(decoder.io, 4)), '\0'))
+        settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
+        group = String(strip(String(read(decoder.io, 21)), '\0'))
+        exchange = String(strip(String(read(decoder.io, 5)), '\0'))
+        asset = String(strip(String(read(decoder.io, 11)), '\0'))
+        cfi = String(strip(String(read(decoder.io, 7)), '\0'))
+        security_type = String(strip(String(read(decoder.io, 7)), '\0'))
+        unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
+        underlying = String(strip(String(read(decoder.io, 21)), '\0'))
+        strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+
+        # leg_raw_symbol only exists in v3 files
+        leg_raw_symbol = if body_size > 384
+            String(strip(String(read(decoder.io, 20)), '\0'))
+        else
+            ""  # v2 files don't have this field
+        end
 
         # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos
