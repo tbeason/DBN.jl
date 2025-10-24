@@ -574,11 +574,12 @@ function read_record(decoder::DBNDecoder)
         leg_side = safe_side(leg_side_byte)
 
         # All string fields AFTER single-byte fields
+        # Note: group comes BEFORE secsubtype in the binary!
         raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
         group = String(strip(String(read(decoder.io, 21)), '\0'))
+        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
         exchange = String(strip(String(read(decoder.io, 5)), '\0'))
         asset = String(strip(String(read(decoder.io, 11)), '\0'))
         cfi = String(strip(String(read(decoder.io, 7)), '\0'))
