@@ -356,9 +356,60 @@ function write_record(encoder::DBNEncoder, record)
         
     elseif isa(record, InstrumentDefMsg)
         write_record_header(io, record.hd)
-        # Write fields following Rust #[repr(C)] struct declaration order
-        # All 8-byte fields first
+        # InstrumentDefMsg uses encode_order attributes, NOT struct declaration order!
+
+        # encode_order 0: ts_recv
         write(io, record.ts_recv)
+
+        # encode_order 2: raw_symbol
+        write_fixed_string(io, record.raw_symbol, 22)
+
+        # encode_order 3: security_update_action
+        write(io, UInt8(record.security_update_action))
+
+        # encode_order 4: instrument_class
+        write(io, UInt8(record.instrument_class))
+
+        # encode_order 20: raw_instrument_id
+        write(io, record.raw_instrument_id)
+
+        # encode_order 54: strike_price
+        write(io, record.strike_price)
+
+        # encode_order 158: leg_count
+        write(io, record.leg_count)
+
+        # encode_order 159: leg_index
+        write(io, record.leg_index)
+
+        # encode_order 160: leg_instrument_id
+        write(io, record.leg_instrument_id)
+
+        # encode_order 161: leg_raw_symbol (only in v3)
+        if encoder.metadata.version >= 3
+            write_fixed_string(io, record.leg_raw_symbol, 20)
+        end
+
+        # encode_order 163: leg_instrument_class
+        write(io, UInt8(record.leg_instrument_class))
+
+        # encode_order 164: leg_side
+        write(io, UInt8(record.leg_side))
+
+        # encode_order 165: leg_price
+        write(io, record.leg_price)
+
+        # encode_order 166: leg_delta
+        write(io, record.leg_delta)
+
+        # encode_order 167-171: leg ratio fields
+        write(io, record.leg_ratio_price_numerator)
+        write(io, record.leg_ratio_price_denominator)
+        write(io, record.leg_ratio_qty_numerator)
+        write(io, record.leg_ratio_qty_denominator)
+        write(io, record.leg_underlying_id)
+
+        # Now all fields WITHOUT encode_order, in struct declaration order
         write(io, record.min_price_increment)
         write(io, record.display_factor)
         write(io, record.expiration)
@@ -369,12 +420,7 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.unit_of_measure_qty)
         write(io, record.min_price_increment_amount)
         write(io, record.price_ratio)
-        write(io, record.strike_price)
-        write(io, record.raw_instrument_id)
-        write(io, record.leg_price)
-        write(io, record.leg_delta)
 
-        # All 4-byte fields
         write(io, record.inst_attrib_value)
         write(io, record.underlying_id)
         write(io, record.market_depth_implied)
@@ -388,29 +434,31 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.contract_multiplier)
         write(io, record.decay_quantity)
         write(io, record.original_contract_size)
-        write(io, record.leg_instrument_id)
-        write(io, record.leg_ratio_price_numerator)
-        write(io, record.leg_ratio_price_denominator)
-        write(io, record.leg_ratio_qty_numerator)
-        write(io, record.leg_ratio_qty_denominator)
-        write(io, record.leg_underlying_id)
 
-        # All 2-byte fields (always UInt16 in both v2 and v3)
         write(io, record.appl_id)
         write(io, record.maturity_year)
         write(io, record.decay_start_date)
         write(io, record.channel_id)
-        write(io, record.leg_count)
-        write(io, record.leg_index)
 
-        # All single-byte fields BEFORE strings (16 fields)
-        write(io, UInt8(record.instrument_class))
+        # String fields without encode_order
+        write_fixed_string(io, record.currency, 4)
+        write_fixed_string(io, record.settl_currency, 4)
+        write_fixed_string(io, record.secsubtype, 6)
+        write_fixed_string(io, record.group, 21)
+        write_fixed_string(io, record.exchange, 5)
+        write_fixed_string(io, record.asset, 11)
+        write_fixed_string(io, record.cfi, 7)
+        write_fixed_string(io, record.security_type, 7)
+        write_fixed_string(io, record.unit_of_measure, 31)
+        write_fixed_string(io, record.underlying, 21)
+        write_fixed_string(io, record.strike_price_currency, 4)
+
+        # Single-byte fields without encode_order
         write(io, UInt8(record.match_algorithm))
         write(io, record.main_fraction)
         write(io, record.price_display_format)
         write(io, record.sub_fraction)
         write(io, record.underlying_product)
-        write(io, UInt8(record.security_update_action))
         write(io, record.maturity_month)
         write(io, record.maturity_day)
         write(io, record.maturity_week)
@@ -418,30 +466,9 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.contract_multiplier_unit)
         write(io, record.flow_schedule_type)
         write(io, record.tick_rule)
-        write(io, UInt8(record.leg_instrument_class))
-        write(io, UInt8(record.leg_side))
 
-        # All string fields AFTER single-byte fields
-        # Order based on byte position analysis
-        write_fixed_string(io, record.currency, 4)
-        write_fixed_string(io, record.raw_symbol, 22)
-        write_fixed_string(io, record.exchange, 5)
-        write_fixed_string(io, record.asset, 11)
-        write_fixed_string(io, record.settl_currency, 4)
-        write_fixed_string(io, record.cfi, 7)
-        write_fixed_string(io, record.security_type, 7)
-        write_fixed_string(io, record.unit_of_measure, 31)
-        write_fixed_string(io, record.underlying, 21)
-        write_fixed_string(io, record.group, 21)
-        write_fixed_string(io, record.secsubtype, 6)
-        write_fixed_string(io, record.strike_price_currency, 4)
-
-        # leg_raw_symbol only exists in v3 (20 bytes)
-        # v2 has _reserved padding (17 bytes) instead
-        if encoder.metadata.version >= 3
-            write_fixed_string(io, record.leg_raw_symbol, 20)
-        else
-            # v2: write 17 bytes of padding instead of leg_raw_symbol
+        # v2: write 17 bytes of padding
+        if encoder.metadata.version < 3
             for _ in 1:17
                 write(io, UInt8(0))
             end
