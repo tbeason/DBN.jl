@@ -361,8 +361,9 @@ function write_record(encoder::DBNEncoder, record)
         # encode_order 0: ts_recv
         write(io, record.ts_recv)
 
-        # encode_order 2: raw_symbol
-        write_fixed_string(io, record.raw_symbol, 22)
+        # encode_order 2: raw_symbol (v2: 19 bytes, v3: 22 bytes)
+        raw_symbol_len = encoder.metadata.version == 2 ? 19 : 22
+        write_fixed_string(io, record.raw_symbol, raw_symbol_len)
 
         # encode_order 3: security_update_action
         write(io, UInt8(record.security_update_action))

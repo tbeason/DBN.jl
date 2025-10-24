@@ -497,7 +497,8 @@ function read_record(decoder::DBNDecoder)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
         body_size = record_size_bytes - 16
 
-        raw_symbol_len = 22  # Always 22 for both v2 and v3
+        # v2 uses 19-byte raw_symbol, v3 uses 22-byte (SYMBOL_CSTR_LEN may vary)
+        raw_symbol_len = body_size == 384 ? 19 : 22
 
         # encode_order 0: ts_recv
         ts_recv = read(decoder.io, Int64)
