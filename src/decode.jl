@@ -524,8 +524,6 @@ function read_record(decoder::DBNDecoder)
         raw_instrument_id = read(decoder.io, UInt64)
         leg_price = read(decoder.io, Int64)
         leg_delta = read(decoder.io, Int64)
-        pos_after_8byte = position(decoder.io) - start_pos
-        @warn "After 8-byte fields: position=$pos_after_8byte (expected 120)"
 
         # All 4-byte fields (19 fields = 76 bytes, total 196)
         inst_attrib_value = read(decoder.io, Int32)
@@ -547,8 +545,6 @@ function read_record(decoder::DBNDecoder)
         leg_ratio_qty_numerator = read(decoder.io, UInt32)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_underlying_id = read(decoder.io, UInt32)
-        pos_after_4byte = position(decoder.io) - start_pos
-        @warn "After 4-byte fields: position=$pos_after_4byte (expected 196)"
 
         # All 2-byte fields (6 fields = 12 bytes, total 208)
         appl_id = read(decoder.io, Int16)
@@ -557,14 +553,12 @@ function read_record(decoder::DBNDecoder)
         channel_id = read(decoder.io, UInt16)
         leg_count = read(decoder.io, UInt16)
         leg_index = read(decoder.io, UInt16)
-        pos_after_2byte = position(decoder.io) - start_pos
-        @warn "After 2-byte fields: position=$pos_after_2byte (expected 208)"
 
-        # All string fields (char arrays, should total 160 bytes for position 368)
+        # All string fields - using version-specific raw_symbol length
         currency = String(strip(String(read(decoder.io, 4)), '\0'))
         settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-        raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
+        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
         group = String(strip(String(read(decoder.io, 21)), '\0'))
         exchange = String(strip(String(read(decoder.io, 5)), '\0'))
         asset = String(strip(String(read(decoder.io, 11)), '\0'))
@@ -574,8 +568,6 @@ function read_record(decoder::DBNDecoder)
         underlying = String(strip(String(read(decoder.io, 21)), '\0'))
         strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
         leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
-        pos_after_strings = position(decoder.io) - start_pos
-        @warn "After string fields: position=$pos_after_strings (expected 368: 4+4+6+19+21+5+11+7+7+31+21+4+20=160)"
 
         # All single-byte fields (16 fields = 16 bytes, total 384)
         instrument_class_byte = read(decoder.io, UInt8)
@@ -600,20 +592,14 @@ function read_record(decoder::DBNDecoder)
         leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
         leg_side_byte = read(decoder.io, UInt8)
         leg_side = safe_side(leg_side_byte)
-        pos_after_1byte = position(decoder.io) - start_pos
-        @warn "After single-byte fields: position=$pos_after_1byte (expected 384)"
 
         # Verify we read exactly the right amount
         bytes_read = position(decoder.io) - start_pos
         if bytes_read < body_size
-            # Skip any remaining bytes (like _reserved padding)
-            bytes_to_skip = body_size - bytes_read
-            @warn "Skipping $bytes_to_skip reserved/padding bytes"
-            skip(decoder.io, bytes_to_skip)
+            # Skip any remaining bytes (like _reserved padding in some versions)
+            skip(decoder.io, body_size - bytes_read)
         elseif bytes_read > body_size
             error("InstrumentDefMsg: Read $bytes_read bytes but expected $body_size (over by $(bytes_read - body_size))")
-        else
-            @warn "Perfect match: read exactly $bytes_read bytes as expected!"
         end
 
         return InstrumentDefMsg(
