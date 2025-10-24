@@ -500,6 +500,8 @@ function read_record(decoder::DBNDecoder)
         # The 3-byte difference comes from leg_raw_symbol (v3 only) vs _reserved padding (v2 only)
         raw_symbol_len = 22
 
+        @warn "body_size=$body_size, raw_symbol_len=$raw_symbol_len, position before strings=$(position(decoder.io) - start_pos)"
+
         # Read fields following Rust #[repr(C)] struct declaration order
         # All 8-byte fields first (15 fields = 120 bytes)
         ts_recv = read(decoder.io, Int64)
