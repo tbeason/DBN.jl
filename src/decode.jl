@@ -540,23 +540,13 @@ function read_record(decoder::DBNDecoder)
         leg_ratio_qty_denominator = read(decoder.io, UInt32)
         leg_underlying_id = read(decoder.io, UInt32)
 
-        # 2-byte fields - note that channel_id, leg_count, leg_index are version-dependent
+        # All 2-byte fields (always UInt16 in both v2 and v3)
         appl_id = read(decoder.io, Int16)
         maturity_year = read(decoder.io, UInt16)
         decay_start_date = read(decoder.io, UInt16)
-
-        # These fields are UInt8 in v2 (body=384) and UInt16 in v3 (body≥387)
-        if body_size <= 384
-            # v2: single bytes (3 × 1 = 3 bytes)
-            channel_id = UInt16(read(decoder.io, UInt8))
-            leg_count = UInt16(read(decoder.io, UInt8))
-            leg_index = UInt16(read(decoder.io, UInt8))
-        else
-            # v3: two bytes each (3 × 2 = 6 bytes)
-            channel_id = read(decoder.io, UInt16)
-            leg_count = read(decoder.io, UInt16)
-            leg_index = read(decoder.io, UInt16)
-        end
+        channel_id = read(decoder.io, UInt16)
+        leg_count = read(decoder.io, UInt16)
+        leg_index = read(decoder.io, UInt16)
 
         # All string fields - using version-specific raw_symbol length
         currency = String(strip(String(read(decoder.io, 4)), '\0'))

@@ -395,21 +395,13 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.leg_ratio_qty_denominator)
         write(io, record.leg_underlying_id)
 
-        # 2-byte fields - channel_id, leg_count, leg_index are version-dependent
+        # All 2-byte fields (always UInt16 in both v2 and v3)
         write(io, record.appl_id)
         write(io, record.maturity_year)
         write(io, record.decay_start_date)
-
-        # v2 uses UInt8 (1 byte), v3 uses UInt16 (2 bytes) for these fields
-        if encoder.metadata.version == 2
-            write(io, UInt8(record.channel_id))
-            write(io, UInt8(record.leg_count))
-            write(io, UInt8(record.leg_index))
-        else
-            write(io, record.channel_id)
-            write(io, record.leg_count)
-            write(io, record.leg_index)
-        end
+        write(io, record.channel_id)
+        write(io, record.leg_count)
+        write(io, record.leg_index)
 
         # All string fields (char arrays) - version-specific raw_symbol size
         write_fixed_string(io, record.currency, 4)
