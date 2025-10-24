@@ -491,18 +491,72 @@ function read_record(decoder::DBNDecoder)
         return StatusMsg(hd, ts_recv, action, reason, trading_event, is_trading, is_quoting, is_short_sell_restricted)
         
     elseif hd.rtype == RType.INSTRUMENT_DEF_MSG
-        # Track position to ensure we read exactly the right amount
+        # InstrumentDefMsg uses encode_order attributes, NOT struct declaration order!
+        # Read fields in encode_order sequence
         start_pos = position(decoder.io)
         record_size_bytes = hd.length * LENGTH_MULTIPLIER
-        body_size = record_size_bytes - 16  # Subtract header size
+        body_size = record_size_bytes - 16
 
-        # raw_symbol is always 22 bytes in both v2 and v3
-        # The 3-byte difference comes from leg_raw_symbol (v3 only) vs _reserved padding (v2 only)
-        raw_symbol_len = 22
+        raw_symbol_len = 22  # Always 22 for both v2 and v3
 
-        # Read fields following Rust #[repr(C)] struct declaration order
-        # All 8-byte fields first (15 fields = 120 bytes)
+        # encode_order 0: ts_recv
         ts_recv = read(decoder.io, Int64)
+
+        # encode_order 2: raw_symbol
+        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
+
+        # encode_order 3: security_update_action
+        security_update_action_byte = read(decoder.io, UInt8)
+        security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
+
+        # encode_order 4: instrument_class
+        instrument_class_byte = read(decoder.io, UInt8)
+        instrument_class = safe_instrument_class(instrument_class_byte)
+
+        # encode_order 20: raw_instrument_id
+        raw_instrument_id = read(decoder.io, UInt64)
+
+        # encode_order 54: strike_price
+        strike_price = read(decoder.io, Int64)
+
+        # encode_order 158: leg_count
+        leg_count = read(decoder.io, UInt16)
+
+        # encode_order 159: leg_index
+        leg_index = read(decoder.io, UInt16)
+
+        # encode_order 160: leg_instrument_id
+        leg_instrument_id = read(decoder.io, UInt32)
+
+        # encode_order 161: leg_raw_symbol (only in v3)
+        leg_raw_symbol = if body_size > 384
+            String(strip(String(read(decoder.io, 20)), '\0'))
+        else
+            ""  # v2 doesn't have this
+        end
+
+        # encode_order 163: leg_instrument_class
+        leg_instrument_class_byte = read(decoder.io, UInt8)
+        leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
+
+        # encode_order 164: leg_side
+        leg_side_byte = read(decoder.io, UInt8)
+        leg_side = safe_side(leg_side_byte)
+
+        # encode_order 165: leg_price
+        leg_price = read(decoder.io, Int64)
+
+        # encode_order 166: leg_delta
+        leg_delta = read(decoder.io, Int64)
+
+        # encode_order 167-171: leg ratio fields
+        leg_ratio_price_numerator = read(decoder.io, UInt32)
+        leg_ratio_price_denominator = read(decoder.io, UInt32)
+        leg_ratio_qty_numerator = read(decoder.io, UInt32)
+        leg_ratio_qty_denominator = read(decoder.io, UInt32)
+        leg_underlying_id = read(decoder.io, UInt32)
+
+        # Now all fields WITHOUT encode_order, in struct declaration order
         min_price_increment = read(decoder.io, Int64)
         display_factor = read(decoder.io, Int64)
         expiration = read(decoder.io, Int64)
@@ -513,12 +567,7 @@ function read_record(decoder::DBNDecoder)
         unit_of_measure_qty = read(decoder.io, Int64)
         min_price_increment_amount = read(decoder.io, Int64)
         price_ratio = read(decoder.io, Int64)
-        strike_price = read(decoder.io, Int64)
-        raw_instrument_id = read(decoder.io, UInt64)
-        leg_price = read(decoder.io, Int64)
-        leg_delta = read(decoder.io, Int64)
 
-        # All 4-byte fields (19 fields = 76 bytes, total 196)
         inst_attrib_value = read(decoder.io, Int32)
         underlying_id = read(decoder.io, UInt32)
         market_depth_implied = read(decoder.io, Int32)
@@ -532,32 +581,32 @@ function read_record(decoder::DBNDecoder)
         contract_multiplier = read(decoder.io, Int32)
         decay_quantity = read(decoder.io, Int32)
         original_contract_size = read(decoder.io, Int32)
-        leg_instrument_id = read(decoder.io, UInt32)
-        leg_ratio_price_numerator = read(decoder.io, UInt32)
-        leg_ratio_price_denominator = read(decoder.io, UInt32)
-        leg_ratio_qty_numerator = read(decoder.io, UInt32)
-        leg_ratio_qty_denominator = read(decoder.io, UInt32)
-        leg_underlying_id = read(decoder.io, UInt32)
 
-        # All 2-byte fields (always UInt16 in both v2 and v3)
         appl_id = read(decoder.io, Int16)
         maturity_year = read(decoder.io, UInt16)
         decay_start_date = read(decoder.io, UInt16)
         channel_id = read(decoder.io, UInt16)
-        leg_count = read(decoder.io, UInt16)
-        leg_index = read(decoder.io, UInt16)
 
-        # All single-byte fields BEFORE strings (16 fields = 16 bytes)
-        instrument_class_byte = read(decoder.io, UInt8)
-        instrument_class = safe_instrument_class(instrument_class_byte)
+        # String fields without encode_order
+        currency = String(strip(String(read(decoder.io, 4)), '\0'))
+        settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
+        group = String(strip(String(read(decoder.io, 21)), '\0'))
+        exchange = String(strip(String(read(decoder.io, 5)), '\0'))
+        asset = String(strip(String(read(decoder.io, 11)), '\0'))
+        cfi = String(strip(String(read(decoder.io, 7)), '\0'))
+        security_type = String(strip(String(read(decoder.io, 7)), '\0'))
+        unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
+        underlying = String(strip(String(read(decoder.io, 21)), '\0'))
+        strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+
+        # Single-byte fields without encode_order
         match_algorithm_byte = read(decoder.io, UInt8)
         match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
         main_fraction = read(decoder.io, UInt8)
         price_display_format = read(decoder.io, UInt8)
         sub_fraction = read(decoder.io, UInt8)
         underlying_product = read(decoder.io, UInt8)
-        security_update_action_byte = read(decoder.io, UInt8)
-        security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
         maturity_month = read(decoder.io, UInt8)
         maturity_day = read(decoder.io, UInt8)
         maturity_week = read(decoder.io, UInt8)
@@ -566,44 +615,13 @@ function read_record(decoder::DBNDecoder)
         contract_multiplier_unit = read(decoder.io, Int8)
         flow_schedule_type = read(decoder.io, Int8)
         tick_rule = read(decoder.io, UInt8)
-        leg_instrument_class_byte = read(decoder.io, UInt8)
-        leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
-        leg_side_byte = read(decoder.io, UInt8)
-        leg_side = safe_side(leg_side_byte)
 
-        # Debug: check position before reading strings
-        pos_before_strings = position(decoder.io) - start_pos
-        @warn "Position after all numeric/single-byte fields, before strings: $pos_before_strings bytes (expected 224 = 120+76+12+16)"
-
-        # All string fields AFTER single-byte fields
-        # Trying different order based on corruption pattern
-        currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        raw_symbol = String(strip(String(read(decoder.io, raw_symbol_len)), '\0'))
-        exchange = String(strip(String(read(decoder.io, 5)), '\0'))
-        asset = String(strip(String(read(decoder.io, 11)), '\0'))
-        settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-        cfi = String(strip(String(read(decoder.io, 7)), '\0'))
-        security_type = String(strip(String(read(decoder.io, 7)), '\0'))
-        unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
-        underlying = String(strip(String(read(decoder.io, 21)), '\0'))
-        group = String(strip(String(read(decoder.io, 21)), '\0'))
-        secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-        strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-
-        # leg_raw_symbol only exists in v3 files
-        leg_raw_symbol = if body_size > 384
-            String(strip(String(read(decoder.io, 20)), '\0'))
-        else
-            ""  # v2 files don't have this field
-        end
-
-        # Verify we read exactly the right amount
+        # Handle remaining bytes (v2 has 17-byte _reserved padding)
         bytes_read = position(decoder.io) - start_pos
         if bytes_read < body_size
-            # Skip any remaining bytes (like _reserved padding in some versions)
             skip(decoder.io, body_size - bytes_read)
         elseif bytes_read > body_size
-            error("InstrumentDefMsg: Read $bytes_read bytes but expected $body_size (over by $(bytes_read - body_size))")
+            error("InstrumentDefMsg: Read $bytes_read bytes but expected $body_size")
         end
 
         return InstrumentDefMsg(
