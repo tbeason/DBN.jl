@@ -70,10 +70,11 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir -p $HOME/dbn-workspace
-          if [ ! -d "$HOME/dbn-workspace/dbn" ]; then
+          if [ ! -f "$HOME/dbn-workspace/dbn/Cargo.toml" ]; then
+            rm -rf $HOME/dbn-workspace/dbn
             git clone --depth 1 https://github.com/databento/dbn $HOME/dbn-workspace/dbn
           fi
-          cd $HOME/dbn-workspace/dbn/rust
+          cd $HOME/dbn-workspace/dbn
           cargo build --release
 
       - name: Build dbn (Windows)
@@ -82,10 +83,11 @@ jobs:
         run: |
           $workspace = "$env:USERPROFILE\dbn-workspace"
           New-Item -ItemType Directory -Force -Path $workspace | Out-Null
-          if (-not (Test-Path "$workspace\dbn")) {
+          if (-not (Test-Path "$workspace\dbn\Cargo.toml")) {
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$workspace\dbn"
             git clone --depth 1 https://github.com/databento/dbn "$workspace\dbn"
           }
-          cd "$workspace\dbn\rust"
+          cd "$workspace\dbn"
           cargo build --release
 
       - uses: julia-actions/setup-julia@v2
