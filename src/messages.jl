@@ -320,6 +320,13 @@ end
 
 Instrument definition message containing detailed information about financial instruments.
 
+Note: DBN v2 and v3 have different field sets. This struct supports both versions:
+- v2-only fields (trading_reference_price, trading_reference_date, md_security_trading_status, settl_price_type) are set to 0 in v3
+- v3-only fields (all leg_* fields) are set to 0/empty in v2
+- raw_instrument_id is UInt32 in v2, UInt64 in v3
+- raw_symbol is 19 bytes in v2, 22 bytes in v3
+- asset is 7 bytes in v2, 11 bytes in v3
+
 # Fields
 - `hd::RecordHeader`: Standard record header
 - `ts_recv::Int64`: Timestamp when message was received
@@ -330,12 +337,13 @@ Instrument definition message containing detailed information about financial in
 - `high_limit_price::Int64`: High limit price
 - `low_limit_price::Int64`: Low limit price
 - `max_price_variation::Int64`: Maximum price variation
+- `trading_reference_price::Int64`: Trading reference price (DBN v2 only, 0 in v3)
 - `unit_of_measure_qty::Int64`: Unit of measure quantity
 - `min_price_increment_amount::Int64`: Minimum price increment amount
 - `price_ratio::Int64`: Price ratio
 - `inst_attrib_value::Int32`: Instrument attribute value
 - `underlying_id::UInt32`: Underlying instrument ID
-- `raw_instrument_id::UInt64`: Raw instrument ID (expanded to 64 bits in DBN v3)
+- `raw_instrument_id::UInt64`: Raw instrument ID (UInt32 in v2, UInt64 in v3)
 - `market_depth_implied::Int32`: Market depth implied
 - `market_depth::Int32`: Market depth
 - `market_segment_id::UInt32`: Market segment ID
@@ -347,17 +355,18 @@ Instrument definition message containing detailed information about financial in
 - `contract_multiplier::Int32`: Contract multiplier
 - `decay_quantity::Int32`: Decay quantity
 - `original_contract_size::Int32`: Original contract size
+- `trading_reference_date::UInt16`: Trading reference date (DBN v2 only, 0 in v3)
 - `appl_id::Int16`: Application ID
 - `maturity_year::UInt16`: Maturity year
 - `decay_start_date::UInt16`: Decay start date
-- `channel_id::UInt8`: Channel ID
+- `channel_id::UInt16`: Channel ID
 - `currency::String`: Currency code
 - `settl_currency::String`: Settlement currency
 - `secsubtype::String`: Security subtype
-- `raw_symbol::String`: Raw symbol
+- `raw_symbol::String`: Raw symbol (19 bytes in v2, 22 bytes in v3)
 - `group::String`: Group identifier
 - `exchange::String`: Exchange identifier
-- `asset::String`: Asset identifier (expanded to 11 bytes in DBN v3)
+- `asset::String`: Asset identifier (7 bytes in v2, 11 bytes in v3)
 - `cfi::String`: CFI code
 - `security_type::String`: Security type
 - `unit_of_measure::String`: Unit of measure
@@ -366,8 +375,10 @@ Instrument definition message containing detailed information about financial in
 - `instrument_class::InstrumentClass.T`: Instrument class
 - `strike_price::Int64`: Strike price
 - `match_algorithm::Char`: Match algorithm
+- `md_security_trading_status::UInt8`: MD security trading status (DBN v2 only, 0 in v3)
 - `main_fraction::UInt8`: Main fraction
 - `price_display_format::UInt8`: Price display format
+- `settl_price_type::UInt8`: Settlement price type (DBN v2 only, 0 in v3)
 - `sub_fraction::UInt8`: Sub fraction
 - `underlying_product::UInt8`: Underlying product
 - `security_update_action::Char`: Security update action
@@ -378,19 +389,19 @@ Instrument definition message containing detailed information about financial in
 - `contract_multiplier_unit::Int8`: Contract multiplier unit
 - `flow_schedule_type::Int8`: Flow schedule type
 - `tick_rule::UInt8`: Tick rule
-- `leg_count::UInt8`: Number of legs (new in DBN v3)
-- `leg_index::UInt8`: Leg index (new in DBN v3)
-- `leg_instrument_id::UInt32`: Leg instrument ID (new in DBN v3)
-- `leg_raw_symbol::String`: Leg raw symbol (new in DBN v3)
-- `leg_side::Side.T`: Leg side (new in DBN v3)
-- `leg_underlying_id::UInt32`: Leg underlying ID (new in DBN v3)
-- `leg_instrument_class::InstrumentClass.T`: Leg instrument class (new in DBN v3)
-- `leg_ratio_qty_numerator::UInt32`: Leg ratio quantity numerator (new in DBN v3)
-- `leg_ratio_qty_denominator::UInt32`: Leg ratio quantity denominator (new in DBN v3)
-- `leg_ratio_price_numerator::UInt32`: Leg ratio price numerator (new in DBN v3)
-- `leg_ratio_price_denominator::UInt32`: Leg ratio price denominator (new in DBN v3)
-- `leg_price::Int64`: Leg price (new in DBN v3)
-- `leg_delta::Int64`: Leg delta (new in DBN v3)
+- `leg_count::UInt16`: Number of legs (DBN v3 only, 0 in v2)
+- `leg_index::UInt16`: Leg index (DBN v3 only, 0 in v2)
+- `leg_instrument_id::UInt32`: Leg instrument ID (DBN v3 only, 0 in v2)
+- `leg_raw_symbol::String`: Leg raw symbol (DBN v3 only, empty in v2)
+- `leg_side::Side.T`: Leg side (DBN v3 only, NONE in v2)
+- `leg_underlying_id::UInt32`: Leg underlying ID (DBN v3 only, 0 in v2)
+- `leg_instrument_class::InstrumentClass.T`: Leg instrument class (DBN v3 only, UNKNOWN_0 in v2)
+- `leg_ratio_qty_numerator::UInt32`: Leg ratio quantity numerator (DBN v3 only, 0 in v2)
+- `leg_ratio_qty_denominator::UInt32`: Leg ratio quantity denominator (DBN v3 only, 0 in v2)
+- `leg_ratio_price_numerator::UInt32`: Leg ratio price numerator (DBN v3 only, 0 in v2)
+- `leg_ratio_price_denominator::UInt32`: Leg ratio price denominator (DBN v3 only, 0 in v2)
+- `leg_price::Int64`: Leg price (DBN v3 only, 0 in v2)
+- `leg_delta::Int64`: Leg delta (DBN v3 only, 0 in v2)
 """
 struct InstrumentDefMsg
     hd::RecordHeader
@@ -402,12 +413,13 @@ struct InstrumentDefMsg
     high_limit_price::Int64
     low_limit_price::Int64
     max_price_variation::Int64
+    trading_reference_price::Int64  # DBN v2 only (0 in v3)
     unit_of_measure_qty::Int64
     min_price_increment_amount::Int64
     price_ratio::Int64
     inst_attrib_value::Int32
     underlying_id::UInt32
-    raw_instrument_id::UInt64  # Expanded to 64 bits in DBN v3
+    raw_instrument_id::UInt64  # u32 in v2, u64 in v3
     market_depth_implied::Int32
     market_depth::Int32
     market_segment_id::UInt32
@@ -419,17 +431,18 @@ struct InstrumentDefMsg
     contract_multiplier::Int32
     decay_quantity::Int32
     original_contract_size::Int32
+    trading_reference_date::UInt16  # DBN v2 only (0 in v3)
     appl_id::Int16
     maturity_year::UInt16
     decay_start_date::UInt16
-    channel_id::UInt8
+    channel_id::UInt16
     currency::String
     settl_currency::String
     secsubtype::String
     raw_symbol::String
     group::String
     exchange::String
-    asset::String  # Expanded to 11 bytes in DBN v3
+    asset::String  # 7 bytes in v2, 11 bytes in v3
     cfi::String
     security_type::String
     unit_of_measure::String
@@ -438,8 +451,10 @@ struct InstrumentDefMsg
     instrument_class::InstrumentClass.T
     strike_price::Int64
     match_algorithm::Char
+    md_security_trading_status::UInt8  # DBN v2 only (0 in v3)
     main_fraction::UInt8
     price_display_format::UInt8
+    settl_price_type::UInt8  # DBN v2 only (0 in v3)
     sub_fraction::UInt8
     underlying_product::UInt8
     security_update_action::Char
@@ -450,9 +465,9 @@ struct InstrumentDefMsg
     contract_multiplier_unit::Int8
     flow_schedule_type::Int8
     tick_rule::UInt8
-    # New strategy leg fields in DBN v3
-    leg_count::UInt8
-    leg_index::UInt8
+    # New strategy leg fields in DBN v3 (all 0/empty in v2)
+    leg_count::UInt16
+    leg_index::UInt16
     leg_instrument_id::UInt32
     leg_raw_symbol::String
     leg_side::Side.T

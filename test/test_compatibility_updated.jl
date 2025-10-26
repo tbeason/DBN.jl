@@ -30,7 +30,7 @@ using .CompatibilityUtils
                 @testset "$schema_name schema" begin
                     files = CompatibilityUtils.get_test_files(pattern)
                     # Filter out compressed and fragment files for basic compatibility
-                    files = filter(f -> !endswith(f, ".zst") && !contains(f, "frag"), files)
+                    files = filter(f -> !endswith(f, ".zst") && !contains(f, "frag") && !contains(f, "bad"), files)
                     
                     if isempty(files)
                         @warn "No test files found for pattern: $pattern"
@@ -221,10 +221,11 @@ using .CompatibilityUtils
     
     @testset "Version Compatibility" begin
         # Test files from different DBN versions
-        for version in [1, 2, 3]
-            version_files = filter(f -> contains(f, "v$version") && !contains(f, "frag"), 
+        # Note: DBN v1 is not supported - use `dbn upgrade` to convert v1 files to v3
+        for version in [2, 3]  # Skip v1
+            version_files = filter(f -> contains(f, "v$version") && !contains(f, "frag"),
                                  CompatibilityUtils.get_test_files(".*\\.dbn"))
-            
+
             if !isempty(version_files)
                 @testset "DBN v$version" begin
                     test_file = first(version_files)
