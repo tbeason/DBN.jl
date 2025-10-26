@@ -89,8 +89,14 @@ Intern a string to reduce memory allocations for repeated values.
 
 Uses a hash-based cache to reuse string objects for symbols, exchanges,
 and other frequently repeated string fields.
+
+Note: String(bytes) takes ownership of the byte array, so we must
+compute the hash BEFORE calling String().
 """
 @inline function intern_string(decoder::DBNDecoder, bytes::Vector{UInt8})
+    # IMPORTANT: Compute hash BEFORE calling String(), which empties the array
+    h = hash(bytes)
+
     # Strip null bytes and convert to string
     stripped = strip(String(bytes), '\0')
 
@@ -98,9 +104,6 @@ and other frequently repeated string fields.
     if isempty(stripped)
         return ""
     end
-
-    # Compute hash of the byte content
-    h = hash(bytes)
 
     # Check cache and return existing string if found
     get!(decoder.string_cache, h) do
@@ -648,14 +651,14 @@ end
     
     # Read input symbol (variable length string)
     stype_in_len = read(decoder.io, UInt16)
-    stype_in_symbol = String(read(decoder.io, stype_in_len))
-    
+    stype_in_symbol = intern_string(decoder, read(decoder.io, stype_in_len))
+
     stype_out = SType.T(read(decoder.io, UInt8))
     _ = read(decoder.io, 3)  # Padding
-    
+
     # Read output symbol (variable length string)
     stype_out_len = read(decoder.io, UInt16)
-    stype_out_symbol = String(read(decoder.io, stype_out_len))
+    stype_out_symbol = intern_string(decoder, read(decoder.io, stype_out_len))
     
     start_ts = read(decoder.io, Int64)
     end_ts = read(decoder.io, Int64)
@@ -877,18 +880,19 @@ end
     decay_start_date = read(decoder.io, UInt16)                  # offset 166
     channel_id = read(decoder.io, UInt16)                        # offset 168
     # String fields in struct declaration order (offsets 170+)
-    currency = String(strip(String(read(decoder.io, 4)), '\0'))          # offset 170
-    settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))    # offset 174
-    secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))        # offset 178
-    raw_symbol = String(strip(String(read(decoder.io, 71)), '\0'))       # offset 184 (71 bytes in v2!)
-    group = String(strip(String(read(decoder.io, 21)), '\0'))            # offset 255
-    exchange = String(strip(String(read(decoder.io, 5)), '\0'))          # offset 276
-    asset = String(strip(String(read(decoder.io, 7)), '\0'))             # offset 281 (7 bytes in v2!)
-    cfi = String(strip(String(read(decoder.io, 7)), '\0'))               # offset 288
-    security_type = String(strip(String(read(decoder.io, 7)), '\0'))     # offset 295
-    unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))  # offset 302
-    underlying = String(strip(String(read(decoder.io, 21)), '\0'))       # offset 333
-    strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))  # offset 354
+    # Use string interning for repeated values (currencies, exchanges, etc.)
+    currency = intern_string(decoder, read(decoder.io, 4))          # offset 170
+    settl_currency = intern_string(decoder, read(decoder.io, 4))    # offset 174
+    secsubtype = intern_string(decoder, read(decoder.io, 6))        # offset 178
+    raw_symbol = intern_string(decoder, read(decoder.io, 71))       # offset 184 (71 bytes in v2!)
+    group = intern_string(decoder, read(decoder.io, 21))            # offset 255
+    exchange = intern_string(decoder, read(decoder.io, 5))          # offset 276
+    asset = intern_string(decoder, read(decoder.io, 7))             # offset 281 (7 bytes in v2!)
+    cfi = intern_string(decoder, read(decoder.io, 7))               # offset 288
+    security_type = intern_string(decoder, read(decoder.io, 7))     # offset 295
+    unit_of_measure = intern_string(decoder, read(decoder.io, 31))  # offset 302
+    underlying = intern_string(decoder, read(decoder.io, 21))       # offset 333
+    strike_price_currency = intern_string(decoder, read(decoder.io, 4))  # offset 354
     # Byte fields in struct declaration order (offsets 358+)
     instrument_class_byte = read(decoder.io, UInt8)              # offset 358
     instrument_class = safe_instrument_class(instrument_class_byte)
@@ -971,7 +975,7 @@ end
     # encode_order 160: leg_instrument_id
     leg_instrument_id = read(decoder.io, UInt32)
     # encode_order 161: leg_raw_symbol (20 bytes)
-    leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
+    leg_raw_symbol = intern_string(decoder, read(decoder.io, 20))
     # encode_order 163: leg_instrument_class
     leg_instrument_class_byte = read(decoder.io, UInt8)
     leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
@@ -1017,17 +1021,18 @@ end
     decay_start_date = read(decoder.io, UInt16)
     channel_id = read(decoder.io, UInt16)
     # String fields without encode_order
-    currency = String(strip(String(read(decoder.io, 4)), '\0'))
-    settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-    secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-    group = String(strip(String(read(decoder.io, 21)), '\0'))
-    exchange = String(strip(String(read(decoder.io, 5)), '\0'))
-    asset = String(strip(String(read(decoder.io, 11)), '\0'))  # 11 bytes in v3!
-    cfi = String(strip(String(read(decoder.io, 7)), '\0'))
-    security_type = String(strip(String(read(decoder.io, 7)), '\0'))
-    unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
-    underlying = String(strip(String(read(decoder.io, 21)), '\0'))
-    strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+    # Use string interning for repeated values (currencies, exchanges, etc.)
+    currency = intern_string(decoder, read(decoder.io, 4))
+    settl_currency = intern_string(decoder, read(decoder.io, 4))
+    secsubtype = intern_string(decoder, read(decoder.io, 6))
+    group = intern_string(decoder, read(decoder.io, 21))
+    exchange = intern_string(decoder, read(decoder.io, 5))
+    asset = intern_string(decoder, read(decoder.io, 11))  # 11 bytes in v3!
+    cfi = intern_string(decoder, read(decoder.io, 7))
+    security_type = intern_string(decoder, read(decoder.io, 7))
+    unit_of_measure = intern_string(decoder, read(decoder.io, 31))
+    underlying = intern_string(decoder, read(decoder.io, 21))
+    strike_price_currency = intern_string(decoder, read(decoder.io, 4))
     # Single-byte fields without encode_order
     match_algorithm_byte = read(decoder.io, UInt8)
     match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
