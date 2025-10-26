@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(julia:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(ls:*)",
+      "Bash(\"$HOME/dbn-workspace/dbn/target/release/dbn.exe\":*)",
+      "Bash(./dbn-workspace/dbn/target/release/dbn.exe:*)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:databento.com)",
+      "Read(//c/Users/tbeas/dbn-workspace/dbn/tests/data/**)",
+      "Read(//c/Users/tbeas/dbn-workspace/dbn/rust/dbn/**)",
+      "Read(//c/Users/tbeas/dbn-workspace/dbn/rust/**)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/databento/dbn/v0.29.0/rust/dbn/src/record.rs\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/databento/dbn/v0.29.0/rust/dbn/src/lib.rs\")",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix DBN v2 InstrumentDefMsg decode: fields are in struct declaration order, not encode_order\n\nThe failing compatibility test was caused by incorrect v2 InstrumentDefMsg decoding.\nIn DBN v2, the encode_order attribute is completely ignored - all fields appear in\nexact Rust struct declaration order in the binary.\n\nKey changes:\n- src/decode.jl: Rewrote v2 InstrumentDefMsg decoder to read fields in strict struct order\n  - raw_symbol is 71 bytes in v2 (not 19 bytes)\n  - raw_symbol at offset 184, strike_price at offset 96 (NOT sorted by encode_order)\n  - Fixed leg_instrument_class default to OTHER for v2 records\n- test/compatibility_utils.jl: Fixed UInt64::max -> -1 conversion and header length calculation\n- test/test_compatibility_updated.jl: No functional changes, just formatting\n\nAll 3503 tests now pass (was 3502/3503).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)",
+      "Read(//c/Users/tbeas/dbn-workspace/dbn/**)",
+      "Bash(\"$HOME/dbn-workspace/dbn/target/release/dbn.exe\" --help)",
+      "Bash(/c/Users/tbeas/dbn-workspace/dbn/target/release/dbn.exe:*)",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Read(//c/Users/tbeas/dbn-workspace/**)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(if [ -f src/decode.jl.mem ])",
+      "Bash(then grep -v \"^        0\" src/decode.jl.mem)",
+      "Bash(else echo \"No decode.jl.mem file found\")",
+      "Bash(fi)",
+      "Bash(cat:*)",
+      "Bash(awk:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -388,614 +388,660 @@ function read_record(decoder::DBNDecoder)
     
     # Handle unknown record types
     if hd_result isa Tuple
-        # Unknown record type - skip it
         _, rtype_raw, record_length = hd_result
-        skip(decoder.io, record_length - 2)  # Already read length(1) + rtype(1) = 2 bytes
+        skip(decoder.io, record_length - 2)
         return nothing
     end
     
     hd = hd_result
     
-    if hd.rtype == RType.MBO_MSG
-        # For MBO records, we need to read exactly 56 bytes total
-        # We've already read: length(1) + rtype(1) + publisher_id(2) + instrument_id(4) + ts_event(8) = 16 bytes
-        # Remaining to read: 56 - 16 = 40 bytes
-        
-        # Based on Rust struct order and empirical evidence:
-        ts_recv = read(decoder.io, Int64)      # 8 bytes (positions 16-23)
-        order_id = read(decoder.io, UInt64)    # 8 bytes (positions 24-31)
-        size = read(decoder.io, UInt32)        # 4 bytes (positions 32-35)
-        flags = read(decoder.io, UInt8)        # 1 byte (position 36)
-        channel_id = read(decoder.io, UInt8)   # 1 byte (position 37)
-        action = safe_action(read(decoder.io, UInt8))   # 1 byte (position 38)
-        side = safe_side(read(decoder.io, UInt8))       # 1 byte (position 39)
-        price = read(decoder.io, Int64)        # 8 bytes (positions 40-47)
-        ts_in_delta = read(decoder.io, Int32)  # 4 bytes (positions 48-51)
-        sequence = read(decoder.io, UInt32)    # 4 bytes (positions 52-55)
-        
-        return MBOMsg(hd, order_id, price, size, flags, channel_id, action, side, ts_recv, ts_in_delta, sequence)
-        
-    elseif hd.rtype == RType.MBP_0_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        return TradeMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence)
-        
-    elseif hd.rtype == RType.MBP_1_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        bid_px = read(decoder.io, Int64)
-        ask_px = read(decoder.io, Int64)
-        bid_sz = read(decoder.io, UInt32)
-        ask_sz = read(decoder.io, UInt32)
-        bid_ct = read(decoder.io, UInt32)
-        ask_ct = read(decoder.io, UInt32)
-        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        
-        return MBP1Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
-    elseif hd.rtype == RType.MBP_10_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        levels = ntuple(10) do _
-            bid_px = read(decoder.io, Int64)
-            ask_px = read(decoder.io, Int64)
-            bid_sz = read(decoder.io, UInt32)
-            ask_sz = read(decoder.io, UInt32)
-            bid_ct = read(decoder.io, UInt32)
-            ask_ct = read(decoder.io, UInt32)
-            BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        end
-        
-        return MBP10Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
-    elseif hd.rtype in [RType.OHLCV_1S_MSG, RType.OHLCV_1M_MSG, RType.OHLCV_1H_MSG, RType.OHLCV_1D_MSG]
-        open = read(decoder.io, Int64)
-        high = read(decoder.io, Int64)
-        low = read(decoder.io, Int64)
-        close = read(decoder.io, Int64)
-        volume = read(decoder.io, UInt64)
-        return OHLCVMsg(hd, open, high, low, close, volume)
-        
-    elseif hd.rtype == RType.STATUS_MSG
-        ts_recv = read(decoder.io, UInt64)
-        action = read(decoder.io, UInt16)
-        reason = read(decoder.io, UInt16)
-        trading_event = read(decoder.io, UInt16)
-        is_trading = read(decoder.io, UInt8)
-        is_quoting = read(decoder.io, UInt8)
-        is_short_sell_restricted = read(decoder.io, UInt8)
-        _ = read(decoder.io, 7)  # Reserved (was 5, now 7 to align to 40 bytes total)
-        return StatusMsg(hd, ts_recv, action, reason, trading_event, is_trading, is_quoting, is_short_sell_restricted)
-        
-    elseif hd.rtype == RType.INSTRUMENT_DEF_MSG
-        # V2 and V3 have COMPLETELY different structures!
-        start_pos = position(decoder.io)
-        record_size_bytes = hd.length * LENGTH_MULTIPLIER
-        body_size = record_size_bytes - 16
+    # Type-stable dispatch - function barrier eliminates type instability
+    return read_record_dispatch(decoder, hd, hd.rtype)
+end
 
-        if body_size == 384
-            # ===== DBN V2 InstrumentDefMsg =====
-            # CRITICAL: In v2, encode_order attributes are COMPLETELY IGNORED!
-            # ALL fields appear in EXACT Rust struct declaration order in the binary.
-            # Source: https://github.com/databento/dbn/blob/v0.29.0/rust/dbn/src/record.rs#L671
-            #
-            # This includes fields with encode_order annotations like:
-            # - ts_recv (encode_order 0) - at offset 0
-            # - raw_symbol (encode_order 2) - at offset 184 (NOT early!)
-            # - security_update_action (encode_order 3) - at offset 295
-            # - instrument_class (encode_order 4) - at offset 215
-            # - strike_price (encode_order 46) - at offset 96 (NOT late!)
-
-            # Read ALL fields in exact Rust struct declaration order
-            # Int64/UInt64 fields (offsets 0-103)
-            ts_recv = read(decoder.io, Int64)                            # offset 0
-            min_price_increment = read(decoder.io, Int64)                # offset 8
-            display_factor = read(decoder.io, Int64)                     # offset 16
-            expiration = reinterpret(Int64, read(decoder.io, UInt64))    # offset 24
-            activation = reinterpret(Int64, read(decoder.io, UInt64))    # offset 32
-            high_limit_price = read(decoder.io, Int64)                   # offset 40
-            low_limit_price = read(decoder.io, Int64)                    # offset 48
-            max_price_variation = read(decoder.io, Int64)                # offset 56
-            trading_reference_price = read(decoder.io, Int64)            # offset 64 (v2 only)
-            unit_of_measure_qty = read(decoder.io, Int64)                # offset 72
-            min_price_increment_amount = read(decoder.io, Int64)         # offset 80
-            price_ratio = read(decoder.io, Int64)                        # offset 88
-            strike_price = read(decoder.io, Int64)                       # offset 96
-
-            # Int32/UInt32 fields (offsets 104-159)
-            inst_attrib_value = read(decoder.io, Int32)                  # offset 104
-            underlying_id = read(decoder.io, UInt32)                     # offset 108
-            raw_instrument_id = UInt64(read(decoder.io, UInt32))         # offset 112 (u32 in v2, convert to u64)
-            market_depth_implied = read(decoder.io, Int32)               # offset 116
-            market_depth = read(decoder.io, Int32)                       # offset 120
-            market_segment_id = read(decoder.io, UInt32)                 # offset 124
-            max_trade_vol = read(decoder.io, UInt32)                     # offset 128
-            min_lot_size = read(decoder.io, Int32)                       # offset 132
-            min_lot_size_block = read(decoder.io, Int32)                 # offset 136
-            min_lot_size_round_lot = read(decoder.io, Int32)             # offset 140
-            min_trade_vol = read(decoder.io, UInt32)                     # offset 144
-            contract_multiplier = read(decoder.io, Int32)                # offset 148
-            decay_quantity = read(decoder.io, Int32)                     # offset 152
-            original_contract_size = read(decoder.io, Int32)             # offset 156
-
-            # Int16/UInt16 fields (offsets 160-169)
-            trading_reference_date = read(decoder.io, UInt16)            # offset 160 (v2 only)
-            appl_id = read(decoder.io, Int16)                            # offset 162
-            maturity_year = read(decoder.io, UInt16)                     # offset 164
-            decay_start_date = read(decoder.io, UInt16)                  # offset 166
-            channel_id = read(decoder.io, UInt16)                        # offset 168
-
-            # String fields in struct declaration order (offsets 170+)
-            currency = String(strip(String(read(decoder.io, 4)), '\0'))          # offset 170
-            settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))    # offset 174
-            secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))        # offset 178
-            raw_symbol = String(strip(String(read(decoder.io, 71)), '\0'))       # offset 184 (71 bytes in v2!)
-            group = String(strip(String(read(decoder.io, 21)), '\0'))            # offset 255
-            exchange = String(strip(String(read(decoder.io, 5)), '\0'))          # offset 276
-            asset = String(strip(String(read(decoder.io, 7)), '\0'))             # offset 281 (7 bytes in v2!)
-            cfi = String(strip(String(read(decoder.io, 7)), '\0'))               # offset 288
-            security_type = String(strip(String(read(decoder.io, 7)), '\0'))     # offset 295
-            unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))  # offset 302
-            underlying = String(strip(String(read(decoder.io, 21)), '\0'))       # offset 333
-            strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))  # offset 354
-
-            # Byte fields in struct declaration order (offsets 358+)
-            instrument_class_byte = read(decoder.io, UInt8)              # offset 358
-            instrument_class = safe_instrument_class(instrument_class_byte)
-            match_algorithm_byte = read(decoder.io, UInt8)               # offset 359
-            match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
-            md_security_trading_status = read(decoder.io, UInt8)         # offset 360 (v2 only)
-            main_fraction = read(decoder.io, UInt8)                      # offset 361
-            price_display_format = read(decoder.io, UInt8)               # offset 362
-            settl_price_type = read(decoder.io, UInt8)                   # offset 363 (v2 only)
-            sub_fraction = read(decoder.io, UInt8)                       # offset 364
-            underlying_product = read(decoder.io, UInt8)                 # offset 365
-            security_update_action_byte = read(decoder.io, UInt8)        # offset 366
-            security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
-            maturity_month = read(decoder.io, UInt8)                     # offset 367
-            maturity_day = read(decoder.io, UInt8)                       # offset 368
-            maturity_week = read(decoder.io, UInt8)                      # offset 369
-            user_defined_instrument_byte = read(decoder.io, UInt8)       # offset 370
-            user_defined_instrument = user_defined_instrument_byte != 0x00 && user_defined_instrument_byte != UInt8('N')
-            contract_multiplier_unit = read(decoder.io, Int8)            # offset 371
-            flow_schedule_type = read(decoder.io, Int8)                  # offset 372
-            tick_rule = read(decoder.io, UInt8)                          # offset 373
-
-            # v2: remaining bytes are reserved/padding (384 - 374 = 10 bytes)
-            skip(decoder.io, 10)
-
-            # V2 has NO leg fields - set ALL to defaults
-            leg_price = Int64(0)
-            leg_delta = Int64(0)
-            leg_count = UInt16(0)
-            leg_index = UInt16(0)
-            leg_instrument_id = UInt32(0)
-            leg_raw_symbol = ""
-            leg_instrument_class = InstrumentClass.OTHER  # Default is OTHER, not UNKNOWN_0
-            leg_side = Side.NONE
-            leg_ratio_price_numerator = UInt32(0)
-            leg_ratio_price_denominator = UInt32(0)
-            leg_ratio_qty_numerator = UInt32(0)
-            leg_ratio_qty_denominator = UInt32(0)
-            leg_underlying_id = UInt32(0)
-
-        else
-            # ===== DBN V3 InstrumentDefMsg =====
-            # encode_order 0: ts_recv
-            ts_recv = read(decoder.io, Int64)
-
-            # encode_order 2: raw_symbol (22 bytes in v3)
-            raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
-
-            # encode_order 3: security_update_action
-            security_update_action_byte = read(decoder.io, UInt8)
-            security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
-
-            # encode_order 4: instrument_class
-            instrument_class_byte = read(decoder.io, UInt8)
-            instrument_class = safe_instrument_class(instrument_class_byte)
-
-            # encode_order 20: raw_instrument_id (u64 in v3)
-            raw_instrument_id = read(decoder.io, UInt64)
-
-            # encode_order 54: strike_price
-            strike_price = read(decoder.io, Int64)
-
-            # encode_order 158: leg_count
-            leg_count = read(decoder.io, UInt16)
-
-            # encode_order 159: leg_index
-            leg_index = read(decoder.io, UInt16)
-
-            # encode_order 160: leg_instrument_id
-            leg_instrument_id = read(decoder.io, UInt32)
-
-            # encode_order 161: leg_raw_symbol (20 bytes)
-            leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
-
-            # encode_order 163: leg_instrument_class
-            leg_instrument_class_byte = read(decoder.io, UInt8)
-            leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
-
-            # encode_order 164: leg_side
-            leg_side_byte = read(decoder.io, UInt8)
-            leg_side = safe_side(leg_side_byte)
-
-            # encode_order 165: leg_price
-            leg_price = read(decoder.io, Int64)
-
-            # encode_order 166: leg_delta
-            leg_delta = read(decoder.io, Int64)
-
-            # encode_order 167-171: leg ratio fields
-            leg_ratio_price_numerator = read(decoder.io, UInt32)
-            leg_ratio_price_denominator = read(decoder.io, UInt32)
-            leg_ratio_qty_numerator = read(decoder.io, UInt32)
-            leg_ratio_qty_denominator = read(decoder.io, UInt32)
-            leg_underlying_id = read(decoder.io, UInt32)
-
-            # Now all fields WITHOUT encode_order, in struct declaration order
-            min_price_increment = read(decoder.io, Int64)
-            display_factor = read(decoder.io, Int64)
-            expiration = read(decoder.io, Int64)
-            activation = read(decoder.io, Int64)
-            high_limit_price = read(decoder.io, Int64)
-            low_limit_price = read(decoder.io, Int64)
-            max_price_variation = read(decoder.io, Int64)
-            unit_of_measure_qty = read(decoder.io, Int64)
-            min_price_increment_amount = read(decoder.io, Int64)
-            price_ratio = read(decoder.io, Int64)
-
-            inst_attrib_value = read(decoder.io, Int32)
-            underlying_id = read(decoder.io, UInt32)
-            market_depth_implied = read(decoder.io, Int32)
-            market_depth = read(decoder.io, Int32)
-            market_segment_id = read(decoder.io, UInt32)
-            max_trade_vol = read(decoder.io, UInt32)
-            min_lot_size = read(decoder.io, Int32)
-            min_lot_size_block = read(decoder.io, Int32)
-            min_lot_size_round_lot = read(decoder.io, Int32)
-            min_trade_vol = read(decoder.io, UInt32)
-            contract_multiplier = read(decoder.io, Int32)
-            decay_quantity = read(decoder.io, Int32)
-            original_contract_size = read(decoder.io, Int32)
-
-            appl_id = read(decoder.io, Int16)
-            maturity_year = read(decoder.io, UInt16)
-            decay_start_date = read(decoder.io, UInt16)
-            channel_id = read(decoder.io, UInt16)
-
-            # String fields without encode_order
-            currency = String(strip(String(read(decoder.io, 4)), '\0'))
-            settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-            secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
-            group = String(strip(String(read(decoder.io, 21)), '\0'))
-            exchange = String(strip(String(read(decoder.io, 5)), '\0'))
-            asset = String(strip(String(read(decoder.io, 11)), '\0'))  # 11 bytes in v3!
-            cfi = String(strip(String(read(decoder.io, 7)), '\0'))
-            security_type = String(strip(String(read(decoder.io, 7)), '\0'))
-            unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
-            underlying = String(strip(String(read(decoder.io, 21)), '\0'))
-            strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
-
-            # Single-byte fields without encode_order
-            match_algorithm_byte = read(decoder.io, UInt8)
-            match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
-            main_fraction = read(decoder.io, UInt8)
-            price_display_format = read(decoder.io, UInt8)
-            sub_fraction = read(decoder.io, UInt8)
-            underlying_product = read(decoder.io, UInt8)
-            maturity_month = read(decoder.io, UInt8)
-            maturity_day = read(decoder.io, UInt8)
-            maturity_week = read(decoder.io, UInt8)
-            user_defined_instrument_byte = read(decoder.io, UInt8)
-            user_defined_instrument = user_defined_instrument_byte != 0x00 && user_defined_instrument_byte != UInt8('N')
-            contract_multiplier_unit = read(decoder.io, Int8)
-            flow_schedule_type = read(decoder.io, Int8)
-            tick_rule = read(decoder.io, UInt8)
-
-            # v3: 17 bytes _reserved
-            skip(decoder.io, 17)
-
-            # V3 has NO v2-only fields - set to defaults
-            trading_reference_price = Int64(0)
-            trading_reference_date = UInt16(0)
-            md_security_trading_status = UInt8(0)
-            settl_price_type = UInt8(0)
-        end
-
-        return InstrumentDefMsg(
-            hd, ts_recv, min_price_increment, display_factor, expiration, activation,
-            high_limit_price, low_limit_price, max_price_variation,
-            trading_reference_price, unit_of_measure_qty, min_price_increment_amount,
-            price_ratio, inst_attrib_value, underlying_id, raw_instrument_id,
-            market_depth_implied, market_depth, market_segment_id, max_trade_vol,
-            min_lot_size, min_lot_size_block, min_lot_size_round_lot, min_trade_vol,
-            contract_multiplier, decay_quantity, original_contract_size,
-            trading_reference_date, appl_id, maturity_year, decay_start_date, channel_id,
-            currency, settl_currency, secsubtype, raw_symbol, group, exchange, asset,
-            cfi, security_type, unit_of_measure, underlying, strike_price_currency,
-            instrument_class, strike_price, match_algorithm, md_security_trading_status,
-            main_fraction, price_display_format, settl_price_type, sub_fraction,
-            underlying_product, security_update_action, maturity_month, maturity_day,
-            maturity_week, user_defined_instrument, contract_multiplier_unit,
-            flow_schedule_type, tick_rule, leg_count, leg_index, leg_instrument_id,
-            leg_raw_symbol, leg_side, leg_underlying_id, leg_instrument_class,
-            leg_ratio_qty_numerator, leg_ratio_qty_denominator, leg_ratio_price_numerator,
-            leg_ratio_price_denominator, leg_price, leg_delta
-        )
-
-    elseif hd.rtype == RType.IMBALANCE_MSG
-        ts_recv = read(decoder.io, UInt64)
-        ref_price = read(decoder.io, Int64)
-        auction_time = read(decoder.io, UInt64)
-        cont_book_clr_price = read(decoder.io, Int64)
-        auct_interest_clr_price = read(decoder.io, Int64)
-        ssr_filling_price = read(decoder.io, Int64)
-        ind_match_price = read(decoder.io, Int64)
-        upper_collar = read(decoder.io, Int64)
-        lower_collar = read(decoder.io, Int64)
-        paired_qty = read(decoder.io, UInt32)
-        total_imbalance_qty = read(decoder.io, UInt32)
-        market_imbalance_qty = read(decoder.io, UInt32)
-        unpaired_qty = read(decoder.io, UInt32)
-        auction_type = read(decoder.io, UInt8)
-        side = safe_side(read(decoder.io, UInt8))
-        auction_status = read(decoder.io, UInt8)
-        freeze_status = read(decoder.io, UInt8)
-        num_extensions = read(decoder.io, UInt8)
-        unpaired_side = read(decoder.io, UInt8)
-        significant_imbalance = read(decoder.io, UInt8)
-        _ = read(decoder.io, 1)  # Reserved
-        return ImbalanceMsg(hd, ts_recv, ref_price, auction_time, cont_book_clr_price, auct_interest_clr_price, ssr_filling_price, ind_match_price, upper_collar, lower_collar, paired_qty, total_imbalance_qty, market_imbalance_qty, unpaired_qty, auction_type, side, auction_status, freeze_status, num_extensions, unpaired_side, significant_imbalance)
-        
-    elseif hd.rtype == RType.STAT_MSG
-        ts_recv = read(decoder.io, UInt64)
-        ts_ref = read(decoder.io, UInt64) 
-        price = read(decoder.io, Int64)
-        # Handle UNDEF values in quantity field - read as UInt64 first
-        quantity_raw = read(decoder.io, UInt64)
-        quantity = if quantity_raw == 0xffffffffffffffff
-            # UNDEF_STAT_QUANTITY - use a special value or convert safely
-            typemax(Int64)  
-        else
-            # Safe conversion for normal values
-            quantity_raw <= typemax(Int64) ? Int64(quantity_raw) : typemax(Int64)
-        end
-        sequence = read(decoder.io, UInt32)
-        ts_in_delta = read(decoder.io, Int32)
-        stat_type = read(decoder.io, UInt16)
-        channel_id = read(decoder.io, UInt16)
-        update_action = read(decoder.io, UInt8)
-        stat_flags = read(decoder.io, UInt8)
-        _ = read(decoder.io, 18)  # Reserved (adjusted for field size changes)
-        return StatMsg(hd, ts_recv, ts_ref, price, quantity, sequence, ts_in_delta, stat_type, channel_id, update_action, stat_flags)
-        
-    elseif hd.rtype == RType.ERROR_MSG
-        # Read error message string
-        msg_bytes = hd.length - 16  # Subtract header size
-        if msg_bytes > 0
-            err_data = read(decoder.io, msg_bytes)
-            # Remove null terminator if present
-            null_pos = findfirst(==(0), err_data)
-            if null_pos !== nothing
-                err_string = String(err_data[1:null_pos-1])
-            else
-                err_string = String(err_data)
-            end
-        else
-            err_string = ""
-        end
-        return ErrorMsg(hd, err_string)
-        
-    elseif hd.rtype == RType.SYMBOL_MAPPING_MSG
-        # Read symbol mapping fields
-        stype_in = SType.T(read(decoder.io, UInt8))
-        _ = read(decoder.io, 3)  # Padding
-        
-        # Read input symbol (variable length string)
-        stype_in_len = read(decoder.io, UInt16)
-        stype_in_symbol = String(read(decoder.io, stype_in_len))
-        
-        stype_out = SType.T(read(decoder.io, UInt8))
-        _ = read(decoder.io, 3)  # Padding
-        
-        # Read output symbol (variable length string)
-        stype_out_len = read(decoder.io, UInt16)
-        stype_out_symbol = String(read(decoder.io, stype_out_len))
-        
-        start_ts = read(decoder.io, Int64)
-        end_ts = read(decoder.io, Int64)
-        
-        return SymbolMappingMsg(hd, stype_in, stype_in_symbol, stype_out, stype_out_symbol, start_ts, end_ts)
-        
-    elseif hd.rtype == RType.SYSTEM_MSG
-        # Read system message fields
-        remaining_bytes = hd.length - 16
-        if remaining_bytes > 0
-            # Split remaining data into msg and code (format TBD)
-            # For now, read as single message string
-            msg_data = read(decoder.io, remaining_bytes)
-            null_pos = findfirst(==(0), msg_data)
-            if null_pos !== nothing
-                msg_string = String(msg_data[1:null_pos-1])
-                # If there's more data after null, treat as code
-                if null_pos < length(msg_data)
-                    code_data = msg_data[null_pos+1:end]
-                    code_null = findfirst(==(0), code_data)
-                    if code_null !== nothing
-                        code_string = String(code_data[1:code_null-1])
-                    else
-                        code_string = String(code_data)
-                    end
-                else
-                    code_string = ""
-                end
-            else
-                msg_string = String(msg_data)
-                code_string = ""
-            end
-        else
-            msg_string = ""
-            code_string = ""
-        end
-        return SystemMsg(hd, msg_string, code_string)
-        
-    elseif hd.rtype == RType.CMBP_1_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        bid_px = read(decoder.io, Int64)
-        ask_px = read(decoder.io, Int64)
-        bid_sz = read(decoder.io, UInt32)
-        ask_sz = read(decoder.io, UInt32)
-        bid_ct = read(decoder.io, UInt32)
-        ask_ct = read(decoder.io, UInt32)
-        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        
-        return CMBP1Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
-    elseif hd.rtype == RType.CBBO_1S_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        bid_px = read(decoder.io, Int64)
-        ask_px = read(decoder.io, Int64)
-        bid_sz = read(decoder.io, UInt32)
-        ask_sz = read(decoder.io, UInt32)
-        bid_ct = read(decoder.io, UInt32)
-        ask_ct = read(decoder.io, UInt32)
-        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        
-        return CBBO1sMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
-    elseif hd.rtype == RType.CBBO_1M_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        bid_px = read(decoder.io, Int64)
-        ask_px = read(decoder.io, Int64)
-        bid_sz = read(decoder.io, UInt32)
-        ask_sz = read(decoder.io, UInt32)
-        bid_ct = read(decoder.io, UInt32)
-        ask_ct = read(decoder.io, UInt32)
-        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        
-        return CBBO1mMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
-    elseif hd.rtype == RType.TCBBO_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        bid_px = read(decoder.io, Int64)
-        ask_px = read(decoder.io, Int64)
-        bid_sz = read(decoder.io, UInt32)
-        ask_sz = read(decoder.io, UInt32)
-        bid_ct = read(decoder.io, UInt32)
-        ask_ct = read(decoder.io, UInt32)
-        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        
-        return TCBBOMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
-    elseif hd.rtype == RType.BBO_1S_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        bid_px = read(decoder.io, Int64)
-        ask_px = read(decoder.io, Int64)
-        bid_sz = read(decoder.io, UInt32)
-        ask_sz = read(decoder.io, UInt32)
-        bid_ct = read(decoder.io, UInt32)
-        ask_ct = read(decoder.io, UInt32)
-        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        
-        return BBO1sMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
-    elseif hd.rtype == RType.BBO_1M_MSG
-        price = read(decoder.io, Int64)
-        size = read(decoder.io, UInt32)
-        action = safe_action(read(decoder.io, UInt8))
-        side = safe_side(read(decoder.io, UInt8))
-        flags = read(decoder.io, UInt8)
-        depth = read(decoder.io, UInt8)
-        ts_recv = read(decoder.io, Int64)
-        ts_in_delta = read(decoder.io, Int32)
-        sequence = read(decoder.io, UInt32)
-        
-        bid_px = read(decoder.io, Int64)
-        ask_px = read(decoder.io, Int64)
-        bid_sz = read(decoder.io, UInt32)
-        ask_sz = read(decoder.io, UInt32)
-        bid_ct = read(decoder.io, UInt32)
-        ask_ct = read(decoder.io, UInt32)
-        levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
-        
-        return BBO1mMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
-        
+# Dispatch to type-stable helpers - each helper has concrete types
+@inline function read_record_dispatch(decoder::DBNDecoder, hd::RecordHeader, rtype::RType.T)
+    if rtype == RType.MBO_MSG
+        return read_mbo_msg(decoder, hd)
+    elseif rtype == RType.MBP_0_MSG
+        return read_trade_msg(decoder, hd)
+    elseif rtype == RType.MBP_1_MSG
+        return read_mbp1_msg(decoder, hd)
+    elseif rtype == RType.MBP_10_MSG
+        return read_mbp10_msg(decoder, hd)
+    elseif rtype in (RType.OHLCV_1S_MSG, RType.OHLCV_1M_MSG, RType.OHLCV_1H_MSG, RType.OHLCV_1D_MSG)
+        return read_ohlcv_msg(decoder, hd)
+    elseif rtype == RType.STATUS_MSG
+        return read_status_msg(decoder, hd)
+    elseif rtype == RType.INSTRUMENT_DEF_MSG
+        return read_instrument_def_msg(decoder, hd)
+    elseif rtype == RType.IMBALANCE_MSG
+        return read_imbalance_msg(decoder, hd)
+    elseif rtype == RType.STAT_MSG
+        return read_stat_msg(decoder, hd)
+    elseif rtype == RType.ERROR_MSG
+        return read_error_msg(decoder, hd)
+    elseif rtype == RType.SYMBOL_MAPPING_MSG
+        return read_symbol_mapping_msg(decoder, hd)
+    elseif rtype == RType.SYSTEM_MSG
+        return read_system_msg(decoder, hd)
+    elseif rtype == RType.CMBP_1_MSG
+        return read_cmbp1_msg(decoder, hd)
+    elseif rtype == RType.CBBO_1S_MSG
+        return read_cbbo1s_msg(decoder, hd)
+    elseif rtype == RType.CBBO_1M_MSG
+        return read_cbbo1m_msg(decoder, hd)
+    elseif rtype == RType.TCBBO_MSG
+        return read_tcbbo_msg(decoder, hd)
+    elseif rtype == RType.BBO_1S_MSG
+        return read_bbo1s_msg(decoder, hd)
+    elseif rtype == RType.BBO_1M_MSG
+        return read_bbo1m_msg(decoder, hd)
     else
-        # Skip unknown record types
-        skip(decoder.io, hd.length - 16)  # 16 bytes for record header
+        skip(decoder.io, hd.length - 16)
         return nothing
     end
 end
+
+@inline function read_mbo_msg(decoder::DBNDecoder, hd::RecordHeader)
+    # For MBO records, we need to read exactly 56 bytes total
+    # We've already read: length(1) + rtype(1) + publisher_id(2) + instrument_id(4) + ts_event(8) = 16 bytes
+    # Remaining to read: 56 - 16 = 40 bytes
+    
+    # Based on Rust struct order and empirical evidence:
+    ts_recv = read(decoder.io, Int64)      # 8 bytes (positions 16-23)
+    order_id = read(decoder.io, UInt64)    # 8 bytes (positions 24-31)
+    size = read(decoder.io, UInt32)        # 4 bytes (positions 32-35)
+    flags = read(decoder.io, UInt8)        # 1 byte (position 36)
+    channel_id = read(decoder.io, UInt8)   # 1 byte (position 37)
+    action = safe_action(read(decoder.io, UInt8))   # 1 byte (position 38)
+    side = safe_side(read(decoder.io, UInt8))       # 1 byte (position 39)
+    price = read(decoder.io, Int64)        # 8 bytes (positions 40-47)
+    ts_in_delta = read(decoder.io, Int32)  # 4 bytes (positions 48-51)
+    sequence = read(decoder.io, UInt32)    # 4 bytes (positions 52-55)
+    
+    return MBOMsg(hd, order_id, price, size, flags, channel_id, action, side, ts_recv, ts_in_delta, sequence)
+end
+
+@inline function read_trade_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    return TradeMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence)
+end
+
+@inline function read_mbp1_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    bid_px = read(decoder.io, Int64)
+    ask_px = read(decoder.io, Int64)
+    bid_sz = read(decoder.io, UInt32)
+    ask_sz = read(decoder.io, UInt32)
+    bid_ct = read(decoder.io, UInt32)
+    ask_ct = read(decoder.io, UInt32)
+    levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    
+    return MBP1Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_mbp10_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    levels = ntuple(10) do _
+        bid_px = read(decoder.io, Int64)
+        ask_px = read(decoder.io, Int64)
+        bid_sz = read(decoder.io, UInt32)
+        ask_sz = read(decoder.io, UInt32)
+        bid_ct = read(decoder.io, UInt32)
+        ask_ct = read(decoder.io, UInt32)
+        BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    end
+    
+    return MBP10Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_ohlcv_msg(decoder::DBNDecoder, hd::RecordHeader)
+    open = read(decoder.io, Int64)
+    high = read(decoder.io, Int64)
+    low = read(decoder.io, Int64)
+    close = read(decoder.io, Int64)
+    volume = read(decoder.io, UInt64)
+    return OHLCVMsg(hd, open, high, low, close, volume)
+end
+
+@inline function read_status_msg(decoder::DBNDecoder, hd::RecordHeader)
+    ts_recv = read(decoder.io, UInt64)
+    action = read(decoder.io, UInt16)
+    reason = read(decoder.io, UInt16)
+    trading_event = read(decoder.io, UInt16)
+    is_trading = read(decoder.io, UInt8)
+    is_quoting = read(decoder.io, UInt8)
+    is_short_sell_restricted = read(decoder.io, UInt8)
+    _ = read(decoder.io, 7)  # Reserved (was 5, now 7 to align to 40 bytes total)
+    return StatusMsg(hd, ts_recv, action, reason, trading_event, is_trading, is_quoting, is_short_sell_restricted)
+end
+
+@inline function read_imbalance_msg(decoder::DBNDecoder, hd::RecordHeader)
+    ts_recv = read(decoder.io, UInt64)
+    ref_price = read(decoder.io, Int64)
+    auction_time = read(decoder.io, UInt64)
+    cont_book_clr_price = read(decoder.io, Int64)
+    auct_interest_clr_price = read(decoder.io, Int64)
+    ssr_filling_price = read(decoder.io, Int64)
+    ind_match_price = read(decoder.io, Int64)
+    upper_collar = read(decoder.io, Int64)
+    lower_collar = read(decoder.io, Int64)
+    paired_qty = read(decoder.io, UInt32)
+    total_imbalance_qty = read(decoder.io, UInt32)
+    market_imbalance_qty = read(decoder.io, UInt32)
+    unpaired_qty = read(decoder.io, UInt32)
+    auction_type = read(decoder.io, UInt8)
+    side = safe_side(read(decoder.io, UInt8))
+    auction_status = read(decoder.io, UInt8)
+    freeze_status = read(decoder.io, UInt8)
+    num_extensions = read(decoder.io, UInt8)
+    unpaired_side = read(decoder.io, UInt8)
+    significant_imbalance = read(decoder.io, UInt8)
+    _ = read(decoder.io, 1)  # Reserved
+    return ImbalanceMsg(hd, ts_recv, ref_price, auction_time, cont_book_clr_price, auct_interest_clr_price, ssr_filling_price, ind_match_price, upper_collar, lower_collar, paired_qty, total_imbalance_qty, market_imbalance_qty, unpaired_qty, auction_type, side, auction_status, freeze_status, num_extensions, unpaired_side, significant_imbalance)
+end
+
+@inline function read_stat_msg(decoder::DBNDecoder, hd::RecordHeader)
+    ts_recv = read(decoder.io, UInt64)
+    ts_ref = read(decoder.io, UInt64) 
+    price = read(decoder.io, Int64)
+    # Handle UNDEF values in quantity field - read as UInt64 first
+    quantity_raw = read(decoder.io, UInt64)
+    quantity = if quantity_raw == 0xffffffffffffffff
+        # UNDEF_STAT_QUANTITY - use a special value or convert safely
+        typemax(Int64)  
+    else
+        # Safe conversion for normal values
+        quantity_raw <= typemax(Int64) ? Int64(quantity_raw) : typemax(Int64)
+    end
+    sequence = read(decoder.io, UInt32)
+    ts_in_delta = read(decoder.io, Int32)
+    stat_type = read(decoder.io, UInt16)
+    channel_id = read(decoder.io, UInt16)
+    update_action = read(decoder.io, UInt8)
+    stat_flags = read(decoder.io, UInt8)
+    _ = read(decoder.io, 18)  # Reserved (adjusted for field size changes)
+    return StatMsg(hd, ts_recv, ts_ref, price, quantity, sequence, ts_in_delta, stat_type, channel_id, update_action, stat_flags)
+end
+
+@inline function read_error_msg(decoder::DBNDecoder, hd::RecordHeader)
+    # Read error message string
+    msg_bytes = hd.length - 16  # Subtract header size
+    if msg_bytes > 0
+        err_data = read(decoder.io, msg_bytes)
+        # Remove null terminator if present
+        null_pos = findfirst(==(0), err_data)
+        if null_pos !== nothing
+            err_string = String(err_data[1:null_pos-1])
+        else
+            err_string = String(err_data)
+        end
+    else
+        err_string = ""
+    end
+    return ErrorMsg(hd, err_string)
+end
+
+@inline function read_symbol_mapping_msg(decoder::DBNDecoder, hd::RecordHeader)
+    # Read symbol mapping fields
+    stype_in = SType.T(read(decoder.io, UInt8))
+    _ = read(decoder.io, 3)  # Padding
+    
+    # Read input symbol (variable length string)
+    stype_in_len = read(decoder.io, UInt16)
+    stype_in_symbol = String(read(decoder.io, stype_in_len))
+    
+    stype_out = SType.T(read(decoder.io, UInt8))
+    _ = read(decoder.io, 3)  # Padding
+    
+    # Read output symbol (variable length string)
+    stype_out_len = read(decoder.io, UInt16)
+    stype_out_symbol = String(read(decoder.io, stype_out_len))
+    
+    start_ts = read(decoder.io, Int64)
+    end_ts = read(decoder.io, Int64)
+    
+    return SymbolMappingMsg(hd, stype_in, stype_in_symbol, stype_out, stype_out_symbol, start_ts, end_ts)
+end
+
+@inline function read_system_msg(decoder::DBNDecoder, hd::RecordHeader)
+    # Read system message fields
+    remaining_bytes = hd.length - 16
+    if remaining_bytes > 0
+        # Split remaining data into msg and code (format TBD)
+        # For now, read as single message string
+        msg_data = read(decoder.io, remaining_bytes)
+        null_pos = findfirst(==(0), msg_data)
+        if null_pos !== nothing
+            msg_string = String(msg_data[1:null_pos-1])
+            # If there's more data after null, treat as code
+            if null_pos < length(msg_data)
+                code_data = msg_data[null_pos+1:end]
+                code_null = findfirst(==(0), code_data)
+                if code_null !== nothing
+                    code_string = String(code_data[1:code_null-1])
+                else
+                    code_string = String(code_data)
+                end
+            else
+                code_string = ""
+            end
+        else
+            msg_string = String(msg_data)
+            code_string = ""
+        end
+    else
+        msg_string = ""
+        code_string = ""
+    end
+    return SystemMsg(hd, msg_string, code_string)
+end
+
+@inline function read_cmbp1_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    bid_px = read(decoder.io, Int64)
+    ask_px = read(decoder.io, Int64)
+    bid_sz = read(decoder.io, UInt32)
+    ask_sz = read(decoder.io, UInt32)
+    bid_ct = read(decoder.io, UInt32)
+    ask_ct = read(decoder.io, UInt32)
+    levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    
+    return CMBP1Msg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_cbbo1s_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    bid_px = read(decoder.io, Int64)
+    ask_px = read(decoder.io, Int64)
+    bid_sz = read(decoder.io, UInt32)
+    ask_sz = read(decoder.io, UInt32)
+    bid_ct = read(decoder.io, UInt32)
+    ask_ct = read(decoder.io, UInt32)
+    levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    
+    return CBBO1sMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_cbbo1m_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    bid_px = read(decoder.io, Int64)
+    ask_px = read(decoder.io, Int64)
+    bid_sz = read(decoder.io, UInt32)
+    ask_sz = read(decoder.io, UInt32)
+    bid_ct = read(decoder.io, UInt32)
+    ask_ct = read(decoder.io, UInt32)
+    levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    
+    return CBBO1mMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_tcbbo_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    bid_px = read(decoder.io, Int64)
+    ask_px = read(decoder.io, Int64)
+    bid_sz = read(decoder.io, UInt32)
+    ask_sz = read(decoder.io, UInt32)
+    bid_ct = read(decoder.io, UInt32)
+    ask_ct = read(decoder.io, UInt32)
+    levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    
+    return TCBBOMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_bbo1s_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    bid_px = read(decoder.io, Int64)
+    ask_px = read(decoder.io, Int64)
+    bid_sz = read(decoder.io, UInt32)
+    ask_sz = read(decoder.io, UInt32)
+    bid_ct = read(decoder.io, UInt32)
+    ask_ct = read(decoder.io, UInt32)
+    levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    
+    return BBO1sMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_bbo1m_msg(decoder::DBNDecoder, hd::RecordHeader)
+    price = read(decoder.io, Int64)
+    size = read(decoder.io, UInt32)
+    action = safe_action(read(decoder.io, UInt8))
+    side = safe_side(read(decoder.io, UInt8))
+    flags = read(decoder.io, UInt8)
+    depth = read(decoder.io, UInt8)
+    ts_recv = read(decoder.io, Int64)
+    ts_in_delta = read(decoder.io, Int32)
+    sequence = read(decoder.io, UInt32)
+    
+    bid_px = read(decoder.io, Int64)
+    ask_px = read(decoder.io, Int64)
+    bid_sz = read(decoder.io, UInt32)
+    ask_sz = read(decoder.io, UInt32)
+    bid_ct = read(decoder.io, UInt32)
+    ask_ct = read(decoder.io, UInt32)
+    levels = BidAskPair(bid_px, ask_px, bid_sz, ask_sz, bid_ct, ask_ct)
+    
+    return BBO1mMsg(hd, price, size, action, side, flags, depth, ts_recv, ts_in_delta, sequence, levels)
+end
+
+@inline function read_instrument_def_msg(decoder::DBNDecoder, hd::RecordHeader)
+    start_pos = position(decoder.io)
+    record_size_bytes = hd.length * LENGTH_MULTIPLIER
+    body_size = record_size_bytes - 16
+    if body_size == 384
+        return read_instrument_def_v2(decoder, hd)
+    else
+        return read_instrument_def_v3(decoder, hd)
+    end
+end
+@inline function read_instrument_def_v2(decoder::DBNDecoder, hd::RecordHeader)
+    # ===== DBN V2 InstrumentDefMsg =====
+    # CRITICAL: In v2, encode_order attributes are COMPLETELY IGNORED!
+    # Read ALL fields in exact Rust struct declaration order
+    ts_recv = read(decoder.io, Int64)                            # offset 0
+    min_price_increment = read(decoder.io, Int64)                # offset 8
+    display_factor = read(decoder.io, Int64)                     # offset 16
+    expiration = reinterpret(Int64, read(decoder.io, UInt64))    # offset 24
+    activation = reinterpret(Int64, read(decoder.io, UInt64))    # offset 32
+    high_limit_price = read(decoder.io, Int64)                   # offset 40
+    low_limit_price = read(decoder.io, Int64)                    # offset 48
+    max_price_variation = read(decoder.io, Int64)                # offset 56
+    trading_reference_price = read(decoder.io, Int64)            # offset 64 (v2 only)
+    unit_of_measure_qty = read(decoder.io, Int64)                # offset 72
+    min_price_increment_amount = read(decoder.io, Int64)         # offset 80
+    price_ratio = read(decoder.io, Int64)                        # offset 88
+    strike_price = read(decoder.io, Int64)                       # offset 96
+    # Int32/UInt32 fields (offsets 104-159)
+    inst_attrib_value = read(decoder.io, Int32)                  # offset 104
+    underlying_id = read(decoder.io, UInt32)                     # offset 108
+    raw_instrument_id = UInt64(read(decoder.io, UInt32))         # offset 112 (u32 in v2, convert to u64)
+    market_depth_implied = read(decoder.io, Int32)               # offset 116
+    market_depth = read(decoder.io, Int32)                       # offset 120
+    market_segment_id = read(decoder.io, UInt32)                 # offset 124
+    max_trade_vol = read(decoder.io, UInt32)                     # offset 128
+    min_lot_size = read(decoder.io, Int32)                       # offset 132
+    min_lot_size_block = read(decoder.io, Int32)                 # offset 136
+    min_lot_size_round_lot = read(decoder.io, Int32)             # offset 140
+    min_trade_vol = read(decoder.io, UInt32)                     # offset 144
+    contract_multiplier = read(decoder.io, Int32)                # offset 148
+    decay_quantity = read(decoder.io, Int32)                     # offset 152
+    original_contract_size = read(decoder.io, Int32)             # offset 156
+    # Int16/UInt16 fields (offsets 160-169)
+    trading_reference_date = read(decoder.io, UInt16)            # offset 160 (v2 only)
+    appl_id = read(decoder.io, Int16)                            # offset 162
+    maturity_year = read(decoder.io, UInt16)                     # offset 164
+    decay_start_date = read(decoder.io, UInt16)                  # offset 166
+    channel_id = read(decoder.io, UInt16)                        # offset 168
+    # String fields in struct declaration order (offsets 170+)
+    currency = String(strip(String(read(decoder.io, 4)), '\0'))          # offset 170
+    settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))    # offset 174
+    secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))        # offset 178
+    raw_symbol = String(strip(String(read(decoder.io, 71)), '\0'))       # offset 184 (71 bytes in v2!)
+    group = String(strip(String(read(decoder.io, 21)), '\0'))            # offset 255
+    exchange = String(strip(String(read(decoder.io, 5)), '\0'))          # offset 276
+    asset = String(strip(String(read(decoder.io, 7)), '\0'))             # offset 281 (7 bytes in v2!)
+    cfi = String(strip(String(read(decoder.io, 7)), '\0'))               # offset 288
+    security_type = String(strip(String(read(decoder.io, 7)), '\0'))     # offset 295
+    unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))  # offset 302
+    underlying = String(strip(String(read(decoder.io, 21)), '\0'))       # offset 333
+    strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))  # offset 354
+    # Byte fields in struct declaration order (offsets 358+)
+    instrument_class_byte = read(decoder.io, UInt8)              # offset 358
+    instrument_class = safe_instrument_class(instrument_class_byte)
+    match_algorithm_byte = read(decoder.io, UInt8)               # offset 359
+    match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
+    md_security_trading_status = read(decoder.io, UInt8)         # offset 360 (v2 only)
+    main_fraction = read(decoder.io, UInt8)                      # offset 361
+    price_display_format = read(decoder.io, UInt8)               # offset 362
+    settl_price_type = read(decoder.io, UInt8)                   # offset 363 (v2 only)
+    sub_fraction = read(decoder.io, UInt8)                       # offset 364
+    underlying_product = read(decoder.io, UInt8)                 # offset 365
+    security_update_action_byte = read(decoder.io, UInt8)        # offset 366
+    security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
+    maturity_month = read(decoder.io, UInt8)                     # offset 367
+    maturity_day = read(decoder.io, UInt8)                       # offset 368
+    maturity_week = read(decoder.io, UInt8)                      # offset 369
+    user_defined_instrument_byte = read(decoder.io, UInt8)       # offset 370
+    user_defined_instrument = user_defined_instrument_byte != 0x00 && user_defined_instrument_byte != UInt8('N')
+    contract_multiplier_unit = read(decoder.io, Int8)            # offset 371
+    flow_schedule_type = read(decoder.io, Int8)                  # offset 372
+    tick_rule = read(decoder.io, UInt8)                          # offset 373
+    # v2: remaining bytes are reserved/padding (384 - 374 = 10 bytes)
+    skip(decoder.io, 10)
+    # V2 has NO leg fields - set ALL to defaults
+    leg_price = Int64(0)
+    leg_delta = Int64(0)
+    leg_count = UInt16(0)
+    leg_index = UInt16(0)
+    leg_instrument_id = UInt32(0)
+    leg_raw_symbol = ""
+    leg_instrument_class = InstrumentClass.OTHER  # Default is OTHER, not UNKNOWN_0
+    leg_side = Side.NONE
+    leg_ratio_price_numerator = UInt32(0)
+    leg_ratio_price_denominator = UInt32(0)
+    leg_ratio_qty_numerator = UInt32(0)
+    leg_ratio_qty_denominator = UInt32(0)
+    leg_underlying_id = UInt32(0)
+
+    return InstrumentDefMsg(
+        hd, ts_recv, min_price_increment, display_factor, expiration, activation,
+        high_limit_price, low_limit_price, max_price_variation,
+        trading_reference_price, unit_of_measure_qty, min_price_increment_amount,
+        price_ratio, inst_attrib_value, underlying_id, raw_instrument_id,
+        market_depth_implied, market_depth, market_segment_id, max_trade_vol,
+        min_lot_size, min_lot_size_block, min_lot_size_round_lot, min_trade_vol,
+        contract_multiplier, decay_quantity, original_contract_size,
+        trading_reference_date, appl_id, maturity_year, decay_start_date, channel_id,
+        currency, settl_currency, secsubtype, raw_symbol, group, exchange, asset,
+        cfi, security_type, unit_of_measure, underlying, strike_price_currency,
+        instrument_class, strike_price, match_algorithm, md_security_trading_status,
+        main_fraction, price_display_format, settl_price_type, sub_fraction,
+        underlying_product, security_update_action, maturity_month, maturity_day,
+        maturity_week, user_defined_instrument, contract_multiplier_unit,
+        flow_schedule_type, tick_rule, leg_count, leg_index, leg_instrument_id,
+        leg_raw_symbol, leg_side, leg_underlying_id, leg_instrument_class,
+        leg_ratio_qty_numerator, leg_ratio_qty_denominator, leg_ratio_price_numerator,
+        leg_ratio_price_denominator, leg_price, leg_delta
+    )
+end
+
+@inline function read_instrument_def_v3(decoder::DBNDecoder, hd::RecordHeader)
+    # ===== DBN V3 InstrumentDefMsg =====
+    ts_recv = read(decoder.io, Int64)
+    # encode_order 2: raw_symbol (22 bytes in v3)
+    raw_symbol = String(strip(String(read(decoder.io, 22)), '\0'))
+    # encode_order 3: security_update_action
+    security_update_action_byte = read(decoder.io, UInt8)
+    security_update_action = security_update_action_byte == 0 ? '\0' : Char(security_update_action_byte)
+    # encode_order 4: instrument_class
+    instrument_class_byte = read(decoder.io, UInt8)
+    instrument_class = safe_instrument_class(instrument_class_byte)
+    # encode_order 20: raw_instrument_id (u64 in v3)
+    raw_instrument_id = read(decoder.io, UInt64)
+    # encode_order 54: strike_price
+    strike_price = read(decoder.io, Int64)
+    # encode_order 158: leg_count
+    leg_count = read(decoder.io, UInt16)
+    # encode_order 159: leg_index
+    leg_index = read(decoder.io, UInt16)
+    # encode_order 160: leg_instrument_id
+    leg_instrument_id = read(decoder.io, UInt32)
+    # encode_order 161: leg_raw_symbol (20 bytes)
+    leg_raw_symbol = String(strip(String(read(decoder.io, 20)), '\0'))
+    # encode_order 163: leg_instrument_class
+    leg_instrument_class_byte = read(decoder.io, UInt8)
+    leg_instrument_class = safe_instrument_class(leg_instrument_class_byte)
+    # encode_order 164: leg_side
+    leg_side_byte = read(decoder.io, UInt8)
+    leg_side = safe_side(leg_side_byte)
+    # encode_order 165: leg_price
+    leg_price = read(decoder.io, Int64)
+    # encode_order 166: leg_delta
+    leg_delta = read(decoder.io, Int64)
+    # encode_order 167-171: leg ratio fields
+    leg_ratio_price_numerator = read(decoder.io, UInt32)
+    leg_ratio_price_denominator = read(decoder.io, UInt32)
+    leg_ratio_qty_numerator = read(decoder.io, UInt32)
+    leg_ratio_qty_denominator = read(decoder.io, UInt32)
+    leg_underlying_id = read(decoder.io, UInt32)
+    # Now all fields WITHOUT encode_order, in struct declaration order
+    min_price_increment = read(decoder.io, Int64)
+    display_factor = read(decoder.io, Int64)
+    expiration = read(decoder.io, Int64)
+    activation = read(decoder.io, Int64)
+    high_limit_price = read(decoder.io, Int64)
+    low_limit_price = read(decoder.io, Int64)
+    max_price_variation = read(decoder.io, Int64)
+    unit_of_measure_qty = read(decoder.io, Int64)
+    min_price_increment_amount = read(decoder.io, Int64)
+    price_ratio = read(decoder.io, Int64)
+    inst_attrib_value = read(decoder.io, Int32)
+    underlying_id = read(decoder.io, UInt32)
+    market_depth_implied = read(decoder.io, Int32)
+    market_depth = read(decoder.io, Int32)
+    market_segment_id = read(decoder.io, UInt32)
+    max_trade_vol = read(decoder.io, UInt32)
+    min_lot_size = read(decoder.io, Int32)
+    min_lot_size_block = read(decoder.io, Int32)
+    min_lot_size_round_lot = read(decoder.io, Int32)
+    min_trade_vol = read(decoder.io, UInt32)
+    contract_multiplier = read(decoder.io, Int32)
+    decay_quantity = read(decoder.io, Int32)
+    original_contract_size = read(decoder.io, Int32)
+    appl_id = read(decoder.io, Int16)
+    maturity_year = read(decoder.io, UInt16)
+    decay_start_date = read(decoder.io, UInt16)
+    channel_id = read(decoder.io, UInt16)
+    # String fields without encode_order
+    currency = String(strip(String(read(decoder.io, 4)), '\0'))
+    settl_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+    secsubtype = String(strip(String(read(decoder.io, 6)), '\0'))
+    group = String(strip(String(read(decoder.io, 21)), '\0'))
+    exchange = String(strip(String(read(decoder.io, 5)), '\0'))
+    asset = String(strip(String(read(decoder.io, 11)), '\0'))  # 11 bytes in v3!
+    cfi = String(strip(String(read(decoder.io, 7)), '\0'))
+    security_type = String(strip(String(read(decoder.io, 7)), '\0'))
+    unit_of_measure = String(strip(String(read(decoder.io, 31)), '\0'))
+    underlying = String(strip(String(read(decoder.io, 21)), '\0'))
+    strike_price_currency = String(strip(String(read(decoder.io, 4)), '\0'))
+    # Single-byte fields without encode_order
+    match_algorithm_byte = read(decoder.io, UInt8)
+    match_algorithm = match_algorithm_byte == 0 ? '\0' : Char(match_algorithm_byte)
+    main_fraction = read(decoder.io, UInt8)
+    price_display_format = read(decoder.io, UInt8)
+    sub_fraction = read(decoder.io, UInt8)
+    underlying_product = read(decoder.io, UInt8)
+    maturity_month = read(decoder.io, UInt8)
+    maturity_day = read(decoder.io, UInt8)
+    maturity_week = read(decoder.io, UInt8)
+    user_defined_instrument_byte = read(decoder.io, UInt8)
+    user_defined_instrument = user_defined_instrument_byte != 0x00 && user_defined_instrument_byte != UInt8('N')
+    contract_multiplier_unit = read(decoder.io, Int8)
+    flow_schedule_type = read(decoder.io, Int8)
+    tick_rule = read(decoder.io, UInt8)
+    # v3: 17 bytes _reserved
+    skip(decoder.io, 17)
+    # V3 has NO v2-only fields - set to defaults
+    trading_reference_price = Int64(0)
+    trading_reference_date = UInt16(0)
+    md_security_trading_status = UInt8(0)
+    settl_price_type = UInt8(0)
+
+    return InstrumentDefMsg(
+        hd, ts_recv, min_price_increment, display_factor, expiration, activation,
+        high_limit_price, low_limit_price, max_price_variation,
+        trading_reference_price, unit_of_measure_qty, min_price_increment_amount,
+        price_ratio, inst_attrib_value, underlying_id, raw_instrument_id,
+        market_depth_implied, market_depth, market_segment_id, max_trade_vol,
+        min_lot_size, min_lot_size_block, min_lot_size_round_lot, min_trade_vol,
+        contract_multiplier, decay_quantity, original_contract_size,
+        trading_reference_date, appl_id, maturity_year, decay_start_date, channel_id,
+        currency, settl_currency, secsubtype, raw_symbol, group, exchange, asset,
+        cfi, security_type, unit_of_measure, underlying, strike_price_currency,
+        instrument_class, strike_price, match_algorithm, md_security_trading_status,
+        main_fraction, price_display_format, settl_price_type, sub_fraction,
+        underlying_product, security_update_action, maturity_month, maturity_day,
+        maturity_week, user_defined_instrument, contract_multiplier_unit,
+        flow_schedule_type, tick_rule, leg_count, leg_index, leg_instrument_id,
+        leg_raw_symbol, leg_side, leg_underlying_id, leg_instrument_class,
+        leg_ratio_qty_numerator, leg_ratio_qty_denominator, leg_ratio_price_numerator,
+        leg_ratio_price_denominator, leg_price, leg_delta
+    )
+end
+
+
 
 # Convenience function
 """
@@ -1040,7 +1086,9 @@ function read_dbn(filename::String)
         max(100, div(file_size, 50))
     end
 
-    records = Vector{Any}(undef, 0)
+    # Use type-stable union instead of Vector{Any} to eliminate boxing overhead
+    # This dramatically improves performance by enabling type inference and reducing GC pressure
+    records = Vector{DBNRecord}(undef, 0)
     sizehint!(records, estimated_count)
 
     try
@@ -1102,7 +1150,8 @@ function read_dbn_with_metadata(filename::String)
         max(100, div(file_size, 50))
     end
 
-    records = Vector{Any}(undef, 0)
+    # Use type-stable union instead of Vector{Any} to eliminate boxing overhead
+    records = Vector{DBNRecord}(undef, 0)
     sizehint!(records, estimated_count)
 
     try
