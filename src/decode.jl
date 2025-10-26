@@ -575,8 +575,8 @@ function read_record(decoder::DBNDecoder)
             flow_schedule_type = read(decoder.io, Int8)
             tick_rule = read(decoder.io, UInt8)
 
-            # v2: 63 bytes _reserved (321 bytes read, 384 total, 63 remaining)
-            skip(decoder.io, 63)
+            # v2: 62 bytes _reserved (322 bytes read, 384 total, 62 remaining)
+            skip(decoder.io, 62)
 
             # V2 has NO leg fields - set ALL to defaults
             leg_price = Int64(0)
