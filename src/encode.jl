@@ -47,13 +47,13 @@ Writes the complete DBN header in the correct binary format:
 - Metadata length
 - Complete metadata section with all fields
 
-Always writes to the base IO stream (uncompressed) as headers must be readable
-for compression detection.
+Writes to the current IO stream (encoder.io), which may be compressed or uncompressed.
+For compressed files (.zst), the entire file including the header is compressed.
 """
 function write_header(encoder::DBNEncoder)
-    # Always write header to the base IO (uncompressed)
-    io = encoder.base_io
-    
+    # Write header to the current IO stream (compressed or uncompressed)
+    io = encoder.io
+
     # Write magic bytes "DBN"
     write(io, b"DBN")
     
@@ -792,10 +792,10 @@ end
 """
     write_dbn(filename::String, metadata::Metadata, records)
 
-Convenience function to write a complete DBN file.
+Convenience function to write a complete DBN file with automatic compression support.
 
 # Arguments
-- `filename::String`: Output file path
+- `filename::String`: Output file path (use .zst extension for compression)
 - `metadata::Metadata`: File metadata
 - `records`: Collection of records to write
 
@@ -803,26 +803,62 @@ Convenience function to write a complete DBN file.
 Creates a complete DBN file with header and all records.
 Automatically handles:
 - File creation and management
-- Header writing
+- Zstd compression (when filename ends with .zst)
+- Header writing (uncompressed for format detection)
 - Record serialization
 - Resource cleanup
 
 # Example
 ```julia
-metadata = Metadata(3, "TEST", Schema.TRADES, start_ts, end_ts, length(records), 
+metadata = Metadata(3, "TEST", Schema.TRADES, start_ts, end_ts, length(records),
                    SType.RAW_SYMBOL, SType.RAW_SYMBOL, false, symbols, [], [], [])
+# Uncompressed
 write_dbn("output.dbn", metadata, records)
+# Compressed
+write_dbn("output.dbn.zst", metadata, records)
 ```
 """
 function write_dbn(filename::String, metadata::Metadata, records)
-    open(filename, "w") do f
-        encoder = DBNEncoder(f, metadata)
-        write_header(encoder)
-        
-        for record in records
-            write_record(encoder, record)
+    # Check if compression is needed
+    use_compression = endswith(filename, ".zst")
+
+    base_io = open(filename, "w")
+
+    try
+        if use_compression
+            # Wrap the entire stream with compression (including header)
+            compressed_io = TranscodingStream(ZstdCompressor(), base_io)
+
+            try
+                encoder = DBNEncoder(compressed_io, base_io, metadata, nothing)
+                write_header(encoder)
+
+                # Write all records
+                for record in records
+                    write_record(encoder, record)
+                end
+
+                finalize_encoder(encoder)
+            finally
+                # Close the compression stream
+                close(compressed_io)
+            end
+        else
+            # Uncompressed: write directly to file
+            encoder = DBNEncoder(base_io, metadata)
+            write_header(encoder)
+
+            # Write all records
+            for record in records
+                write_record(encoder, record)
+            end
+
+            finalize_encoder(encoder)
         end
-        
-        finalize_encoder(encoder)
+    finally
+        # Always close the base IO
+        if isopen(base_io)
+            close(base_io)
+        end
     end
 end

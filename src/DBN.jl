@@ -92,6 +92,7 @@ using StructTypes
 # Include all the component files
 include("types.jl")
 include("messages.jl")
+include("buffered_io.jl")
 include("decode.jl")
 include("encode.jl")
 include("streaming.jl")
@@ -99,7 +100,8 @@ include("export.jl")
 include("import.jl")
 
 # Exports
-export DBNDecoder, DBNEncoder, read_dbn, read_dbn_with_metadata, write_dbn
+export DBNDecoder, DBNEncoder, read_dbn, read_dbn_with_metadata, read_dbn_typed, write_dbn
+export read_trades, read_mbo, read_mbp1, read_mbp10  # Fast typed readers
 export Metadata, DBNHeader, RecordHeader, DBNTimestamp
 export MBOMsg, TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg, StatMsg
 export CMBP1Msg, CBBO1sMsg, CBBO1mMsg, TCBBOMsg, BBO1sMsg, BBO1mMsg

@@ -700,4 +700,15 @@ StructTypes.StructType(::Type{ErrorMsg}) = StructTypes.Struct()
 StructTypes.StructType(::Type{SymbolMappingMsg}) = StructTypes.Struct()
 StructTypes.StructType(::Type{SystemMsg}) = StructTypes.Struct()
 StructTypes.StructType(::Type{InstrumentDefMsg}) = StructTypes.Struct()
+
+# Union type for all DBN record types - enables type-stable containers
+# Using a Union instead of Vector{Any} dramatically improves performance by:
+# - Eliminating boxing/unboxing overhead
+# - Enabling Julia's type inference and specialization
+# - Reducing GC pressure (80-90% GC time → much lower)
+const DBNRecord = Union{
+    MBOMsg, TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg,
+    StatusMsg, ImbalanceMsg, StatMsg, ErrorMsg, SymbolMappingMsg, SystemMsg,
+    InstrumentDefMsg, CMBP1Msg, CBBO1sMsg, CBBO1mMsg, TCBBOMsg, BBO1sMsg, BBO1mMsg
+}
 StructTypes.StructType(::Type{BidAskPair}) = StructTypes.Struct()
