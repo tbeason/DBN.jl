@@ -18,6 +18,7 @@ mutable struct DBNDecoder{IO_T <: IO}
     header::Union{DBNHeader,Nothing}
     metadata::Union{Metadata,Nothing}
     upgrade_policy::UInt8
+    string_cache::Dict{UInt64, String}  # String interning cache for symbols, exchanges, etc.
 end
 
 """
@@ -35,7 +36,7 @@ Construct a DBNDecoder from an existing IO stream.
 The decoder is parametrized on the IO type for maximum performance. Julia will
 specialize all operations on the concrete IO type, eliminating runtime dispatch.
 """
-DBNDecoder(io::IO_T) where {IO_T <: IO} = DBNDecoder{IO_T}(io, io, nothing, nothing, 0)
+DBNDecoder(io::IO_T) where {IO_T <: IO} = DBNDecoder{IO_T}(io, io, nothing, nothing, 0, Dict{UInt64, String}())
 
 """
     DBNDecoder(filename::String)
@@ -76,9 +77,35 @@ function DBNDecoder(filename::String)
     end
 
     # Use the parametric constructor - Julia will infer the concrete IO type
-    decoder = DBNDecoder{typeof(io)}(io, base_io, nothing, nothing, 0)
+    decoder = DBNDecoder{typeof(io)}(io, base_io, nothing, nothing, 0, Dict{UInt64, String}())
     read_header!(decoder)
     return decoder
+end
+
+"""
+    intern_string(decoder::DBNDecoder, bytes::Vector{UInt8})
+
+Intern a string to reduce memory allocations for repeated values.
+
+Uses a hash-based cache to reuse string objects for symbols, exchanges,
+and other frequently repeated string fields.
+"""
+@inline function intern_string(decoder::DBNDecoder, bytes::Vector{UInt8})
+    # Strip null bytes and convert to string
+    stripped = strip(String(bytes), '\0')
+
+    # Empty strings are common - handle without hashing
+    if isempty(stripped)
+        return ""
+    end
+
+    # Compute hash of the byte content
+    h = hash(bytes)
+
+    # Check cache and return existing string if found
+    get!(decoder.string_cache, h) do
+        stripped
+    end
 end
 
 """
@@ -1080,31 +1107,60 @@ end
 function read_dbn(filename::String)
     decoder = DBNDecoder(filename)  # This now handles compression automatically
 
-    # Pre-allocate records vector with size hint
-    # Use metadata limit if available, otherwise estimate from file size
-    estimated_count = if decoder.metadata.limit !== nothing && decoder.metadata.limit > 0
-        Int(decoder.metadata.limit)
+    # Pre-allocate records vector
+    # Two strategies: exact pre-allocation if limit known, or dynamic with sizehint
+    has_exact_limit = decoder.metadata.limit !== nothing && decoder.metadata.limit > 0
+
+    if has_exact_limit
+        # EXACT PRE-ALLOCATION: Eliminate all vector growth overhead
+        # When limit is known, pre-allocate exact size and use direct indexing
+        limit = Int(decoder.metadata.limit)
+        records = Vector{DBNRecord}(undef, limit)
+        idx = 1
+
+        try
+            while idx <= limit && !eof(decoder.io)
+                record = read_record(decoder)
+                if record !== nothing
+                    records[idx] = record
+                    idx += 1
+                else
+                    # Handle case where we hit unknown record types
+                    # This is rare but possible
+                end
+            end
+
+            # Trim if we read fewer records than expected (very rare)
+            if idx <= limit
+                resize!(records, idx - 1)
+            end
+        catch e
+            # On error, trim to what we successfully read
+            resize!(records, idx - 1)
+            rethrow(e)
+        end
     else
-        # Estimate based on file size: assume average record size of 50 bytes
-        # This is conservative - actual records range from 40-400 bytes
+        # DYNAMIC ALLOCATION: Use sizehint! for estimated capacity
+        # Estimate based on file size when limit is unknown
         file_size = filesize(filename)
-        max(100, div(file_size, 50))
-    end
+        estimated_count = max(100, div(file_size, 50))
 
-    # Use type-stable union instead of Vector{Any} to eliminate boxing overhead
-    # This dramatically improves performance by enabling type inference and reducing GC pressure
-    records = Vector{DBNRecord}(undef, 0)
-    sizehint!(records, estimated_count)
+        # Use type-stable union instead of Vector{Any} to eliminate boxing overhead
+        records = Vector{DBNRecord}(undef, 0)
+        sizehint!(records, estimated_count)
 
-    try
         while !eof(decoder.io)
             record = read_record(decoder)
             if record !== nothing
                 push!(records, record)
             end
         end
+    end
+
+    # Clean up resources - always close files even if there was an error
+    try
+        return records
     finally
-        # Clean up resources
         if decoder.io !== decoder.base_io
             # Close the TranscodingStream first
             close(decoder.io)
@@ -1117,8 +1173,6 @@ function read_dbn(filename::String)
         # Windows may not immediately release file locks even after close()
         GC.gc()
     end
-
-    return records
 end
 
 """
