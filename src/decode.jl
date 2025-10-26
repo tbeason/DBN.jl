@@ -12,9 +12,9 @@ Decoder for reading DBN (Databento Binary Encoding) files with support for compr
 - `metadata::Union{Metadata,Nothing}`: Parsed metadata information
 - `upgrade_policy::UInt8`: Version upgrade policy
 """
-mutable struct DBNDecoder
-    io::IO
-    base_io::IO  # Original IO before compression wrapper
+mutable struct DBNDecoder{IO_T <: IO}
+    io::IO_T     # Parametric type for type-stable operations
+    base_io::IO  # Original IO before compression wrapper (can be abstract)
     header::Union{DBNHeader,Nothing}
     metadata::Union{Metadata,Nothing}
     upgrade_policy::UInt8
@@ -29,9 +29,13 @@ Construct a DBNDecoder from an existing IO stream.
 - `io::IO`: Input stream to read from
 
 # Returns
-- `DBNDecoder`: Decoder instance ready for reading
+- `DBNDecoder{typeof(io)}`: Decoder instance ready for reading with concrete IO type
+
+# Details
+The decoder is parametrized on the IO type for maximum performance. Julia will
+specialize all operations on the concrete IO type, eliminating runtime dispatch.
 """
-DBNDecoder(io::IO) = DBNDecoder(io, io, nothing, nothing, 0)
+DBNDecoder(io::IO_T) where {IO_T <: IO} = DBNDecoder{IO_T}(io, io, nothing, nothing, 0)
 
 """
     DBNDecoder(filename::String)
@@ -70,8 +74,9 @@ function DBNDecoder(filename::String)
     else
         io = base_io
     end
-    
-    decoder = DBNDecoder(io, base_io, nothing, nothing, 0)
+
+    # Use the parametric constructor - Julia will infer the concrete IO type
+    decoder = DBNDecoder{typeof(io)}(io, base_io, nothing, nothing, 0)
     read_header!(decoder)
     return decoder
 end
