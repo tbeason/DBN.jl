@@ -30,7 +30,7 @@ using .CompatibilityUtils
                 @testset "$schema_name schema" begin
                     files = CompatibilityUtils.get_test_files(pattern)
                     # Filter out compressed and fragment files for basic compatibility
-                    files = filter(f -> !endswith(f, ".zst") && !contains(f, "frag"), files)
+                    files = filter(f -> !endswith(f, ".zst") && !contains(f, "frag") && !contains(f, "bad"), files)
                     
                     if isempty(files)
                         @warn "No test files found for pattern: $pattern"

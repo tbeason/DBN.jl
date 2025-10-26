@@ -317,8 +317,10 @@ function safe_parse_int64(s::String)
     try
         return parse(Int64, s)
     catch OverflowError
-        # Rust uses UInt64::max as sentinel, convert to Int64::max
-        return typemax(Int64)
+        # Rust uses UInt64::max (18446744073709551615) as UNDEF_TIMESTAMP sentinel
+        # When read as UInt64 and reinterpreted as Int64, this becomes -1
+        # So we convert to -1 to match the binary representation
+        return Int64(-1)
     end
 end
 
@@ -412,8 +414,11 @@ function parse_rust_json_record(rust_json_str)
     rtype = DBN.RType.T(rtype_val)
     
     # Determine record type and size
-    record_size = get_record_size_for_rtype(rtype)
-    length = UInt8(record_size ÷ DBN.LENGTH_MULTIPLIER)
+    # Note: record_size is the body size (sizeof struct excluding header)
+    # The length field in the binary includes both header (16 bytes) and body
+    record_body_size = get_record_size_for_rtype(rtype)
+    total_record_size = record_body_size + 16  # Add header size
+    length = UInt8(total_record_size ÷ DBN.LENGTH_MULTIPLIER)
     
     # Create RecordHeader
     hd = DBN.RecordHeader(
