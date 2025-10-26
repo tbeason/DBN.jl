@@ -1027,9 +1027,22 @@ end
 ```
 """
 function read_dbn(filename::String)
-    records = []
     decoder = DBNDecoder(filename)  # This now handles compression automatically
-    
+
+    # Pre-allocate records vector with size hint
+    # Use metadata limit if available, otherwise estimate from file size
+    estimated_count = if decoder.metadata.limit !== nothing && decoder.metadata.limit > 0
+        Int(decoder.metadata.limit)
+    else
+        # Estimate based on file size: assume average record size of 50 bytes
+        # This is conservative - actual records range from 40-400 bytes
+        file_size = filesize(filename)
+        max(100, div(file_size, 50))
+    end
+
+    records = Vector{Any}(undef, 0)
+    sizehint!(records, estimated_count)
+
     try
         while !eof(decoder.io)
             record = read_record(decoder)
@@ -1079,8 +1092,18 @@ println("Records: \$(length(records))")
 ```
 """
 function read_dbn_with_metadata(filename::String)
-    records = []
     decoder = DBNDecoder(filename)  # This now handles compression automatically
+
+    # Pre-allocate records vector with size hint
+    estimated_count = if decoder.metadata.limit !== nothing && decoder.metadata.limit > 0
+        Int(decoder.metadata.limit)
+    else
+        file_size = filesize(filename)
+        max(100, div(file_size, 50))
+    end
+
+    records = Vector{Any}(undef, 0)
+    sizehint!(records, estimated_count)
 
     try
         while !eof(decoder.io)

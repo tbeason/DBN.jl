@@ -18,7 +18,9 @@ Options:
 using Pkg
 
 # Ensure we're in the right environment
-if !haskey(Pkg.project().dependencies, "DBN")
+# Check if DBN is either a dependency or if we're in the DBN.jl project itself
+proj = Pkg.project()
+if !haskey(proj.dependencies, "DBN") && proj.name != "DBN"
     error("DBN package not found. Make sure you're in the DBN.jl project directory.")
 end
 
@@ -29,6 +31,11 @@ Pkg.activate(".")
 using DBN
 using Printf
 using Dates
+
+# Load all benchmark modules at global scope to avoid world age issues
+include("generate_test_data.jl")
+include("throughput.jl")
+include("benchmarks.jl")
 
 """
     parse_args(args)
@@ -189,8 +196,6 @@ function main()
         println("▶"^80)
         println()
 
-        include("generate_test_data.jl")
-
         if options[:quick]
             println("Quick mode: Generating small datasets only...")
             # Generate only small files for quick benchmarking
@@ -209,8 +214,7 @@ function main()
         println("▶"^80)
         println()
 
-        include("throughput.jl")
-        run_throughput_benchmarks(options[:data_dir], runs=options[:runs])
+        run_throughput_benchmarks(options[:data_dir]; runs=options[:runs])
 
         println("\n✓ Throughput benchmarks complete!")
     end
@@ -222,7 +226,6 @@ function main()
         println("▶"^80)
         println()
 
-        include("benchmarks.jl")
         results = run_benchmark_suite(options[:data_dir])
 
         println("\n✓ BenchmarkTools suite complete!")
