@@ -83,6 +83,35 @@ when the buffer needs to be refilled.
     return val
 end
 
+# Specializations for primitive types to avoid method ambiguity with Base.read
+# Base has specialized methods for these types, so we need explicit overloads
+for T in (Int8, UInt8, UInt16, UInt32, UInt64, UInt128, Int16, Int32, Int64, Int128, Float16, Float32, Float64)
+    @eval begin
+        @inline function Base.read(reader::BufferedReader, ::Type{$T})
+            bytes_needed = sizeof($T)
+
+            # Check if we need to refill
+            if reader.buffer_pos + bytes_needed - 1 > reader.buffer_size
+                refill_buffer!(reader)
+
+                # Check if we got enough data
+                if reader.buffer_size < bytes_needed
+                    throw(EOFError())
+                end
+            end
+
+            # Read from buffer (fast path - no syscall!)
+            ptr = pointer(reader.buffer, reader.buffer_pos)
+            val = unsafe_load(Ptr{$T}(ptr))
+
+            reader.buffer_pos += bytes_needed
+            reader.total_read += bytes_needed
+
+            return val
+        end
+    end
+end
+
 """
     Base.read(reader::BufferedReader, n::Integer)
 

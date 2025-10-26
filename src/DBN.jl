@@ -92,6 +92,7 @@ using StructTypes
 # Include all the component files
 include("types.jl")
 include("messages.jl")
+include("buffered_io.jl")
 include("decode.jl")
 include("encode.jl")
 include("streaming.jl")
