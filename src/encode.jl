@@ -444,8 +444,8 @@ function write_record(encoder::DBNEncoder, record)
             write(io, record.flow_schedule_type)
             write(io, record.tick_rule)
 
-            # v2: 69 bytes _reserved (315 bytes written, 384 total, 69 remaining)
-            for _ in 1:69
+            # v2: 62 bytes _reserved (322 bytes written, 384 total, 62 remaining)
+            for _ in 1:62
                 write(io, UInt8(0))
             end
 
