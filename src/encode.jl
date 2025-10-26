@@ -360,11 +360,24 @@ function write_record(encoder::DBNEncoder, record)
 
         if encoder.metadata.version == 2
             # ===== DBN V2 InstrumentDefMsg =====
-            # V2 ONLY has encode_order(0) for ts_recv. All other fields in struct order!
+            # V2 has encode_order for: ts_recv(0), raw_symbol(2), security_update_action(3), instrument_class(4), strike_price(46)
+
             # encode_order 0: ts_recv
             write(io, record.ts_recv)
 
-            # All remaining fields in struct declaration order (no more encode_order!)
+            # encode_order 2: raw_symbol (19 bytes in v2)
+            write_fixed_string(io, record.raw_symbol, 19)
+
+            # encode_order 3: security_update_action
+            write(io, UInt8(record.security_update_action))
+
+            # encode_order 4: instrument_class
+            write(io, UInt8(record.instrument_class))
+
+            # encode_order 46: strike_price
+            write(io, record.strike_price)
+
+            # All remaining fields in struct declaration order (no more encode_order)
             write(io, record.min_price_increment)
             write(io, record.display_factor)
             write(io, record.expiration)
@@ -398,11 +411,11 @@ function write_record(encoder::DBNEncoder, record)
             write(io, record.decay_start_date)
             write(io, record.channel_id)
 
-            # String fields (in struct order)
+            # String fields (in struct order, but raw_symbol already written with encode_order(2))
             write_fixed_string(io, record.currency, 4)
             write_fixed_string(io, record.settl_currency, 4)
             write_fixed_string(io, record.secsubtype, 6)
-            write_fixed_string(io, record.raw_symbol, 19)  # 19 bytes in v2!
+            # raw_symbol already written with encode_order(2)
             write_fixed_string(io, record.group, 21)
             write_fixed_string(io, record.exchange, 5)
             write_fixed_string(io, record.asset, 7)  # 7 bytes in v2, 11 in v3!
@@ -412,11 +425,9 @@ function write_record(encoder::DBNEncoder, record)
             write_fixed_string(io, record.underlying, 21)
             write_fixed_string(io, record.strike_price_currency, 4)
 
-            # Enum and Int64 fields after strings (in struct order)
-            write(io, UInt8(record.instrument_class))
-            write(io, record.strike_price)
+            # instrument_class and strike_price already written with encode_order(4) and encode_order(46)
 
-            # Single-byte fields (in struct order)
+            # Single-byte fields (in struct order, but security_update_action and instrument_class already written)
             write(io, UInt8(record.match_algorithm))
             write(io, record.md_security_trading_status)  # v2 only
             write(io, record.main_fraction)
@@ -424,7 +435,7 @@ function write_record(encoder::DBNEncoder, record)
             write(io, record.settl_price_type)  # v2 only
             write(io, record.sub_fraction)
             write(io, record.underlying_product)
-            write(io, UInt8(record.security_update_action))
+            # security_update_action already written with encode_order(3)
             write(io, record.maturity_month)
             write(io, record.maturity_day)
             write(io, record.maturity_week)
@@ -433,8 +444,8 @@ function write_record(encoder::DBNEncoder, record)
             write(io, record.flow_schedule_type)
             write(io, record.tick_rule)
 
-            # v2: 62 bytes _reserved (322 bytes written, 384 total, 62 remaining)
-            for _ in 1:62
+            # v2: 69 bytes _reserved (315 bytes written, 384 total, 69 remaining)
+            for _ in 1:69
                 write(io, UInt8(0))
             end
 
