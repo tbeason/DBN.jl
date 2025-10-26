@@ -65,18 +65,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      # Clone and build official dbn-cli for compatibility tests
-      - name: Build dbn-cli (Unix)
+      # Clone and build official dbn for compatibility tests
+      - name: Build dbn (Unix)
         if: runner.os != 'Windows'
         run: |
           mkdir -p $HOME/dbn-workspace
           if [ ! -d "$HOME/dbn-workspace/dbn" ]; then
             git clone --depth 1 https://github.com/databento/dbn $HOME/dbn-workspace/dbn
           fi
-          cd $HOME/dbn-workspace/dbn/rust/dbn-cli
+          cd $HOME/dbn-workspace/dbn/rust
           cargo build --release
 
-      - name: Build dbn-cli (Windows)
+      - name: Build dbn (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -85,7 +85,7 @@ jobs:
           if (-not (Test-Path "$workspace\dbn")) {
             git clone --depth 1 https://github.com/databento/dbn "$workspace\dbn"
           }
-          cd "$workspace\dbn\rust\dbn-cli"
+          cd "$workspace\dbn\rust"
           cargo build --release
 
       - uses: julia-actions/setup-julia@v2
