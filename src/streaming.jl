@@ -6,7 +6,8 @@
 Iterator for streaming DBN file reading with automatic compression support.
 
 # Fields
-- `filename::String`: Path to the DBN file (compressed or uncompressed)
+- `decoder::DBNDecoder`: Decoder instance (stored to avoid allocation overhead)
+- `cleanup::Ref{Bool}`: Flag to track if cleanup has been done
 
 # Usage
 ```julia
@@ -20,8 +21,14 @@ Provides memory-efficient streaming access to DBN files without loading
 the entire file into memory. Automatically detects and handles Zstd compression.
 Gracefully skips unknown record types.
 """
-struct DBNStream
-    filename::String
+mutable struct DBNStream
+    decoder::DBNDecoder
+    cleanup::Ref{Bool}
+    
+    function DBNStream(filename::String)
+        decoder = DBNDecoder(filename)
+        new(decoder, Ref(false))
+    end
 end
 
 """
@@ -33,12 +40,9 @@ Initialize iteration over a DBN stream.
 - `stream::DBNStream`: Stream to iterate over
 
 # Returns
-- `Tuple`: (first_record, decoder_state) or `nothing` if empty
+- `Tuple`: (first_record, nothing) or `nothing` if empty
 """
-Base.iterate(stream::DBNStream) = begin
-    decoder = DBNDecoder(stream.filename)  # This handles compression automatically
-    return iterate(stream, decoder)
-end
+Base.iterate(stream::DBNStream) = iterate(stream, nothing)
 
 """
     Base.iterate(stream::DBNStream, state)
@@ -47,32 +51,38 @@ Continue iteration over a DBN stream.
 
 # Arguments
 - `stream::DBNStream`: Stream being iterated
-- `state`: Decoder state from previous iteration
+- `state`: Unused (kept for API compatibility)
 
 # Returns
-- `Tuple`: (next_record, decoder_state) or `nothing` if end reached
+- `Tuple`: (next_record, nothing) or `nothing` if end reached
 """
 Base.iterate(stream::DBNStream, state) = begin
-    decoder = state
-    if eof(decoder.io)
-        # Clean up resources
-        if decoder.io !== decoder.base_io
-            # Close the TranscodingStream first
-            close(decoder.io)
-        end
-        # Always close the base IO
-        if isa(decoder.base_io, IOStream)
-            close(decoder.base_io)
-        end
-        # Force garbage collection to ensure file handles are released on Windows
-        GC.gc()
+    decoder = stream.decoder
+    
+    # Check if already cleaned up
+    if stream.cleanup[]
         return nothing
     end
+    
+    if eof(decoder.io)
+        # Clean up resources once
+        if !stream.cleanup[]
+            if decoder.io !== decoder.base_io
+                close(decoder.io)
+            end
+            if isa(decoder.base_io, IOStream)
+                close(decoder.base_io)
+            end
+            stream.cleanup[] = true
+        end
+        return nothing
+    end
+    
     record = read_record(decoder)
     if record === nothing
         return iterate(stream, state)  # Skip unknown records
     end
-    return (record, state)
+    return (record, nothing)
 end
 
 """
