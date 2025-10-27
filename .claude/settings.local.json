@@ -34,7 +34,9 @@
       "Bash(else echo \"No decode.jl.mem file found\")",
       "Bash(fi)",
       "Bash(cat:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr create:*)"
     ],
     "deny": [],
     "ask": []
