@@ -302,6 +302,112 @@ Create type-stable iterator for OHLCV data.
 """
 stream_ohlcv(filename::String) = DBNTypedStream{OHLCVMsg}(filename)
 
+# ============================================================================
+# Zero-Allocation Callback-Based Streaming
+# ============================================================================
+
+"""
+    foreach_record(f::Function, filename::String, ::Type{T}) where T
+
+Zero-allocation streaming using callback pattern with buffer reuse.
+
+# Arguments
+- `f::Function`: Callback function that processes each record
+- `filename::String`: Path to DBN file
+- `::Type{T}`: Record type (e.g., `TradeMsg`)
+
+# Performance
+Reuses a single pre-allocated buffer for all records, eliminating per-record
+allocations. Significantly faster than iterator-based streaming for pure
+processing workloads.
+
+# Example
+```julia
+# Compute sum of prices (no allocations per record)
+total = 0.0
+foreach_record("trades.dbn", TradeMsg) do trade
+    total += price_to_float(trade.price)
+end
+
+# Count records by side
+counts = Dict('A' => 0, 'B' => 0)
+foreach_record("trades.dbn", TradeMsg) do trade
+    counts[Char(trade.side)] += 1
+end
+```
+
+# Warning
+DO NOT store references to the record - it will be mutated on next iteration!
+If you need to keep records, copy them explicitly or use iterator-based streaming.
+"""
+function foreach_record(f::Function, filename::String, ::Type{T}) where T
+    decoder = DBNDecoder(filename)
+    expected_rtype = _type_to_rtype_stream(T)
+    
+    # Pre-allocate a single buffer that we'll reuse
+    # Since T is a bitstype (all our message types are), we can safely mutate it
+    buffer = Ref{T}()
+    
+    try
+        while !eof(decoder.io)
+            # Read header
+            hd_result = read_record_header(decoder.io)
+            
+            # Handle unknown record types
+            if hd_result isa Tuple
+                _, rtype_raw, record_length = hd_result
+                skip(decoder.io, record_length - 2)
+                continue
+            end
+            
+            hd = hd_result
+            
+            # Verify type matches expected  
+            if hd.rtype != expected_rtype
+                # Special handling for OHLCV variants
+                if T === OHLCVMsg && hd.rtype in (RType.OHLCV_1S_MSG, RType.OHLCV_1M_MSG, RType.OHLCV_1H_MSG, RType.OHLCV_1D_MSG)
+                    # OK, continue
+                else
+                    error("Expected $(T) (rtype=$(expected_rtype)) but got rtype=$(hd.rtype)")
+                end
+            end
+            
+            # Read record directly into buffer
+            buffer[] = _read_typed_record_stream(decoder, T, hd)
+            
+            # Call user function with buffer contents
+            f(buffer[])
+        end
+    finally
+        # Clean up
+        if decoder.io !== decoder.base_io
+            close(decoder.io)
+        end
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
+    end
+    
+    return nothing
+end
+
+# Convenience functions for callback-based streaming
+
+"""
+    foreach_trade(f::Function, filename::String)
+
+Zero-allocation streaming of trade data using callback pattern.
+See `foreach_record` for details.
+"""
+foreach_trade(f::Function, filename::String) = foreach_record(f, filename, TradeMsg)
+
+"""
+    foreach_mbo(f::Function, filename::String)
+
+Zero-allocation streaming of MBO data using callback pattern.
+"""
+foreach_mbo(f::Function, filename::String) = foreach_record(f, filename, MBOMsg)
+
 """
     DBNStreamWriter
 

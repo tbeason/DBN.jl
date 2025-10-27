@@ -108,6 +108,7 @@ export CMBP1Msg, CBBO1sMsg, CBBO1mMsg, TCBBOMsg, BBO1sMsg, BBO1mMsg
 export ErrorMsg, SymbolMappingMsg, SystemMsg, InstrumentDefMsg
 export DBNStream, DBNStreamWriter, write_record!, close_writer!
 export DBNTypedStream, stream_trades, stream_mbo, stream_mbp1, stream_mbp10, stream_ohlcv  # Typed streaming
+export foreach_record, foreach_trade, foreach_mbo  # Zero-allocation callback streaming
 export compress_dbn_file, compress_daily_files
 export Schema, Compression, Encoding, SType, RType, Action, Side, InstrumentClass
 export price_to_float, float_to_price, ts_to_datetime, datetime_to_ts, ts_to_date_time, date_time_to_ts, to_nanoseconds
