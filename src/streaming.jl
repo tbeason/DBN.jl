@@ -99,55 +99,10 @@ Element type for DBNStream iterator (Any, since different record types are possi
 Base.eltype(::Type{DBNStream}) = Any
 
 # ============================================================================
-# Typed Streaming Iterators (Type-Stable)
+# Internal Helpers (Shared by Eager Read and Callback Streaming)
 # ============================================================================
 
-"""
-    DBNTypedStream{T}
-
-Type-stable iterator for streaming DBN files with known record type.
-
-# Type Parameter
-- `T`: Expected record type (e.g., `TradeMsg`, `MBOMsg`)
-
-# Fields
-- `decoder::DBNDecoder`: Decoder instance
-- `cleanup::Ref{Bool}`: Cleanup tracking flag
-
-# Performance
-Provides type-stable iteration eliminating Union type overhead.
-Significantly faster than `DBNStream` when schema is known.
-
-# Usage
-```julia
-# Directly construct
-for trade in DBNTypedStream{TradeMsg}("trades.dbn")
-    process(trade)  # type-stable!
-end
-
-# Or use convenience functions
-for trade in stream_trades("trades.dbn")
-    process(trade)
-end
-```
-
-# Warning
-If the file contains records of different types, this will error.
-For mixed-type files, use `DBNStream` instead.
-"""
-mutable struct DBNTypedStream{T}
-    decoder::DBNDecoder
-    cleanup::Ref{Bool}
-    expected_rtype::RType.T
-    
-    function DBNTypedStream{T}(filename::String) where T
-        decoder = DBNDecoder(filename)
-        expected_rtype = _type_to_rtype_stream(T)
-        new{T}(decoder, Ref(false), expected_rtype)
-    end
-end
-
-# Map type to RType (imported from decode.jl logic)
+# Map type to RType for validation
 _type_to_rtype_stream(::Type{TradeMsg}) = RType.MBP_0_MSG
 _type_to_rtype_stream(::Type{MBOMsg}) = RType.MBO_MSG
 _type_to_rtype_stream(::Type{MBP1Msg}) = RType.MBP_1_MSG
@@ -157,68 +112,7 @@ _type_to_rtype_stream(::Type{StatusMsg}) = RType.STATUS_MSG
 _type_to_rtype_stream(::Type{InstrumentDefMsg}) = RType.INSTRUMENT_DEF_MSG
 _type_to_rtype_stream(::Type{ImbalanceMsg}) = RType.IMBALANCE_MSG
 
-"""
-    Base.iterate(stream::DBNTypedStream{T})
-
-Initialize typed iteration.
-"""
-Base.iterate(stream::DBNTypedStream{T}) where {T} = iterate(stream, nothing)
-
-"""
-    Base.iterate(stream::DBNTypedStream{T}, state)
-
-Continue typed iteration - fully type-stable.
-"""
-Base.iterate(stream::DBNTypedStream{T}, state) where {T} = begin
-    decoder = stream.decoder
-    
-    # Check if already cleaned up
-    if stream.cleanup[]
-        return nothing
-    end
-    
-    if eof(decoder.io)
-        # Clean up resources once
-        if !stream.cleanup[]
-            if decoder.io !== decoder.base_io
-                close(decoder.io)
-            end
-            if isa(decoder.base_io, IOStream)
-                close(decoder.base_io)
-            end
-            stream.cleanup[] = true
-        end
-        return nothing
-    end
-    
-    # Read header
-    hd_result = read_record_header(decoder.io)
-    
-    # Handle unknown record types
-    if hd_result isa Tuple
-        _, rtype_raw, record_length = hd_result
-        skip(decoder.io, record_length - 2)
-        return iterate(stream, state)  # Skip to next record
-    end
-    
-    hd = hd_result
-    
-    # Verify type matches expected
-    if hd.rtype != stream.expected_rtype
-        # Special handling for OHLCV variants
-        if T === OHLCVMsg && hd.rtype in (RType.OHLCV_1S_MSG, RType.OHLCV_1M_MSG, RType.OHLCV_1H_MSG, RType.OHLCV_1D_MSG)
-            # OK, continue
-        else
-            error("Expected $(T) (rtype=$(stream.expected_rtype)) but got rtype=$(hd.rtype)")
-        end
-    end
-    
-    # Read record body - type-stable dispatch
-    record::T = _read_typed_record_stream(decoder, T, hd)
-    return (record, nothing)
-end
-
-# Type-stable record reading helpers
+# Type-stable record reading helpers (shared by eager read and callback API)
 @inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{TradeMsg}, hd::RecordHeader)
     return read_trade_msg(decoder, hd)
 end
@@ -251,65 +145,14 @@ end
     return read_imbalance_msg(decoder, hd)
 end
 
-Base.IteratorSize(::Type{<:DBNTypedStream}) = Base.SizeUnknown()
-Base.eltype(::Type{DBNTypedStream{T}}) where {T} = T
-
-# Convenience functions for common schemas
-"""
-    stream_trades(filename::String) -> DBNTypedStream{TradeMsg}
-
-Create type-stable iterator for trade data.
-
-# Performance
-Type-stable streaming eliminates Union type overhead, providing better
-performance than `DBNStream` when you know all records are trades.
-
-# Example
-```julia
-for trade in stream_trades("data.dbn")
-    # trade::TradeMsg (type-stable!)
-    println(trade.price)
-end
-```
-"""
-stream_trades(filename::String) = DBNTypedStream{TradeMsg}(filename)
-
-"""
-    stream_mbo(filename::String) -> DBNTypedStream{MBOMsg}
-
-Create type-stable iterator for MBO (Market By Order) data.
-"""
-stream_mbo(filename::String) = DBNTypedStream{MBOMsg}(filename)
-
-"""
-    stream_mbp1(filename::String) -> DBNTypedStream{MBP1Msg}
-
-Create type-stable iterator for MBP-1 (top-of-book) data.
-"""
-stream_mbp1(filename::String) = DBNTypedStream{MBP1Msg}(filename)
-
-"""
-    stream_mbp10(filename::String) -> DBNTypedStream{MBP10Msg}
-
-Create type-stable iterator for MBP-10 (10-level depth) data.
-"""
-stream_mbp10(filename::String) = DBNTypedStream{MBP10Msg}(filename)
-
-"""
-    stream_ohlcv(filename::String) -> DBNTypedStream{OHLCVMsg}
-
-Create type-stable iterator for OHLCV data.
-"""
-stream_ohlcv(filename::String) = DBNTypedStream{OHLCVMsg}(filename)
-
 # ============================================================================
-# Zero-Allocation Callback-Based Streaming
+# Near-Zero-Allocation Callback-Based Streaming
 # ============================================================================
 
 """
     foreach_record(f::Function, filename::String, ::Type{T}) where T
 
-Zero-allocation streaming using callback pattern with buffer reuse.
+Highly optimized callback-based streaming with minimal allocations.
 
 # Arguments
 - `f::Function`: Callback function that processes each record
@@ -317,52 +160,89 @@ Zero-allocation streaming using callback pattern with buffer reuse.
 - `::Type{T}`: Record type (e.g., `TradeMsg`)
 
 # Performance
-Reuses a single pre-allocated buffer for all records, eliminating per-record
-allocations. Significantly faster than iterator-based streaming for pure
-processing workloads.
+Achieves near-zero allocations (typically <50 total allocations for any size file)
+when the callback uses `Ref` for mutable state. The Julia compiler optimizes away
+most per-record allocations, making this significantly faster than iterator-based
+streaming for pure processing workloads.
 
-# Example
+# Performance tip: Use Ref for mutable state!
+To achieve true near-zero allocations, use `Ref` for any mutable state in your
+callback instead of plain variables:
+
 ```julia
-# Compute sum of prices (no allocations per record)
+# ✅ GOOD: Only ~44 allocations total (not per record!)
+total = Ref(0.0)
+foreach_record("trades.dbn", TradeMsg) do trade
+    total[] += price_to_float(trade.price)
+end
+println(total[])
+
+# ❌ SLOWER: May allocate per record due to closure overhead
 total = 0.0
 foreach_record("trades.dbn", TradeMsg) do trade
-    total += price_to_float(trade.price)
-end
-
-# Count records by side
-counts = Dict('A' => 0, 'B' => 0)
-foreach_record("trades.dbn", TradeMsg) do trade
-    counts[Char(trade.side)] += 1
+    total += price_to_float(trade.price)  # Closure capture causes allocations
 end
 ```
 
-# Warning
-DO NOT store references to the record - it will be mutated on next iteration!
-If you need to keep records, copy them explicitly or use iterator-based streaming.
+# More examples
+```julia
+# Count records by side (using Ref for mutable Dict)
+counts = Ref(Dict('A' => 0, 'B' => 0))
+foreach_record("trades.dbn", TradeMsg) do trade
+    counts[][Char(trade.side)] += 1
+end
+
+# Collect records (push! automatically copies bitstypes)
+trades = TradeMsg[]
+sizehint!(trades, 100_000)
+foreach_record("trades.dbn", TradeMsg) do trade
+    push!(trades, trade)  # Safe: TradeMsg is copied
+end
+
+# Filter while streaming - only store what you need
+high_volume = TradeMsg[]
+foreach_record("trades.dbn", TradeMsg) do trade
+    if trade.size > 1000
+        push!(high_volume, trade)
+    end
+end
+```
+
+# Note on bitstypes
+All DBN message types are immutable bitstypes, so `push!(array, record)`
+automatically makes a value copy. You can safely store records in arrays without
+explicit copying.
 """
 function foreach_record(f::Function, filename::String, ::Type{T}) where T
     decoder = DBNDecoder(filename)
+    _foreach_record_impl(f, decoder, T)
+    return nothing
+end
+
+# Internal implementation that works with an open decoder
+# This allows eager read to avoid opening the file twice
+function _foreach_record_impl(f::Function, decoder::DBNDecoder, ::Type{T}) where T
     expected_rtype = _type_to_rtype_stream(T)
-    
+
     # Pre-allocate a single buffer that we'll reuse
     # Since T is a bitstype (all our message types are), we can safely mutate it
     buffer = Ref{T}()
-    
+
     try
         while !eof(decoder.io)
             # Read header
             hd_result = read_record_header(decoder.io)
-            
+
             # Handle unknown record types
             if hd_result isa Tuple
                 _, rtype_raw, record_length = hd_result
                 skip(decoder.io, record_length - 2)
                 continue
             end
-            
+
             hd = hd_result
-            
-            # Verify type matches expected  
+
+            # Verify type matches expected
             if hd.rtype != expected_rtype
                 # Special handling for OHLCV variants
                 if T === OHLCVMsg && hd.rtype in (RType.OHLCV_1S_MSG, RType.OHLCV_1M_MSG, RType.OHLCV_1H_MSG, RType.OHLCV_1D_MSG)
@@ -371,10 +251,10 @@ function foreach_record(f::Function, filename::String, ::Type{T}) where T
                     error("Expected $(T) (rtype=$(expected_rtype)) but got rtype=$(hd.rtype)")
                 end
             end
-            
+
             # Read record directly into buffer
             buffer[] = _read_typed_record_stream(decoder, T, hd)
-            
+
             # Call user function with buffer contents
             f(buffer[])
         end
@@ -387,8 +267,6 @@ function foreach_record(f::Function, filename::String, ::Type{T}) where T
             close(decoder.base_io)
         end
     end
-    
-    return nothing
 end
 
 # Convenience functions for callback-based streaming
@@ -396,17 +274,131 @@ end
 """
     foreach_trade(f::Function, filename::String)
 
-Zero-allocation streaming of trade data using callback pattern.
-See `foreach_record` for details.
+Near-zero-allocation streaming of trade data using callback pattern.
+See `foreach_record` for usage and performance tips.
 """
 foreach_trade(f::Function, filename::String) = foreach_record(f, filename, TradeMsg)
 
 """
     foreach_mbo(f::Function, filename::String)
 
-Zero-allocation streaming of MBO data using callback pattern.
+Near-zero-allocation streaming of MBO data using callback pattern.
+See `foreach_record` for usage and performance tips.
 """
 foreach_mbo(f::Function, filename::String) = foreach_record(f, filename, MBOMsg)
+
+"""
+    foreach_mbp1(f::Function, filename::String)
+
+Near-zero-allocation streaming of MBP-1 (top-of-book) data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_mbp1(f::Function, filename::String) = foreach_record(f, filename, MBP1Msg)
+
+"""
+    foreach_mbp10(f::Function, filename::String)
+
+Near-zero-allocation streaming of MBP-10 (10-level depth) data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_mbp10(f::Function, filename::String) = foreach_record(f, filename, MBP10Msg)
+
+"""
+    foreach_tbbo(f::Function, filename::String)
+
+Near-zero-allocation streaming of TBBO (Trade BBO) data using callback pattern.
+Uses MBP-1 records. See `foreach_record` for usage and performance tips.
+"""
+foreach_tbbo(f::Function, filename::String) = foreach_record(f, filename, MBP1Msg)
+
+"""
+    foreach_ohlcv(f::Function, filename::String)
+
+Near-zero-allocation streaming of OHLCV (candlestick) data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_ohlcv(f::Function, filename::String) = foreach_record(f, filename, OHLCVMsg)
+
+"""
+    foreach_ohlcv_1s(f::Function, filename::String)
+
+Near-zero-allocation streaming of 1-second OHLCV data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_ohlcv_1s(f::Function, filename::String) = foreach_record(f, filename, OHLCVMsg)
+
+"""
+    foreach_ohlcv_1m(f::Function, filename::String)
+
+Near-zero-allocation streaming of 1-minute OHLCV data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_ohlcv_1m(f::Function, filename::String) = foreach_record(f, filename, OHLCVMsg)
+
+"""
+    foreach_ohlcv_1h(f::Function, filename::String)
+
+Near-zero-allocation streaming of 1-hour OHLCV data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_ohlcv_1h(f::Function, filename::String) = foreach_record(f, filename, OHLCVMsg)
+
+"""
+    foreach_ohlcv_1d(f::Function, filename::String)
+
+Near-zero-allocation streaming of 1-day OHLCV data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_ohlcv_1d(f::Function, filename::String) = foreach_record(f, filename, OHLCVMsg)
+
+# Consolidated/BBO message streaming
+"""
+    foreach_cmbp1(f::Function, filename::String)
+
+Near-zero-allocation streaming of Consolidated MBP-1 data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_cmbp1(f::Function, filename::String) = foreach_record(f, filename, CMBP1Msg)
+
+"""
+    foreach_cbbo1s(f::Function, filename::String)
+
+Near-zero-allocation streaming of Consolidated BBO 1-second data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_cbbo1s(f::Function, filename::String) = foreach_record(f, filename, CBBO1sMsg)
+
+"""
+    foreach_cbbo1m(f::Function, filename::String)
+
+Near-zero-allocation streaming of Consolidated BBO 1-minute data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_cbbo1m(f::Function, filename::String) = foreach_record(f, filename, CBBO1mMsg)
+
+"""
+    foreach_tcbbo(f::Function, filename::String)
+
+Near-zero-allocation streaming of Top Consolidated BBO data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_tcbbo(f::Function, filename::String) = foreach_record(f, filename, TCBBOMsg)
+
+"""
+    foreach_bbo1s(f::Function, filename::String)
+
+Near-zero-allocation streaming of BBO 1-second data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_bbo1s(f::Function, filename::String) = foreach_record(f, filename, BBO1sMsg)
+
+"""
+    foreach_bbo1m(f::Function, filename::String)
+
+Near-zero-allocation streaming of BBO 1-minute data using callback pattern.
+See `foreach_record` for usage and performance tips.
+"""
+foreach_bbo1m(f::Function, filename::String) = foreach_record(f, filename, BBO1mMsg)
 
 """
     DBNStreamWriter

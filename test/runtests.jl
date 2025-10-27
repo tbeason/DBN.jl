@@ -16,7 +16,8 @@ include("test_utils.jl")
     include("test_phase8.jl")
     include("test_phase9_working.jl")  # Edge cases and error handling
     include("test_phase10_complete.jl")  # Integration and performance testing
-    
+    include("test_convenience_functions.jl")  # Test all convenience read_*/foreach_* functions
+
     # Run compatibility tests if the Rust CLI is available
     dbn_cli_path = if Sys.iswindows()
         joinpath(homedir(), "dbn-workspace", "dbn", "target", "release", "dbn.exe")

@@ -101,14 +101,17 @@ include("import.jl")
 
 # Exports
 export DBNDecoder, DBNEncoder, read_dbn, read_dbn_with_metadata, read_dbn_typed, write_dbn
-export read_trades, read_mbo, read_mbp1, read_mbp10  # Fast typed readers
+export read_trades, read_mbo, read_mbp1, read_mbp10, read_tbbo  # Market depth readers
+export read_ohlcv, read_ohlcv_1s, read_ohlcv_1m, read_ohlcv_1h, read_ohlcv_1d  # OHLCV readers
+export read_cmbp1, read_cbbo1s, read_cbbo1m, read_tcbbo, read_bbo1s, read_bbo1m  # Consolidated/BBO readers
 export Metadata, DBNHeader, RecordHeader, DBNTimestamp
 export MBOMsg, TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg, StatMsg
 export CMBP1Msg, CBBO1sMsg, CBBO1mMsg, TCBBOMsg, BBO1sMsg, BBO1mMsg
 export ErrorMsg, SymbolMappingMsg, SystemMsg, InstrumentDefMsg
 export DBNStream, DBNStreamWriter, write_record!, close_writer!
-export DBNTypedStream, stream_trades, stream_mbo, stream_mbp1, stream_mbp10, stream_ohlcv  # Typed streaming
-export foreach_record, foreach_trade, foreach_mbo  # Zero-allocation callback streaming
+export foreach_record, foreach_trade, foreach_mbo, foreach_mbp1, foreach_mbp10, foreach_tbbo  # Market depth streaming
+export foreach_ohlcv, foreach_ohlcv_1s, foreach_ohlcv_1m, foreach_ohlcv_1h, foreach_ohlcv_1d  # OHLCV streaming
+export foreach_cmbp1, foreach_cbbo1s, foreach_cbbo1m, foreach_tcbbo, foreach_bbo1s, foreach_bbo1m  # Consolidated/BBO streaming
 export compress_dbn_file, compress_daily_files
 export Schema, Compression, Encoding, SType, RType, Action, Side, InstrumentClass
 export price_to_float, float_to_price, ts_to_datetime, datetime_to_ts, ts_to_date_time, date_time_to_ts, to_nanoseconds

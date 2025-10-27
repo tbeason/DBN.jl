@@ -64,19 +64,41 @@ function benchmark_read_optimized(file::String, reader_func::Function)
 end
 
 """
-Run a streaming read benchmark using DBNStream
+Run a streaming read benchmark using DBNStream (generic iterator)
 """
 function benchmark_stream(file::String)
     # Warm up
     for _ in DBNStream(file); end
     GC.gc()
-    
+
     # Benchmark
     trial = @benchmark begin
         for _ in DBNStream($file); end
     end seconds=BENCHMARK_SECONDS samples=BENCHMARK_SAMPLES
-    
+
     count = sum(1 for _ in DBNStream(file))
+    return (trial, count)
+end
+
+"""
+Run a callback streaming benchmark (near-zero allocation)
+"""
+function benchmark_foreach(file::String, foreach_func::Function)
+    # Warm up
+    foreach_func(file) do _; end
+    GC.gc()
+
+    # Benchmark
+    trial = @benchmark begin
+        $foreach_func($file) do _
+            # Just iterate
+        end
+    end seconds=BENCHMARK_SECONDS samples=BENCHMARK_SAMPLES
+
+    count = 0
+    foreach_func(file) do _
+        count += 1
+    end
     return (trial, count)
 end
 
@@ -394,13 +416,32 @@ function run_benchmarks(outfile::String)
                 println(io, @sprintf("  %-40s FAILED: %s", "Read (uncompressed)", string(e)))
             end
             
-            # STREAM UNCOMPRESSED
+            # STREAM UNCOMPRESSED (Generic)
             try
                 trial, count = benchmark_stream(file)
                 println(io, @sprintf("  %-40s %s", "Stream DBNStream() (uncompressed)", format_detailed(trial, count)))
                 results["$(schema)_$(size)_stream"] = (trial, count)
             catch e
-                println(io, @sprintf("  %-40s FAILED: %s", "Stream (uncompressed)", string(e)))
+                println(io, @sprintf("  %-40s FAILED: %s", "Stream DBNStream()", string(e)))
+            end
+
+            # CALLBACK STREAMING (Near-zero allocation)
+            callback_stream = nothing
+            if schema == "trades"
+                callback_stream = (foreach_trade, "foreach_trade()")
+            elseif schema == "mbo"
+                callback_stream = (foreach_mbo, "foreach_mbo()")
+            end
+
+            if callback_stream !== nothing
+                try
+                    foreach_func, foreach_name = callback_stream
+                    trial, count = benchmark_foreach(file, foreach_func)
+                    println(io, @sprintf("  %-40s %s", "Callback $foreach_name (uncompressed)", format_detailed(trial, count)))
+                    results["$(schema)_$(size)_foreach"] = (trial, count)
+                catch e
+                    println(io, @sprintf("  %-40s FAILED: %s", "Callback streaming", string(e)))
+                end
             end
             
             # READ UNCOMPRESSED (OPTIMIZED)
@@ -432,13 +473,25 @@ function run_benchmarks(outfile::String)
                     println(io, @sprintf("  %-40s FAILED: %s", "Read (compressed .zst)", string(e)))
                 end
                 
-                # STREAM COMPRESSED
+                # STREAM COMPRESSED (Generic)
                 try
                     trial, count = benchmark_stream(compressed_file)
                     println(io, @sprintf("  %-40s %s", "Stream DBNStream() (compressed .zst)", format_detailed(trial, count)))
                     results["$(schema)_$(size)_stream_zst"] = (trial, count)
                 catch e
-                    println(io, @sprintf("  %-40s FAILED: %s", "Stream (compressed .zst)", string(e)))
+                    println(io, @sprintf("  %-40s FAILED: %s", "Stream DBNStream() .zst", string(e)))
+                end
+
+                # CALLBACK STREAMING COMPRESSED
+                if callback_stream !== nothing
+                    try
+                        foreach_func, foreach_name = callback_stream
+                        trial, count = benchmark_foreach(compressed_file, foreach_func)
+                        println(io, @sprintf("  %-40s %s", "Callback $foreach_name (compressed .zst)", format_detailed(trial, count)))
+                        results["$(schema)_$(size)_foreach_zst"] = (trial, count)
+                    catch e
+                        println(io, @sprintf("  %-40s FAILED: %s", "Callback streaming .zst", string(e)))
+                    end
                 end
                 
                 # READ COMPRESSED (OPTIMIZED)
@@ -552,11 +605,23 @@ function run_benchmarks(outfile::String)
         end
     end
     
-    println(io, "\nStream Performance (uncompressed):")
+    println(io, "\nStream Performance - Generic DBNStream() (uncompressed):")
     println(io, "-"^100)
     for schema in schemas
         for size in sizes
             key = "$(schema)_$(size)_stream"
+            if haskey(results, key)
+                trial, count = results[key]
+                println(io, @sprintf("  %-20s %s", "$(schema) $(size):", format_throughput(trial, count)))
+            end
+        end
+    end
+
+    println(io, "\nStream Performance - Callback foreach_*() (uncompressed):")
+    println(io, "-"^100)
+    for schema in schemas
+        for size in sizes
+            key = "$(schema)_$(size)_foreach"
             if haskey(results, key)
                 trial, count = results[key]
                 println(io, @sprintf("  %-20s %s", "$(schema) $(size):", format_throughput(trial, count)))
@@ -588,11 +653,23 @@ function run_benchmarks(outfile::String)
         end
     end
     
-    println(io, "\nStream Performance (compressed):")
+    println(io, "\nStream Performance - Generic DBNStream() (compressed):")
     println(io, "-"^100)
     for schema in schemas
         for size in sizes
             key = "$(schema)_$(size)_stream_zst"
+            if haskey(results, key)
+                trial, count = results[key]
+                println(io, @sprintf("  %-20s %s", "$(schema) $(size):", format_throughput(trial, count)))
+            end
+        end
+    end
+
+    println(io, "\nStream Performance - Callback foreach_*() (compressed):")
+    println(io, "-"^100)
+    for schema in schemas
+        for size in sizes
+            key = "$(schema)_$(size)_foreach_zst"
             if haskey(results, key)
                 trial, count = results[key]
                 println(io, @sprintf("  %-20s %s", "$(schema) $(size):", format_throughput(trial, count)))
