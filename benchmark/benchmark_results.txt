@@ -16,21 +16,21 @@ Compressed size: 0.01 MB (3.09x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.00 M/s | 0.233 s | 0.1 MB
-  Stream DBNStream() (uncompressed)        9.59 M/s | 0.000 s | 0.2 MB
-  Read optimized (read_trades())           15.09 M/s | 0.000 s | 0.1 MB
-  Read (compressed .zst)                   0.00 M/s | 0.221 s | 0.2 MB
-  Stream DBNStream() (compressed .zst)     4.24 M/s | 0.000 s | 0.2 MB
-  Read optimized .zst (read_trades())      5.26 M/s | 0.000 s | 0.1 MB
-  Write (uncompressed)                     1.52 M/s | 0.001 s | 0.2 MB
-  Write stream (uncompressed)              1.38 M/s | 0.001 s | 0.2 MB
-  Write (compressed .zst)                  0.95 M/s | 0.001 s | 0.2 MB
-  Write stream (compressed .zst)           1.41 M/s | 0.001 s | 0.2 MB
+  Read (uncompressed)                      0.00 M/s | 0.284 s | 0.1 MB
+  Stream DBNStream() (uncompressed)        2.52 M/s | 0.000 s | 0.2 MB
+  Read optimized (read_trades())           4.98 M/s | 0.000 s | 0.1 MB
+  Read (compressed .zst)                   0.00 M/s | 0.201 s | 0.2 MB
+  Stream DBNStream() (compressed .zst)     5.00 M/s | 0.000 s | 0.2 MB
+  Read optimized .zst (read_trades())      6.10 M/s | 0.000 s | 0.1 MB
+  Write (uncompressed)                     1.40 M/s | 0.001 s | 0.2 MB
+  Write stream (uncompressed)              1.46 M/s | 0.001 s | 0.2 MB
+  Write (compressed .zst)                  1.00 M/s | 0.001 s | 0.2 MB
+  Write stream (compressed .zst)           1.43 M/s | 0.001 s | 0.2 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             5.22 M/s | 0.000 s
-    Python read (compressed .zst)          3.34 M/s | 0.000 s
-    Python write (uncompressed)            3.83 M/s | 0.000 s
+    Python read (uncompressed)             5.37 M/s | 0.000 s
+    Python read (compressed .zst)          3.41 M/s | 0.000 s
+    Python write (uncompressed)            3.92 M/s | 0.000 s
     Python write (compressed .zst)         3.84 M/s | 0.000 s
 
 ----------------------------------------------------------------------------------------------------
@@ -40,22 +40,22 @@ Compressed size: 0.16 MB (2.93x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.04 M/s | 0.231 s | 0.8 MB
-  Stream DBNStream() (uncompressed)        11.35 M/s | 0.001 s | 1.3 MB
-  Read optimized (read_trades())           20.38 M/s | 0.000 s | 0.5 MB
-  Read (compressed .zst)                   0.04 M/s | 0.230 s | 1.0 MB
-  Stream DBNStream() (compressed .zst)     5.41 M/s | 0.002 s | 1.5 MB
-  Read optimized .zst (read_trades())      10.06 M/s | 0.001 s | 0.7 MB
-  Write (uncompressed)                     2.00 M/s | 0.005 s | 2.0 MB
-  Write stream (uncompressed)              2.14 M/s | 0.005 s | 2.0 MB
-  Write (compressed .zst)                  1.48 M/s | 0.007 s | 2.0 MB
-  Write stream (compressed .zst)           2.50 M/s | 0.004 s | 2.0 MB
+  Read (uncompressed)                      0.05 M/s | 0.209 s | 0.8 MB
+  Stream DBNStream() (uncompressed)        11.39 M/s | 0.001 s | 1.3 MB
+  Read optimized (read_trades())           21.73 M/s | 0.000 s | 0.5 MB
+  Read (compressed .zst)                   0.05 M/s | 0.211 s | 1.0 MB
+  Stream DBNStream() (compressed .zst)     6.27 M/s | 0.002 s | 1.5 MB
+  Read optimized .zst (read_trades())      10.30 M/s | 0.001 s | 0.7 MB
+  Write (uncompressed)                     2.76 M/s | 0.004 s | 2.0 MB
+  Write stream (uncompressed)              2.63 M/s | 0.004 s | 2.0 MB
+  Write (compressed .zst)                  1.99 M/s | 0.005 s | 2.0 MB
+  Write stream (compressed .zst)           2.66 M/s | 0.004 s | 2.0 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             11.81 M/s | 0.001 s
-    Python read (compressed .zst)          5.48 M/s | 0.002 s
-    Python write (uncompressed)            15.04 M/s | 0.001 s
-    Python write (compressed .zst)         14.25 M/s | 0.001 s
+    Python read (uncompressed)             12.39 M/s | 0.001 s
+    Python read (compressed .zst)          7.38 M/s | 0.001 s
+    Python write (uncompressed)            24.27 M/s | 0.000 s
+    Python write (compressed .zst)         23.08 M/s | 0.000 s
 
 ----------------------------------------------------------------------------------------------------
 Size: 100K (trades.100k.dbn)
@@ -64,22 +64,22 @@ Compressed size: 1.57 MB (2.92x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.41 M/s | 0.244 s | 6.9 MB
-  Stream DBNStream() (uncompressed)        7.42 M/s | 0.013 s | 12.3 MB
-  Read optimized (read_trades())           19.60 M/s | 0.005 s | 4.6 MB
-  Read (compressed .zst)                   0.39 M/s | 0.255 s | 7.6 MB
-  Stream DBNStream() (compressed .zst)     3.60 M/s | 0.028 s | 13.0 MB
-  Read optimized .zst (read_trades())      9.77 M/s | 0.010 s | 5.4 MB
-  Write (uncompressed)                     2.03 M/s | 0.049 s | 19.8 MB
-  Write stream (uncompressed)              2.02 M/s | 0.050 s | 19.8 MB
-  Write (compressed .zst)                  1.60 M/s | 0.062 s | 19.9 MB
-  Write stream (compressed .zst)           2.11 M/s | 0.047 s | 19.8 MB
+  Read (uncompressed)                      0.46 M/s | 0.217 s | 6.9 MB
+  Stream DBNStream() (uncompressed)        10.40 M/s | 0.010 s | 12.3 MB
+  Read optimized (read_trades())           21.75 M/s | 0.005 s | 4.6 MB
+  Read (compressed .zst)                   0.42 M/s | 0.239 s | 7.6 MB
+  Stream DBNStream() (compressed .zst)     5.79 M/s | 0.017 s | 13.0 MB
+  Read optimized .zst (read_trades())      12.28 M/s | 0.008 s | 5.4 MB
+  Write (uncompressed)                     2.75 M/s | 0.036 s | 19.8 MB
+  Write stream (uncompressed)              2.69 M/s | 0.037 s | 19.8 MB
+  Write (compressed .zst)                  2.11 M/s | 0.047 s | 19.9 MB
+  Write stream (compressed .zst)           2.61 M/s | 0.038 s | 19.8 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             8.82 M/s | 0.011 s
-    Python read (compressed .zst)          6.13 M/s | 0.016 s
-    Python write (uncompressed)            36.28 M/s | 0.003 s
-    Python write (compressed .zst)         38.48 M/s | 0.003 s
+    Python read (uncompressed)             10.73 M/s | 0.009 s
+    Python read (compressed .zst)          7.57 M/s | 0.013 s
+    Python write (uncompressed)            59.51 M/s | 0.002 s
+    Python write (compressed .zst)         60.91 M/s | 0.002 s
 
 ----------------------------------------------------------------------------------------------------
 Size: 1M (trades.1m.dbn)
@@ -88,22 +88,22 @@ Compressed size: 15.73 MB (2.91x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      2.70 M/s | 0.371 s | 68.7 MB
-  Stream DBNStream() (uncompressed)        6.70 M/s | 0.149 s | 122.1 MB
-  Read optimized (read_trades())           18.31 M/s | 0.055 s | 45.8 MB
-  Read (compressed .zst)                   2.13 M/s | 0.469 s | 69.4 MB
-  Stream DBNStream() (compressed .zst)     4.09 M/s | 0.244 s | 122.9 MB
-  Read optimized .zst (read_trades())      9.94 M/s | 0.101 s | 46.6 MB
-  Write (uncompressed)                     2.29 M/s | 0.438 s | 198.4 MB
-  Write stream (uncompressed)              2.12 M/s | 0.471 s | 198.4 MB
-  Write (compressed .zst)                  1.69 M/s | 0.592 s | 198.4 MB
-  Write stream (compressed .zst)           2.16 M/s | 0.464 s | 198.4 MB
+  Read (uncompressed)                      2.87 M/s | 0.349 s | 68.7 MB
+  Stream DBNStream() (uncompressed)        10.15 M/s | 0.099 s | 122.1 MB
+  Read optimized (read_trades())           20.81 M/s | 0.048 s | 45.8 MB
+  Read (compressed .zst)                   2.36 M/s | 0.423 s | 69.4 MB
+  Stream DBNStream() (compressed .zst)     6.20 M/s | 0.161 s | 122.9 MB
+  Read optimized .zst (read_trades())      12.48 M/s | 0.080 s | 46.6 MB
+  Write (uncompressed)                     2.84 M/s | 0.353 s | 198.4 MB
+  Write stream (uncompressed)              2.61 M/s | 0.383 s | 198.4 MB
+  Write (compressed .zst)                  2.18 M/s | 0.459 s | 198.4 MB
+  Write stream (compressed .zst)           2.73 M/s | 0.367 s | 198.4 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             8.32 M/s | 0.120 s
-    Python read (compressed .zst)          5.91 M/s | 0.169 s
-    Python write (uncompressed)            33.31 M/s | 0.030 s
-    Python write (compressed .zst)         33.46 M/s | 0.030 s
+    Python read (uncompressed)             9.66 M/s | 0.104 s
+    Python read (compressed .zst)          7.09 M/s | 0.141 s
+    Python write (uncompressed)            45.21 M/s | 0.022 s
+    Python write (compressed .zst)         43.31 M/s | 0.023 s
 
 ----------------------------------------------------------------------------------------------------
 Size: 10M (trades.10m.dbn)
@@ -112,22 +112,22 @@ Compressed size: 157.4 MB (2.91x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      5.32 M/s | 1.879 s | 686.7 MB
-  Stream DBNStream() (uncompressed)        7.16 M/s | 1.397 s | 1220.8 MB
-  Read optimized (read_trades())           17.89 M/s | 0.559 s | 457.8 MB
-  Read (compressed .zst)                   2.88 M/s | 3.467 s | 687.4 MB
-  Stream DBNStream() (compressed .zst)     3.23 M/s | 3.095 s | 1221.5 MB
-  Read optimized .zst (read_trades())      9.89 M/s | 1.011 s | 458.5 MB
-  Write (uncompressed)                     2.47 M/s | 4.052 s | 1983.6 MB
-  Write stream (uncompressed)              2.41 M/s | 4.149 s | 1983.6 MB
-  Write (compressed .zst)                  2.06 M/s | 4.860 s | 1983.7 MB
-  Write stream (compressed .zst)           2.43 M/s | 4.121 s | 1983.6 MB
+  Read (uncompressed)                      7.15 M/s | 1.399 s | 686.7 MB
+  Stream DBNStream() (uncompressed)        9.57 M/s | 1.045 s | 1220.8 MB
+  Read optimized (read_trades())           19.73 M/s | 0.507 s | 457.8 MB
+  Read (compressed .zst)                   4.82 M/s | 2.075 s | 687.4 MB
+  Stream DBNStream() (compressed .zst)     5.88 M/s | 1.700 s | 1221.5 MB
+  Read optimized .zst (read_trades())      9.76 M/s | 1.025 s | 458.5 MB
+  Write (uncompressed)                     1.95 M/s | 5.116 s | 1983.6 MB
+  Write stream (uncompressed)              2.56 M/s | 3.900 s | 1983.6 MB
+  Write (compressed .zst)                  1.97 M/s | 5.084 s | 1983.7 MB
+  Write stream (compressed .zst)           2.58 M/s | 3.882 s | 1983.6 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             8.67 M/s | 1.153 s
-    Python read (compressed .zst)          6.41 M/s | 1.559 s
-    Python write (uncompressed)            39.61 M/s | 0.252 s
-    Python write (compressed .zst)         41.05 M/s | 0.244 s
+    Python read (uncompressed)             9.18 M/s | 1.089 s
+    Python read (compressed .zst)          7.03 M/s | 1.423 s
+    Python write (uncompressed)            42.65 M/s | 0.234 s
+    Python write (compressed .zst)         42.60 M/s | 0.235 s
 
 ====================================================================================================
 SCHEMA: MBO
@@ -140,22 +140,22 @@ Compressed size: 0.02 MB (3.21x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.00 M/s | 0.230 s | 0.1 MB
-  Stream DBNStream() (uncompressed)        8.52 M/s | 0.000 s | 0.2 MB
-  Read optimized (read_mbo())              10.03 M/s | 0.000 s | 0.1 MB
-  Read (compressed .zst)                   0.00 M/s | 0.230 s | 0.2 MB
-  Stream DBNStream() (compressed .zst)     4.13 M/s | 0.000 s | 0.2 MB
-  Read optimized .zst (read_mbo())         6.34 M/s | 0.000 s | 0.1 MB
-  Write (uncompressed)                     1.37 M/s | 0.001 s | 0.2 MB
-  Write stream (uncompressed)              1.38 M/s | 0.001 s | 0.2 MB
-  Write (compressed .zst)                  0.90 M/s | 0.001 s | 0.2 MB
-  Write stream (compressed .zst)           1.33 M/s | 0.001 s | 0.2 MB
+  Read (uncompressed)                      0.00 M/s | 0.215 s | 0.1 MB
+  Stream DBNStream() (uncompressed)        8.18 M/s | 0.000 s | 0.2 MB
+  Read optimized (read_mbo())              10.47 M/s | 0.000 s | 0.1 MB
+  Read (compressed .zst)                   0.00 M/s | 0.209 s | 0.2 MB
+  Stream DBNStream() (compressed .zst)     4.09 M/s | 0.000 s | 0.2 MB
+  Read optimized .zst (read_mbo())         6.71 M/s | 0.000 s | 0.1 MB
+  Write (uncompressed)                     1.44 M/s | 0.001 s | 0.2 MB
+  Write stream (uncompressed)              1.31 M/s | 0.001 s | 0.2 MB
+  Write (compressed .zst)                  0.89 M/s | 0.001 s | 0.2 MB
+  Write stream (compressed .zst)           1.38 M/s | 0.001 s | 0.2 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             5.06 M/s | 0.000 s
-    Python read (compressed .zst)          3.36 M/s | 0.000 s
-    Python write (uncompressed)            3.63 M/s | 0.000 s
-    Python write (compressed .zst)         3.71 M/s | 0.000 s
+    Python read (uncompressed)             5.47 M/s | 0.000 s
+    Python read (compressed .zst)          3.28 M/s | 0.000 s
+    Python write (uncompressed)            3.68 M/s | 0.000 s
+    Python write (compressed .zst)         3.88 M/s | 0.000 s
 
 ----------------------------------------------------------------------------------------------------
 Size: 10K (mbo.10k.dbn)
@@ -164,22 +164,22 @@ Compressed size: 0.18 MB (3.01x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.04 M/s | 0.223 s | 0.8 MB
-  Stream DBNStream() (uncompressed)        11.09 M/s | 0.001 s | 1.3 MB
-  Read optimized (read_mbo())              22.20 M/s | 0.000 s | 0.6 MB
-  Read (compressed .zst)                   0.04 M/s | 0.228 s | 1.1 MB
-  Stream DBNStream() (compressed .zst)     3.25 M/s | 0.003 s | 1.6 MB
-  Read optimized .zst (read_mbo())         8.21 M/s | 0.001 s | 1.0 MB
-  Write (uncompressed)                     1.73 M/s | 0.006 s | 2.3 MB
-  Write stream (uncompressed)              2.15 M/s | 0.005 s | 2.3 MB
-  Write (compressed .zst)                  1.88 M/s | 0.005 s | 2.3 MB
-  Write stream (compressed .zst)           1.61 M/s | 0.006 s | 2.3 MB
+  Read (uncompressed)                      0.05 M/s | 0.204 s | 0.8 MB
+  Stream DBNStream() (uncompressed)        11.27 M/s | 0.001 s | 1.3 MB
+  Read optimized (read_mbo())              18.63 M/s | 0.001 s | 0.6 MB
+  Read (compressed .zst)                   0.03 M/s | 0.331 s | 1.1 MB
+  Stream DBNStream() (compressed .zst)     3.40 M/s | 0.003 s | 1.6 MB
+  Read optimized .zst (read_mbo())         8.31 M/s | 0.001 s | 1.0 MB
+  Write (uncompressed)                     2.53 M/s | 0.004 s | 2.3 MB
+  Write stream (uncompressed)              1.77 M/s | 0.006 s | 2.3 MB
+  Write (compressed .zst)                  1.41 M/s | 0.007 s | 2.3 MB
+  Write stream (compressed .zst)           1.73 M/s | 0.006 s | 2.3 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             11.19 M/s | 0.001 s
-    Python read (compressed .zst)          7.05 M/s | 0.001 s
-    Python write (uncompressed)            21.62 M/s | 0.000 s
-    Python write (compressed .zst)         21.76 M/s | 0.000 s
+    Python read (uncompressed)             11.61 M/s | 0.001 s
+    Python read (compressed .zst)          7.07 M/s | 0.001 s
+    Python write (uncompressed)            21.50 M/s | 0.000 s
+    Python write (compressed .zst)         22.41 M/s | 0.000 s
 
 ----------------------------------------------------------------------------------------------------
 Size: 100K (mbo.100k.dbn)
@@ -188,22 +188,22 @@ Compressed size: 1.82 MB (2.93x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.40 M/s | 0.252 s | 6.9 MB
-  Stream DBNStream() (uncompressed)        6.97 M/s | 0.014 s | 12.3 MB
-  Read optimized (read_mbo())              15.73 M/s | 0.006 s | 5.4 MB
-  Read (compressed .zst)                   0.39 M/s | 0.256 s | 7.6 MB
-  Stream DBNStream() (compressed .zst)     3.39 M/s | 0.029 s | 13.0 MB
-  Read optimized .zst (read_mbo())         8.38 M/s | 0.012 s | 6.1 MB
-  Write (uncompressed)                     2.05 M/s | 0.049 s | 22.9 MB
-  Write stream (uncompressed)              1.80 M/s | 0.056 s | 22.9 MB
-  Write (compressed .zst)                  1.83 M/s | 0.055 s | 22.9 MB
-  Write stream (compressed .zst)           2.17 M/s | 0.046 s | 22.9 MB
+  Read (uncompressed)                      0.28 M/s | 0.353 s | 6.9 MB
+  Stream DBNStream() (uncompressed)        7.57 M/s | 0.013 s | 12.3 MB
+  Read optimized (read_mbo())              15.23 M/s | 0.007 s | 5.4 MB
+  Read (compressed .zst)                   0.29 M/s | 0.348 s | 7.6 MB
+  Stream DBNStream() (compressed .zst)     5.61 M/s | 0.018 s | 13.0 MB
+  Read optimized .zst (read_mbo())         10.61 M/s | 0.009 s | 6.1 MB
+  Write (uncompressed)                     2.46 M/s | 0.041 s | 22.9 MB
+  Write stream (uncompressed)              2.43 M/s | 0.041 s | 22.9 MB
+  Write (compressed .zst)                  1.94 M/s | 0.052 s | 22.9 MB
+  Write stream (compressed .zst)           2.35 M/s | 0.043 s | 22.9 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             9.62 M/s | 0.010 s
-    Python read (compressed .zst)          6.83 M/s | 0.015 s
-    Python write (uncompressed)            41.01 M/s | 0.002 s
-    Python write (compressed .zst)         45.56 M/s | 0.002 s
+    Python read (uncompressed)             10.11 M/s | 0.010 s
+    Python read (compressed .zst)          7.51 M/s | 0.013 s
+    Python write (uncompressed)            51.41 M/s | 0.002 s
+    Python write (compressed .zst)         51.59 M/s | 0.002 s
 
 ----------------------------------------------------------------------------------------------------
 Size: 1M (mbo.1m.dbn)
@@ -212,22 +212,22 @@ Compressed size: 18.29 MB (2.92x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      2.32 M/s | 0.432 s | 68.7 MB
-  Stream DBNStream() (uncompressed)        6.14 M/s | 0.163 s | 122.1 MB
-  Read optimized (read_mbo())              14.46 M/s | 0.069 s | 53.5 MB
-  Read (compressed .zst)                   2.23 M/s | 0.449 s | 69.4 MB
-  Stream DBNStream() (compressed .zst)     4.93 M/s | 0.203 s | 122.9 MB
-  Read optimized .zst (read_mbo())         9.64 M/s | 0.104 s | 54.2 MB
-  Write (uncompressed)                     2.39 M/s | 0.418 s | 228.9 MB
-  Write stream (uncompressed)              2.19 M/s | 0.456 s | 228.9 MB
-  Write (compressed .zst)                  1.83 M/s | 0.547 s | 228.9 MB
-  Write stream (compressed .zst)           2.40 M/s | 0.417 s | 228.9 MB
+  Read (uncompressed)                      2.80 M/s | 0.357 s | 68.7 MB
+  Stream DBNStream() (uncompressed)        9.76 M/s | 0.102 s | 122.1 MB
+  Read optimized (read_mbo())              18.00 M/s | 0.056 s | 53.5 MB
+  Read (compressed .zst)                   2.42 M/s | 0.413 s | 69.4 MB
+  Stream DBNStream() (compressed .zst)     5.37 M/s | 0.186 s | 122.9 MB
+  Read optimized .zst (read_mbo())         10.56 M/s | 0.095 s | 54.2 MB
+  Write (uncompressed)                     2.53 M/s | 0.395 s | 228.9 MB
+  Write stream (uncompressed)              2.41 M/s | 0.414 s | 228.9 MB
+  Write (compressed .zst)                  1.92 M/s | 0.521 s | 228.9 MB
+  Write stream (compressed .zst)           2.34 M/s | 0.427 s | 228.9 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             8.48 M/s | 0.118 s
-    Python read (compressed .zst)          6.32 M/s | 0.158 s
-    Python write (uncompressed)            36.14 M/s | 0.028 s
-    Python write (compressed .zst)         36.25 M/s | 0.028 s
+    Python read (uncompressed)             9.27 M/s | 0.108 s
+    Python read (compressed .zst)          6.44 M/s | 0.155 s
+    Python write (uncompressed)            37.85 M/s | 0.026 s
+    Python write (compressed .zst)         40.02 M/s | 0.025 s
 
 ====================================================================================================
 SCHEMA: OHLCV
@@ -240,14 +240,14 @@ Compressed size: 0.0 MB (1.69x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.00 M/s | 0.231 s | 0.1 MB
-  Stream DBNStream() (uncompressed)        0.14 M/s | 0.000 s | 0.1 MB
-  Read (compressed .zst)                   0.00 M/s | 0.227 s | 0.1 MB
-  Stream DBNStream() (compressed .zst)     0.11 M/s | 0.000 s | 0.1 MB
+  Read (uncompressed)                      0.00 M/s | 0.201 s | 0.1 MB
+  Stream DBNStream() (uncompressed)        0.21 M/s | 0.000 s | 0.1 MB
+  Read (compressed .zst)                   0.00 M/s | 0.198 s | 0.1 MB
+  Stream DBNStream() (compressed .zst)     0.23 M/s | 0.000 s | 0.1 MB
   Write (uncompressed)                     0.03 M/s | 0.000 s | 0.0 MB
-  Write stream (uncompressed)              0.01 M/s | 0.001 s | 0.0 MB
-  Write (compressed .zst)                  0.01 M/s | 0.001 s | 0.0 MB
-  Write stream (compressed .zst)           0.02 M/s | 0.001 s | 0.0 MB
+  Write stream (uncompressed)              0.03 M/s | 0.000 s | 0.0 MB
+  Write (compressed .zst)                  0.02 M/s | 0.001 s | 0.0 MB
+  Write stream (compressed .zst)           0.03 M/s | 0.000 s | 0.0 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
     Python read (uncompressed)             0.09 M/s | 0.000 s
@@ -262,20 +262,20 @@ Compressed size: 0.0 MB (1.96x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.00 M/s | 0.230 s | 0.1 MB
-  Stream DBNStream() (uncompressed)        2.59 M/s | 0.000 s | 0.1 MB
-  Read (compressed .zst)                   0.00 M/s | 0.226 s | 0.1 MB
-  Stream DBNStream() (compressed .zst)     1.56 M/s | 0.000 s | 0.1 MB
-  Write (uncompressed)                     0.22 M/s | 0.000 s | 0.0 MB
-  Write stream (uncompressed)              0.23 M/s | 0.000 s | 0.0 MB
+  Read (uncompressed)                      0.00 M/s | 0.220 s | 0.1 MB
+  Stream DBNStream() (uncompressed)        2.44 M/s | 0.000 s | 0.1 MB
+  Read (compressed .zst)                   0.00 M/s | 0.200 s | 0.1 MB
+  Stream DBNStream() (compressed .zst)     1.63 M/s | 0.000 s | 0.1 MB
+  Write (uncompressed)                     0.31 M/s | 0.000 s | 0.0 MB
+  Write stream (uncompressed)              0.28 M/s | 0.000 s | 0.0 MB
   Write (compressed .zst)                  0.16 M/s | 0.001 s | 0.1 MB
-  Write stream (compressed .zst)           0.28 M/s | 0.000 s | 0.0 MB
+  Write stream (compressed .zst)           0.30 M/s | 0.000 s | 0.0 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             0.85 M/s | 0.000 s
-    Python read (compressed .zst)          0.68 M/s | 0.000 s
-    Python write (uncompressed)            0.41 M/s | 0.000 s
-    Python write (compressed .zst)         0.39 M/s | 0.000 s
+    Python read (uncompressed)             0.74 M/s | 0.000 s
+    Python read (compressed .zst)          0.70 M/s | 0.000 s
+    Python write (uncompressed)            0.39 M/s | 0.000 s
+    Python write (compressed .zst)         0.38 M/s | 0.000 s
 
 ----------------------------------------------------------------------------------------------------
 Size: 100K (ohlcv.100k.dbn)
@@ -284,20 +284,20 @@ Compressed size: 0.03 MB (1.99x compression)
 ----------------------------------------------------------------------------------------------------
   Operation                                Throughput | Time | Memory
   ------------------------------------------------------------------------------------------------
-  Read (uncompressed)                      0.00 M/s | 0.229 s | 0.1 MB
-  Stream DBNStream() (uncompressed)        9.01 M/s | 0.000 s | 0.2 MB
-  Read (compressed .zst)                   0.00 M/s | 0.225 s | 0.2 MB
-  Stream DBNStream() (compressed .zst)     3.78 M/s | 0.000 s | 0.2 MB
+  Read (uncompressed)                      0.00 M/s | 0.202 s | 0.1 MB
+  Stream DBNStream() (uncompressed)        8.77 M/s | 0.000 s | 0.2 MB
+  Read (compressed .zst)                   0.00 M/s | 0.203 s | 0.2 MB
+  Stream DBNStream() (compressed .zst)     3.54 M/s | 0.000 s | 0.2 MB
   Write (uncompressed)                     1.69 M/s | 0.001 s | 0.2 MB
-  Write stream (uncompressed)              1.60 M/s | 0.001 s | 0.2 MB
+  Write stream (uncompressed)              1.47 M/s | 0.001 s | 0.2 MB
   Write (compressed .zst)                  0.98 M/s | 0.001 s | 0.3 MB
-  Write stream (compressed .zst)           1.59 M/s | 0.001 s | 0.2 MB
+  Write stream (compressed .zst)           1.58 M/s | 0.001 s | 0.2 MB
   ------------------------------------------------------------------------------------------------
   Python Comparison:                       
-    Python read (uncompressed)             5.41 M/s | 0.000 s
-    Python read (compressed .zst)          3.22 M/s | 0.000 s
-    Python write (uncompressed)            3.77 M/s | 0.000 s
-    Python write (compressed .zst)         3.67 M/s | 0.000 s
+    Python read (uncompressed)             5.15 M/s | 0.000 s
+    Python read (compressed .zst)          3.11 M/s | 0.000 s
+    Python write (uncompressed)            3.57 M/s | 0.000 s
+    Python write (compressed .zst)         3.80 M/s | 0.000 s
 
 ====================================================================================================
 SUMMARY
@@ -305,147 +305,147 @@ SUMMARY
 
 Read Performance (uncompressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           0.00 M/s (0.233 s)
-  trades 10k:          0.04 M/s (0.231 s)
-  trades 100k:         0.41 M/s (0.244 s)
-  trades 1m:           2.70 M/s (0.371 s)
-  trades 10m:          5.32 M/s (1.879 s)
-  mbo 1k:              0.00 M/s (0.230 s)
-  mbo 10k:             0.04 M/s (0.223 s)
-  mbo 100k:            0.40 M/s (0.252 s)
-  mbo 1m:              2.32 M/s (0.432 s)
-  ohlcv 1k:            0.00 M/s (0.231 s)
-  ohlcv 10k:           0.00 M/s (0.230 s)
-  ohlcv 100k:          0.00 M/s (0.229 s)
+  trades 1k:           0.00 M/s (0.284 s)
+  trades 10k:          0.05 M/s (0.209 s)
+  trades 100k:         0.46 M/s (0.217 s)
+  trades 1m:           2.87 M/s (0.349 s)
+  trades 10m:          7.15 M/s (1.399 s)
+  mbo 1k:              0.00 M/s (0.215 s)
+  mbo 10k:             0.05 M/s (0.204 s)
+  mbo 100k:            0.28 M/s (0.353 s)
+  mbo 1m:              2.80 M/s (0.357 s)
+  ohlcv 1k:            0.00 M/s (0.201 s)
+  ohlcv 10k:           0.00 M/s (0.220 s)
+  ohlcv 100k:          0.00 M/s (0.202 s)
 
 Stream Performance (uncompressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           9.59 M/s (0.000 s)
-  trades 10k:          11.35 M/s (0.001 s)
-  trades 100k:         7.42 M/s (0.013 s)
-  trades 1m:           6.70 M/s (0.149 s)
-  trades 10m:          7.16 M/s (1.397 s)
-  mbo 1k:              8.52 M/s (0.000 s)
-  mbo 10k:             11.09 M/s (0.001 s)
-  mbo 100k:            6.97 M/s (0.014 s)
-  mbo 1m:              6.14 M/s (0.163 s)
-  ohlcv 1k:            0.14 M/s (0.000 s)
-  ohlcv 10k:           2.59 M/s (0.000 s)
-  ohlcv 100k:          9.01 M/s (0.000 s)
+  trades 1k:           2.52 M/s (0.000 s)
+  trades 10k:          11.39 M/s (0.001 s)
+  trades 100k:         10.40 M/s (0.010 s)
+  trades 1m:           10.15 M/s (0.099 s)
+  trades 10m:          9.57 M/s (1.045 s)
+  mbo 1k:              8.18 M/s (0.000 s)
+  mbo 10k:             11.27 M/s (0.001 s)
+  mbo 100k:            7.57 M/s (0.013 s)
+  mbo 1m:              9.76 M/s (0.102 s)
+  ohlcv 1k:            0.21 M/s (0.000 s)
+  ohlcv 10k:           2.44 M/s (0.000 s)
+  ohlcv 100k:          8.77 M/s (0.000 s)
 
 Read Performance (optimized, uncompressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           15.09 M/s (0.000 s)
-  trades 10k:          20.38 M/s (0.000 s)
-  trades 100k:         19.60 M/s (0.005 s)
-  trades 1m:           18.31 M/s (0.055 s)
-  trades 10m:          17.89 M/s (0.559 s)
-  mbo 1k:              10.03 M/s (0.000 s)
-  mbo 10k:             22.20 M/s (0.000 s)
-  mbo 100k:            15.73 M/s (0.006 s)
-  mbo 1m:              14.46 M/s (0.069 s)
+  trades 1k:           4.98 M/s (0.000 s)
+  trades 10k:          21.73 M/s (0.000 s)
+  trades 100k:         21.75 M/s (0.005 s)
+  trades 1m:           20.81 M/s (0.048 s)
+  trades 10m:          19.73 M/s (0.507 s)
+  mbo 1k:              10.47 M/s (0.000 s)
+  mbo 10k:             18.63 M/s (0.001 s)
+  mbo 100k:            15.23 M/s (0.007 s)
+  mbo 1m:              18.00 M/s (0.056 s)
 
 Read Performance (compressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           0.00 M/s (0.221 s)
-  trades 10k:          0.04 M/s (0.230 s)
-  trades 100k:         0.39 M/s (0.255 s)
-  trades 1m:           2.13 M/s (0.469 s)
-  trades 10m:          2.88 M/s (3.467 s)
-  mbo 1k:              0.00 M/s (0.230 s)
-  mbo 10k:             0.04 M/s (0.228 s)
-  mbo 100k:            0.39 M/s (0.256 s)
-  mbo 1m:              2.23 M/s (0.449 s)
-  ohlcv 1k:            0.00 M/s (0.227 s)
-  ohlcv 10k:           0.00 M/s (0.226 s)
-  ohlcv 100k:          0.00 M/s (0.225 s)
+  trades 1k:           0.00 M/s (0.201 s)
+  trades 10k:          0.05 M/s (0.211 s)
+  trades 100k:         0.42 M/s (0.239 s)
+  trades 1m:           2.36 M/s (0.423 s)
+  trades 10m:          4.82 M/s (2.075 s)
+  mbo 1k:              0.00 M/s (0.209 s)
+  mbo 10k:             0.03 M/s (0.331 s)
+  mbo 100k:            0.29 M/s (0.348 s)
+  mbo 1m:              2.42 M/s (0.413 s)
+  ohlcv 1k:            0.00 M/s (0.198 s)
+  ohlcv 10k:           0.00 M/s (0.200 s)
+  ohlcv 100k:          0.00 M/s (0.203 s)
 
 Stream Performance (compressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           4.24 M/s (0.000 s)
-  trades 10k:          5.41 M/s (0.002 s)
-  trades 100k:         3.60 M/s (0.028 s)
-  trades 1m:           4.09 M/s (0.244 s)
-  trades 10m:          3.23 M/s (3.095 s)
-  mbo 1k:              4.13 M/s (0.000 s)
-  mbo 10k:             3.25 M/s (0.003 s)
-  mbo 100k:            3.39 M/s (0.029 s)
-  mbo 1m:              4.93 M/s (0.203 s)
-  ohlcv 1k:            0.11 M/s (0.000 s)
-  ohlcv 10k:           1.56 M/s (0.000 s)
-  ohlcv 100k:          3.78 M/s (0.000 s)
+  trades 1k:           5.00 M/s (0.000 s)
+  trades 10k:          6.27 M/s (0.002 s)
+  trades 100k:         5.79 M/s (0.017 s)
+  trades 1m:           6.20 M/s (0.161 s)
+  trades 10m:          5.88 M/s (1.700 s)
+  mbo 1k:              4.09 M/s (0.000 s)
+  mbo 10k:             3.40 M/s (0.003 s)
+  mbo 100k:            5.61 M/s (0.018 s)
+  mbo 1m:              5.37 M/s (0.186 s)
+  ohlcv 1k:            0.23 M/s (0.000 s)
+  ohlcv 10k:           1.63 M/s (0.000 s)
+  ohlcv 100k:          3.54 M/s (0.000 s)
 
 Read Performance (optimized, compressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           5.26 M/s (0.000 s)
-  trades 10k:          10.06 M/s (0.001 s)
-  trades 100k:         9.77 M/s (0.010 s)
-  trades 1m:           9.94 M/s (0.101 s)
-  trades 10m:          9.89 M/s (1.011 s)
-  mbo 1k:              6.34 M/s (0.000 s)
-  mbo 10k:             8.21 M/s (0.001 s)
-  mbo 100k:            8.38 M/s (0.012 s)
-  mbo 1m:              9.64 M/s (0.104 s)
+  trades 1k:           6.10 M/s (0.000 s)
+  trades 10k:          10.30 M/s (0.001 s)
+  trades 100k:         12.28 M/s (0.008 s)
+  trades 1m:           12.48 M/s (0.080 s)
+  trades 10m:          9.76 M/s (1.025 s)
+  mbo 1k:              6.71 M/s (0.000 s)
+  mbo 10k:             8.31 M/s (0.001 s)
+  mbo 100k:            10.61 M/s (0.009 s)
+  mbo 1m:              10.56 M/s (0.095 s)
 
 Write Performance (uncompressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           1.52 M/s (0.001 s)
-  trades 10k:          2.00 M/s (0.005 s)
-  trades 100k:         2.03 M/s (0.049 s)
-  trades 1m:           2.29 M/s (0.438 s)
-  trades 10m:          2.47 M/s (4.052 s)
-  mbo 1k:              1.37 M/s (0.001 s)
-  mbo 10k:             1.73 M/s (0.006 s)
-  mbo 100k:            2.05 M/s (0.049 s)
-  mbo 1m:              2.39 M/s (0.418 s)
+  trades 1k:           1.40 M/s (0.001 s)
+  trades 10k:          2.76 M/s (0.004 s)
+  trades 100k:         2.75 M/s (0.036 s)
+  trades 1m:           2.84 M/s (0.353 s)
+  trades 10m:          1.95 M/s (5.116 s)
+  mbo 1k:              1.44 M/s (0.001 s)
+  mbo 10k:             2.53 M/s (0.004 s)
+  mbo 100k:            2.46 M/s (0.041 s)
+  mbo 1m:              2.53 M/s (0.395 s)
   ohlcv 1k:            0.03 M/s (0.000 s)
-  ohlcv 10k:           0.22 M/s (0.000 s)
+  ohlcv 10k:           0.31 M/s (0.000 s)
   ohlcv 100k:          1.69 M/s (0.001 s)
 
 Write Stream Performance (uncompressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           1.38 M/s (0.001 s)
-  trades 10k:          2.14 M/s (0.005 s)
-  trades 100k:         2.02 M/s (0.050 s)
-  trades 1m:           2.12 M/s (0.471 s)
-  trades 10m:          2.41 M/s (4.149 s)
-  mbo 1k:              1.38 M/s (0.001 s)
-  mbo 10k:             2.15 M/s (0.005 s)
-  mbo 100k:            1.80 M/s (0.056 s)
-  mbo 1m:              2.19 M/s (0.456 s)
-  ohlcv 1k:            0.01 M/s (0.001 s)
-  ohlcv 10k:           0.23 M/s (0.000 s)
-  ohlcv 100k:          1.60 M/s (0.001 s)
+  trades 1k:           1.46 M/s (0.001 s)
+  trades 10k:          2.63 M/s (0.004 s)
+  trades 100k:         2.69 M/s (0.037 s)
+  trades 1m:           2.61 M/s (0.383 s)
+  trades 10m:          2.56 M/s (3.900 s)
+  mbo 1k:              1.31 M/s (0.001 s)
+  mbo 10k:             1.77 M/s (0.006 s)
+  mbo 100k:            2.43 M/s (0.041 s)
+  mbo 1m:              2.41 M/s (0.414 s)
+  ohlcv 1k:            0.03 M/s (0.000 s)
+  ohlcv 10k:           0.28 M/s (0.000 s)
+  ohlcv 100k:          1.47 M/s (0.001 s)
 
 Write Performance (compressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           0.95 M/s (0.001 s)
-  trades 10k:          1.48 M/s (0.007 s)
-  trades 100k:         1.60 M/s (0.062 s)
-  trades 1m:           1.69 M/s (0.592 s)
-  trades 10m:          2.06 M/s (4.860 s)
-  mbo 1k:              0.90 M/s (0.001 s)
-  mbo 10k:             1.88 M/s (0.005 s)
-  mbo 100k:            1.83 M/s (0.055 s)
-  mbo 1m:              1.83 M/s (0.547 s)
-  ohlcv 1k:            0.01 M/s (0.001 s)
+  trades 1k:           1.00 M/s (0.001 s)
+  trades 10k:          1.99 M/s (0.005 s)
+  trades 100k:         2.11 M/s (0.047 s)
+  trades 1m:           2.18 M/s (0.459 s)
+  trades 10m:          1.97 M/s (5.084 s)
+  mbo 1k:              0.89 M/s (0.001 s)
+  mbo 10k:             1.41 M/s (0.007 s)
+  mbo 100k:            1.94 M/s (0.052 s)
+  mbo 1m:              1.92 M/s (0.521 s)
+  ohlcv 1k:            0.02 M/s (0.001 s)
   ohlcv 10k:           0.16 M/s (0.001 s)
   ohlcv 100k:          0.98 M/s (0.001 s)
 
 Write Stream Performance (compressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           1.41 M/s (0.001 s)
-  trades 10k:          2.50 M/s (0.004 s)
-  trades 100k:         2.11 M/s (0.047 s)
-  trades 1m:           2.16 M/s (0.464 s)
-  trades 10m:          2.43 M/s (4.121 s)
-  mbo 1k:              1.33 M/s (0.001 s)
-  mbo 10k:             1.61 M/s (0.006 s)
-  mbo 100k:            2.17 M/s (0.046 s)
-  mbo 1m:              2.40 M/s (0.417 s)
-  ohlcv 1k:            0.02 M/s (0.001 s)
-  ohlcv 10k:           0.28 M/s (0.000 s)
-  ohlcv 100k:          1.59 M/s (0.001 s)
+  trades 1k:           1.43 M/s (0.001 s)
+  trades 10k:          2.66 M/s (0.004 s)
+  trades 100k:         2.61 M/s (0.038 s)
+  trades 1m:           2.73 M/s (0.367 s)
+  trades 10m:          2.58 M/s (3.882 s)
+  mbo 1k:              1.38 M/s (0.001 s)
+  mbo 10k:             1.73 M/s (0.006 s)
+  mbo 100k:            2.35 M/s (0.043 s)
+  mbo 1m:              2.34 M/s (0.427 s)
+  ohlcv 1k:            0.03 M/s (0.000 s)
+  ohlcv 10k:           0.30 M/s (0.000 s)
+  ohlcv 100k:          1.58 M/s (0.001 s)
 
 ====================================================================================================
 PYTHON DATABENTO COMPARISON
@@ -453,63 +453,63 @@ PYTHON DATABENTO COMPARISON
 
 Python Read Performance (uncompressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           5.22 M/s (0.000 s)
-  trades 10k:          11.81 M/s (0.001 s)
-  trades 100k:         8.82 M/s (0.011 s)
-  trades 1m:           8.32 M/s (0.120 s)
-  trades 10m:          8.67 M/s (1.153 s)
-  mbo 1k:              5.06 M/s (0.000 s)
-  mbo 10k:             11.19 M/s (0.001 s)
-  mbo 100k:            9.62 M/s (0.010 s)
-  mbo 1m:              8.48 M/s (0.118 s)
+  trades 1k:           5.37 M/s (0.000 s)
+  trades 10k:          12.39 M/s (0.001 s)
+  trades 100k:         10.73 M/s (0.009 s)
+  trades 1m:           9.66 M/s (0.104 s)
+  trades 10m:          9.18 M/s (1.089 s)
+  mbo 1k:              5.47 M/s (0.000 s)
+  mbo 10k:             11.61 M/s (0.001 s)
+  mbo 100k:            10.11 M/s (0.010 s)
+  mbo 1m:              9.27 M/s (0.108 s)
   ohlcv 1k:            0.09 M/s (0.000 s)
-  ohlcv 10k:           0.85 M/s (0.000 s)
-  ohlcv 100k:          5.41 M/s (0.000 s)
+  ohlcv 10k:           0.74 M/s (0.000 s)
+  ohlcv 100k:          5.15 M/s (0.000 s)
 
 Python Read Performance (compressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           3.34 M/s (0.000 s)
-  trades 10k:          5.48 M/s (0.002 s)
-  trades 100k:         6.13 M/s (0.016 s)
-  trades 1m:           5.91 M/s (0.169 s)
-  trades 10m:          6.41 M/s (1.559 s)
-  mbo 1k:              3.36 M/s (0.000 s)
-  mbo 10k:             7.05 M/s (0.001 s)
-  mbo 100k:            6.83 M/s (0.015 s)
-  mbo 1m:              6.32 M/s (0.158 s)
+  trades 1k:           3.41 M/s (0.000 s)
+  trades 10k:          7.38 M/s (0.001 s)
+  trades 100k:         7.57 M/s (0.013 s)
+  trades 1m:           7.09 M/s (0.141 s)
+  trades 10m:          7.03 M/s (1.423 s)
+  mbo 1k:              3.28 M/s (0.000 s)
+  mbo 10k:             7.07 M/s (0.001 s)
+  mbo 100k:            7.51 M/s (0.013 s)
+  mbo 1m:              6.44 M/s (0.155 s)
   ohlcv 1k:            0.08 M/s (0.000 s)
-  ohlcv 10k:           0.68 M/s (0.000 s)
-  ohlcv 100k:          3.22 M/s (0.000 s)
+  ohlcv 10k:           0.70 M/s (0.000 s)
+  ohlcv 100k:          3.11 M/s (0.000 s)
 
 Python Write Performance (uncompressed):
 ----------------------------------------------------------------------------------------------------
-  trades 1k:           3.83 M/s (0.000 s)
-  trades 10k:          15.04 M/s (0.001 s)
-  trades 100k:         36.28 M/s (0.003 s)
-  trades 1m:           33.31 M/s (0.030 s)
-  trades 10m:          39.61 M/s (0.252 s)
-  mbo 1k:              3.63 M/s (0.000 s)
-  mbo 10k:             21.62 M/s (0.000 s)
-  mbo 100k:            41.01 M/s (0.002 s)
-  mbo 1m:              36.14 M/s (0.028 s)
+  trades 1k:           3.92 M/s (0.000 s)
+  trades 10k:          24.27 M/s (0.000 s)
+  trades 100k:         59.51 M/s (0.002 s)
+  trades 1m:           45.21 M/s (0.022 s)
+  trades 10m:          42.65 M/s (0.234 s)
+  mbo 1k:              3.68 M/s (0.000 s)
+  mbo 10k:             21.50 M/s (0.000 s)
+  mbo 100k:            51.41 M/s (0.002 s)
+  mbo 1m:              37.85 M/s (0.026 s)
   ohlcv 1k:            0.04 M/s (0.000 s)
-  ohlcv 10k:           0.41 M/s (0.000 s)
-  ohlcv 100k:          3.77 M/s (0.000 s)
+  ohlcv 10k:           0.39 M/s (0.000 s)
+  ohlcv 100k:          3.57 M/s (0.000 s)
 
 Python Write Performance (compressed):
 ----------------------------------------------------------------------------------------------------
   trades 1k:           3.84 M/s (0.000 s)
-  trades 10k:          14.25 M/s (0.001 s)
-  trades 100k:         38.48 M/s (0.003 s)
-  trades 1m:           33.46 M/s (0.030 s)
-  trades 10m:          41.05 M/s (0.244 s)
-  mbo 1k:              3.71 M/s (0.000 s)
-  mbo 10k:             21.76 M/s (0.000 s)
-  mbo 100k:            45.56 M/s (0.002 s)
-  mbo 1m:              36.25 M/s (0.028 s)
+  trades 10k:          23.08 M/s (0.000 s)
+  trades 100k:         60.91 M/s (0.002 s)
+  trades 1m:           43.31 M/s (0.023 s)
+  trades 10m:          42.60 M/s (0.235 s)
+  mbo 1k:              3.88 M/s (0.000 s)
+  mbo 10k:             22.41 M/s (0.000 s)
+  mbo 100k:            51.59 M/s (0.002 s)
+  mbo 1m:              40.02 M/s (0.025 s)
   ohlcv 1k:            0.04 M/s (0.000 s)
-  ohlcv 10k:           0.39 M/s (0.000 s)
-  ohlcv 100k:          3.67 M/s (0.000 s)
+  ohlcv 10k:           0.38 M/s (0.000 s)
+  ohlcv 100k:          3.80 M/s (0.000 s)
 
 ====================================================================================================
 Benchmark complete

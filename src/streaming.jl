@@ -98,6 +98,210 @@ Element type for DBNStream iterator (Any, since different record types are possi
 """
 Base.eltype(::Type{DBNStream}) = Any
 
+# ============================================================================
+# Typed Streaming Iterators (Type-Stable)
+# ============================================================================
+
+"""
+    DBNTypedStream{T}
+
+Type-stable iterator for streaming DBN files with known record type.
+
+# Type Parameter
+- `T`: Expected record type (e.g., `TradeMsg`, `MBOMsg`)
+
+# Fields
+- `decoder::DBNDecoder`: Decoder instance
+- `cleanup::Ref{Bool}`: Cleanup tracking flag
+
+# Performance
+Provides type-stable iteration eliminating Union type overhead.
+Significantly faster than `DBNStream` when schema is known.
+
+# Usage
+```julia
+# Directly construct
+for trade in DBNTypedStream{TradeMsg}("trades.dbn")
+    process(trade)  # type-stable!
+end
+
+# Or use convenience functions
+for trade in stream_trades("trades.dbn")
+    process(trade)
+end
+```
+
+# Warning
+If the file contains records of different types, this will error.
+For mixed-type files, use `DBNStream` instead.
+"""
+mutable struct DBNTypedStream{T}
+    decoder::DBNDecoder
+    cleanup::Ref{Bool}
+    expected_rtype::RType.T
+    
+    function DBNTypedStream{T}(filename::String) where T
+        decoder = DBNDecoder(filename)
+        expected_rtype = _type_to_rtype_stream(T)
+        new{T}(decoder, Ref(false), expected_rtype)
+    end
+end
+
+# Map type to RType (imported from decode.jl logic)
+_type_to_rtype_stream(::Type{TradeMsg}) = RType.MBP_0_MSG
+_type_to_rtype_stream(::Type{MBOMsg}) = RType.MBO_MSG
+_type_to_rtype_stream(::Type{MBP1Msg}) = RType.MBP_1_MSG
+_type_to_rtype_stream(::Type{MBP10Msg}) = RType.MBP_10_MSG
+_type_to_rtype_stream(::Type{OHLCVMsg}) = RType.OHLCV_1S_MSG  # Default to 1s
+_type_to_rtype_stream(::Type{StatusMsg}) = RType.STATUS_MSG
+_type_to_rtype_stream(::Type{InstrumentDefMsg}) = RType.INSTRUMENT_DEF_MSG
+_type_to_rtype_stream(::Type{ImbalanceMsg}) = RType.IMBALANCE_MSG
+
+"""
+    Base.iterate(stream::DBNTypedStream{T})
+
+Initialize typed iteration.
+"""
+Base.iterate(stream::DBNTypedStream{T}) where {T} = iterate(stream, nothing)
+
+"""
+    Base.iterate(stream::DBNTypedStream{T}, state)
+
+Continue typed iteration - fully type-stable.
+"""
+Base.iterate(stream::DBNTypedStream{T}, state) where {T} = begin
+    decoder = stream.decoder
+    
+    # Check if already cleaned up
+    if stream.cleanup[]
+        return nothing
+    end
+    
+    if eof(decoder.io)
+        # Clean up resources once
+        if !stream.cleanup[]
+            if decoder.io !== decoder.base_io
+                close(decoder.io)
+            end
+            if isa(decoder.base_io, IOStream)
+                close(decoder.base_io)
+            end
+            stream.cleanup[] = true
+        end
+        return nothing
+    end
+    
+    # Read header
+    hd_result = read_record_header(decoder.io)
+    
+    # Handle unknown record types
+    if hd_result isa Tuple
+        _, rtype_raw, record_length = hd_result
+        skip(decoder.io, record_length - 2)
+        return iterate(stream, state)  # Skip to next record
+    end
+    
+    hd = hd_result
+    
+    # Verify type matches expected
+    if hd.rtype != stream.expected_rtype
+        # Special handling for OHLCV variants
+        if T === OHLCVMsg && hd.rtype in (RType.OHLCV_1S_MSG, RType.OHLCV_1M_MSG, RType.OHLCV_1H_MSG, RType.OHLCV_1D_MSG)
+            # OK, continue
+        else
+            error("Expected $(T) (rtype=$(stream.expected_rtype)) but got rtype=$(hd.rtype)")
+        end
+    end
+    
+    # Read record body - type-stable dispatch
+    record::T = _read_typed_record_stream(decoder, T, hd)
+    return (record, nothing)
+end
+
+# Type-stable record reading helpers
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{TradeMsg}, hd::RecordHeader)
+    return read_trade_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{MBOMsg}, hd::RecordHeader)
+    return read_mbo_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{MBP1Msg}, hd::RecordHeader)
+    return read_mbp1_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{MBP10Msg}, hd::RecordHeader)
+    return read_mbp10_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{OHLCVMsg}, hd::RecordHeader)
+    return read_ohlcv_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{StatusMsg}, hd::RecordHeader)
+    return read_status_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{InstrumentDefMsg}, hd::RecordHeader)
+    return read_instrument_def_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{ImbalanceMsg}, hd::RecordHeader)
+    return read_imbalance_msg(decoder, hd)
+end
+
+Base.IteratorSize(::Type{<:DBNTypedStream}) = Base.SizeUnknown()
+Base.eltype(::Type{DBNTypedStream{T}}) where {T} = T
+
+# Convenience functions for common schemas
+"""
+    stream_trades(filename::String) -> DBNTypedStream{TradeMsg}
+
+Create type-stable iterator for trade data.
+
+# Performance
+Type-stable streaming eliminates Union type overhead, providing better
+performance than `DBNStream` when you know all records are trades.
+
+# Example
+```julia
+for trade in stream_trades("data.dbn")
+    # trade::TradeMsg (type-stable!)
+    println(trade.price)
+end
+```
+"""
+stream_trades(filename::String) = DBNTypedStream{TradeMsg}(filename)
+
+"""
+    stream_mbo(filename::String) -> DBNTypedStream{MBOMsg}
+
+Create type-stable iterator for MBO (Market By Order) data.
+"""
+stream_mbo(filename::String) = DBNTypedStream{MBOMsg}(filename)
+
+"""
+    stream_mbp1(filename::String) -> DBNTypedStream{MBP1Msg}
+
+Create type-stable iterator for MBP-1 (top-of-book) data.
+"""
+stream_mbp1(filename::String) = DBNTypedStream{MBP1Msg}(filename)
+
+"""
+    stream_mbp10(filename::String) -> DBNTypedStream{MBP10Msg}
+
+Create type-stable iterator for MBP-10 (10-level depth) data.
+"""
+stream_mbp10(filename::String) = DBNTypedStream{MBP10Msg}(filename)
+
+"""
+    stream_ohlcv(filename::String) -> DBNTypedStream{OHLCVMsg}
+
+Create type-stable iterator for OHLCV data.
+"""
+stream_ohlcv(filename::String) = DBNTypedStream{OHLCVMsg}(filename)
+
 """
     DBNStreamWriter
 
