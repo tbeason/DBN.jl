@@ -265,9 +265,20 @@ Supports all DBN v3 record types:
 
 Each record type is serialized according to its specific binary layout.
 """
+# Optimized write for simple bitstypes - direct memory write
+@inline function write_record(encoder::DBNEncoder, record::Union{TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg})
+    unsafe_write(encoder.io, Ref(record), sizeof(record))
+end
+
+# Catch-all for types with variable-length fields (strings, etc.)
 function write_record(encoder::DBNEncoder, record)
+    write_record_complex(encoder, record)
+end
+
+# Fallback for complex types that need field-by-field writing
+function write_record_complex(encoder::DBNEncoder, record)
     io = encoder.io
-    
+
     if isa(record, MBOMsg)
         write_record_header(io, record.hd)
         write(io, record.ts_recv)
@@ -280,7 +291,7 @@ function write_record(encoder::DBNEncoder, record)
         write(io, record.price)
         write(io, record.ts_in_delta)
         write(io, record.sequence)
-        
+
     elseif isa(record, TradeMsg)
         write_record_header(io, record.hd)
         write(io, record.price)

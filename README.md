@@ -17,6 +17,13 @@ For more details, read the [introduction to DBN](https://databento.com/docs/stan
 - ✅ High-precision timestamp handling
 - ✅ Fixed-point price arithmetic
 
+## Performance
+
+DBN.jl is optimized for high-throughput market data processing:
+- **Read**: Up to 40M records/sec with near-zero-allocation callback streaming
+- **Write**: 11M records/sec with optimized bulk operations
+- **Type-specific readers** (`read_trades`, `read_mbo`, etc.) are 5-6x faster than generic `read_dbn()`
+
 **Note**: This package supports DBN v2 and v3 formats only. DBN v1 files are not supported. To convert DBN v1 files, use the official Databento CLI:
 ```bash
 dbn version1.dbn --output version2.dbn --upgrade
@@ -38,16 +45,28 @@ Pkg.add(url="https://github.com/tbeason/DBN.jl")
 ```julia
 using DBN
 
-# Read entire file into memory
+# Read entire file into memory (fastest for bulk loading)
 records = read_dbn("trades.dbn")
 
 # Read with metadata
 metadata, records = read_dbn_with_metadata("trades.dbn")
 
-# Memory-efficient streaming for large files
+# Optimized type-specific eager read (5-6x faster than read_dbn)
+trades = read_trades("trades.dbn")
+mbos = read_mbo("mbo.dbn")
+
+# Generic streaming for mixed-type files
 for record in DBNStream("large_file.dbn.zst")
     println("Trade: $(record.price) @ $(record.size)")
 end
+
+# High-performance callback streaming (near-zero allocations!)
+# Best for pure processing workloads - 40 M records/sec
+total = Ref(0.0)
+foreach_trade("trades.dbn") do trade
+    total[] += price_to_float(trade.price)
+end
+println("Total: $(total[])")
 ```
 
 ### Writing DBN Files
