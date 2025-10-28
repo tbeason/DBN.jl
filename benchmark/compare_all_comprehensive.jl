@@ -7,6 +7,11 @@ Tests all combinations of:
 - Operations: read, write
 - Compression: uncompressed, zstd
 
+Write benchmarks use optimized serialization:
+- Most message types use direct unsafe_write() for zero-copy serialization
+- MBOMsg uses IOBuffer batching (1.4x speedup over field-by-field)
+- All optimizations maintain byte-for-byte DBN format compatibility
+
 Usage: julia --project=. benchmark/compare_all_comprehensive.jl
 """
 
@@ -104,36 +109,46 @@ end
 
 """
 Run a write benchmark - reads once then writes multiple times
+
+Note: Uses optimized write_record() implementations internally:
+- TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg: direct unsafe_write()
+- MBOMsg: IOBuffer batching (1.4x faster than field-by-field)
+- Other types: field-by-field serialization
 """
 function benchmark_write(file::String, compressed::Bool=false)
     # Read the data once
     meta, recs = read_dbn_with_metadata(file)
     count = length(recs)
-    
+
     # Warm up
     tmp = tempname() * (compressed ? ".dbn.zst" : ".dbn")
     write_dbn(tmp, meta, recs)
     rm(tmp, force=true)
     GC.gc()
-    
+
     # Benchmark
     trial = @benchmark begin
         tmp = tempname() * $(compressed ? ".dbn.zst" : ".dbn")
         write_dbn(tmp, $meta, $recs)
         rm(tmp, force=true)
     end seconds=BENCHMARK_SECONDS samples=BENCHMARK_SAMPLES
-    
+
     return (trial, count)
 end
 
 """
 Run a streaming write benchmark using DBNStreamWriter
+
+Note: Uses same optimized write_record() implementations as benchmark_write():
+- TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg: direct unsafe_write()
+- MBOMsg: IOBuffer batching (1.4x faster than field-by-field)
+- Other types: field-by-field serialization
 """
 function benchmark_write_stream(file::String, compressed::Bool=false)
     # Read the data and metadata once
     meta, recs = read_dbn_with_metadata(file)
     count = length(recs)
-    
+
     # Warm up
     tmp = tempname() * (compressed ? ".dbn.zst" : ".dbn")
     writer = DBNStreamWriter(tmp, meta.dataset, meta.schema, symbols=meta.symbols, auto_flush=false)
@@ -143,7 +158,7 @@ function benchmark_write_stream(file::String, compressed::Bool=false)
     close_writer!(writer)
     rm(tmp, force=true)
     GC.gc()
-    
+
     # Benchmark
     trial = @benchmark begin
         tmp = tempname() * $(compressed ? ".dbn.zst" : ".dbn")
@@ -154,7 +169,7 @@ function benchmark_write_stream(file::String, compressed::Bool=false)
         close_writer!(writer)
         rm(tmp, force=true)
     end seconds=BENCHMARK_SECONDS samples=BENCHMARK_SAMPLES
-    
+
     return (trial, count)
 end
 
