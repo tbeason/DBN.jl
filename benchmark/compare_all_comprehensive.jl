@@ -3,9 +3,14 @@ Comprehensive DBN performance comparison using BenchmarkTools.jl
 
 Tests all combinations of:
 - Schemas: trades, mbo, ohlcv
-- Sizes: 1k, 10k, 100k, 1m, 10m (where available)
+- Sizes: 100k, 1m, 10m (where available)
 - Operations: read, write
 - Compression: uncompressed, zstd
+
+Write benchmarks use optimized serialization:
+- Most message types use direct unsafe_write() for zero-copy serialization
+- MBOMsg uses IOBuffer batching (1.4x speedup over field-by-field)
+- All optimizations maintain byte-for-byte DBN format compatibility
 
 Usage: julia --project=. benchmark/compare_all_comprehensive.jl
 """
@@ -14,7 +19,7 @@ using DBN, BenchmarkTools, Printf, Statistics
 
 # Benchmark configuration
 const BENCHMARK_SECONDS = 2  # Minimum time to run each benchmark
-const BENCHMARK_SAMPLES = 20  # Minimum number of samples (20 is enough for stable median)
+const BENCHMARK_SAMPLES = 10  # Minimum number of samples
 
 """
 Generate compressed versions of test files if they don't exist
@@ -104,36 +109,46 @@ end
 
 """
 Run a write benchmark - reads once then writes multiple times
+
+Note: Uses optimized write_record() implementations internally:
+- TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg: direct unsafe_write()
+- MBOMsg: IOBuffer batching (1.4x faster than field-by-field)
+- Other types: field-by-field serialization
 """
 function benchmark_write(file::String, compressed::Bool=false)
     # Read the data once
     meta, recs = read_dbn_with_metadata(file)
     count = length(recs)
-    
+
     # Warm up
     tmp = tempname() * (compressed ? ".dbn.zst" : ".dbn")
     write_dbn(tmp, meta, recs)
     rm(tmp, force=true)
     GC.gc()
-    
+
     # Benchmark
     trial = @benchmark begin
         tmp = tempname() * $(compressed ? ".dbn.zst" : ".dbn")
         write_dbn(tmp, $meta, $recs)
         rm(tmp, force=true)
     end seconds=BENCHMARK_SECONDS samples=BENCHMARK_SAMPLES
-    
+
     return (trial, count)
 end
 
 """
 Run a streaming write benchmark using DBNStreamWriter
+
+Note: Uses same optimized write_record() implementations as benchmark_write():
+- TradeMsg, MBP1Msg, MBP10Msg, OHLCVMsg, StatusMsg, ImbalanceMsg: direct unsafe_write()
+- MBOMsg: IOBuffer batching (1.4x faster than field-by-field)
+- Other types: field-by-field serialization
 """
 function benchmark_write_stream(file::String, compressed::Bool=false)
     # Read the data and metadata once
     meta, recs = read_dbn_with_metadata(file)
     count = length(recs)
-    
+
     # Warm up
     tmp = tempname() * (compressed ? ".dbn.zst" : ".dbn")
     writer = DBNStreamWriter(tmp, meta.dataset, meta.schema, symbols=meta.symbols, auto_flush=false)
@@ -143,7 +158,7 @@ function benchmark_write_stream(file::String, compressed::Bool=false)
     close_writer!(writer)
     rm(tmp, force=true)
     GC.gc()
-    
+
     # Benchmark
     trial = @benchmark begin
         tmp = tempname() * $(compressed ? ".dbn.zst" : ".dbn")
@@ -154,7 +169,7 @@ function benchmark_write_stream(file::String, compressed::Bool=false)
         close_writer!(writer)
         rm(tmp, force=true)
     end seconds=BENCHMARK_SECONDS samples=BENCHMARK_SAMPLES
-    
+
     return (trial, count)
 end
 
@@ -366,7 +381,7 @@ function run_benchmarks(outfile::String)
     
     # Define test matrix
     schemas = ["trades", "mbo", "ohlcv"]
-    sizes = ["1k", "10k", "100k", "1m", "10m"]
+    sizes = ["100k", "1m", "10m"]
     
     # Track results for summary
     results = Dict()
@@ -431,6 +446,8 @@ function run_benchmarks(outfile::String)
                 callback_stream = (foreach_trade, "foreach_trade()")
             elseif schema == "mbo"
                 callback_stream = (foreach_mbo, "foreach_mbo()")
+            elseif schema == "ohlcv"
+                callback_stream = (foreach_ohlcv, "foreach_ohlcv()")
             end
 
             if callback_stream !== nothing
@@ -450,6 +467,8 @@ function run_benchmarks(outfile::String)
                 optimized_reader = (read_trades, "read_trades()")
             elseif schema == "mbo"
                 optimized_reader = (read_mbo, "read_mbo()")
+            elseif schema == "ohlcv"
+                optimized_reader = (read_ohlcv, "read_ohlcv()")
             end
             
             if optimized_reader !== nothing
