@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Format Conversion · DBN.jl</title><meta name="title" content="Format Conversion · DBN.jl"/><meta property="og:title" content="Format Conversion · DBN.jl"/><meta property="twitter:title" content="Format Conversion · DBN.jl"/><meta name="description" content="Documentation for DBN.jl."/><meta property="og:description" content="Documentation for DBN.jl."/><meta property="twitter:description" content="Documentation for DBN.jl."/><meta property="og:url" content="https://tbeason.github.io/DBN.jl/guide/conversion/"/><meta property="twitter:url" content="https://tbeason.github.io/DBN.jl/guide/conversion/"/><link rel="canonical" href="https://tbeason.github.io/DBN.jl/guide/conversion/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">DBN.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../quickstart/">Quick Start</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../reading/">Reading Data</a></li><li><a class="tocitem" href="../writing/">Writing Data</a></li><li><a class="tocitem" href="../streaming/">Streaming</a></li><li class="is-active"><a class="tocitem" href>Format Conversion</a><ul class="internal"><li><a class="tocitem" href="#Supported-Formats"><span>Supported Formats</span></a></li><li><a class="tocitem" href="#DBN-to-Other-Formats"><span>DBN to Other Formats</span></a></li><li><a class="tocitem" href="#Other-Formats-to-DBN"><span>Other Formats to DBN</span></a></li><li><a class="tocitem" href="#Use-Cases"><span>Use Cases</span></a></li><li><a class="tocitem" href="#Round-Trip-Conversion"><span>Round-Trip Conversion</span></a></li><li><a class="tocitem" href="#Performance-Comparison"><span>Performance Comparison</span></a></li><li><a class="tocitem" href="#File-Size-Comparison"><span>File Size Comparison</span></a></li><li><a class="tocitem" href="#Tips-and-Best-Practices"><span>Tips and Best Practices</span></a></li><li><a class="tocitem" href="#See-Also"><span>See Also</span></a></li></ul></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/reading/">Reading</a></li><li><a class="tocitem" href="../../api/writing/">Writing</a></li><li><a class="tocitem" href="../../api/streaming/">Streaming</a></li><li><a class="tocitem" href="../../api/types/">Types</a></li><li><a class="tocitem" href="../../api/enums/">Enums</a></li><li><a class="tocitem" href="../../api/conversion/">Conversion</a></li><li><a class="tocitem" href="../../api/utilities/">Utilities</a></li></ul></li><li><a class="tocitem" href="../../performance/">Performance</a></li><li><a class="tocitem" href="../../troubleshooting/">Troubleshooting</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Format Conversion</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Format Conversion</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/tbeason/DBN.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/tbeason/DBN.jl/blob/main/docs/src/guide/conversion.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Format-Conversion"><a class="docs-heading-anchor" href="#Format-Conversion">Format Conversion</a><a id="Format-Conversion-1"></a><a class="docs-heading-anchor-permalink" href="#Format-Conversion" title="Permalink"></a></h1><p>DBN.jl supports bidirectional conversion between DBN and other popular formats: CSV, JSON, Parquet, and DataFrames.</p><h2 id="Supported-Formats"><a class="docs-heading-anchor" href="#Supported-Formats">Supported Formats</a><a id="Supported-Formats-1"></a><a class="docs-heading-anchor-permalink" href="#Supported-Formats" title="Permalink"></a></h2><table><tr><th style="text-align: right">Format</th><th style="text-align: right">Read</th><th style="text-align: right">Write</th><th style="text-align: right">Use Case</th></tr><tr><td style="text-align: right"><strong>CSV</strong></td><td style="text-align: right">✅</td><td style="text-align: right">✅</td><td style="text-align: right">Human-readable, Excel-compatible</td></tr><tr><td style="text-align: right"><strong>JSON/JSONL</strong></td><td style="text-align: right">✅</td><td style="text-align: right">✅</td><td style="text-align: right">Human-readable, web APIs</td></tr><tr><td style="text-align: right"><strong>Parquet</strong></td><td style="text-align: right">✅</td><td style="text-align: right">✅</td><td style="text-align: right">Analytics, data lakes</td></tr><tr><td style="text-align: right"><strong>DataFrame</strong></td><td style="text-align: right">N/A</td><td style="text-align: right">✅</td><td style="text-align: right">In-memory analysis</td></tr></table><h2 id="DBN-to-Other-Formats"><a class="docs-heading-anchor" href="#DBN-to-Other-Formats">DBN to Other Formats</a><a id="DBN-to-Other-Formats-1"></a><a class="docs-heading-anchor-permalink" href="#DBN-to-Other-Formats" title="Permalink"></a></h2><h3 id="DBN-to-CSV"><a class="docs-heading-anchor" href="#DBN-to-CSV">DBN to CSV</a><a id="DBN-to-CSV-1"></a><a class="docs-heading-anchor-permalink" href="#DBN-to-CSV" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Convert DBN to CSV
+dbn_to_csv(&quot;trades.dbn&quot;, &quot;trades.csv&quot;)
+
+# Works with compressed files
+dbn_to_csv(&quot;trades.dbn.zst&quot;, &quot;trades.csv&quot;)</code></pre><p><strong>CSV Output Format:</strong></p><ul><li>Header row with column names</li><li>One record per row</li><li>Timestamps as nanoseconds (Int64)</li><li>Prices as fixed-point integers</li><li>Enums as strings (e.g., &quot;BID&quot;, &quot;ASK&quot;)</li></ul><p><strong>Example CSV:</strong></p><pre><code class="language-csv hljs">ts_event,publisher_id,instrument_id,price,size,action,side,flags,depth,ts_recv,ts_in_delta,sequence
+1704067200000000000,1,12345,1005000,100,TRADE,BID,0,0,1704067200000000000,0,1
+1704067200100000000,1,12345,1005500,200,TRADE,ASK,0,0,1704067200100000000,0,2</code></pre><h3 id="DBN-to-JSON"><a class="docs-heading-anchor" href="#DBN-to-JSON">DBN to JSON</a><a id="DBN-to-JSON-1"></a><a class="docs-heading-anchor-permalink" href="#DBN-to-JSON" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Convert to JSON (array of objects)
+dbn_to_json(&quot;trades.dbn&quot;, &quot;trades.json&quot;)
+
+# Convert to JSONL (one object per line)
+dbn_to_json(&quot;trades.dbn&quot;, &quot;trades.jsonl&quot;)</code></pre><p><strong>JSON Output Format:</strong></p><pre><code class="language-json hljs">[
+  {
+    &quot;hd&quot;: {
+      &quot;length&quot;: 11,
+      &quot;rtype&quot;: 160,
+      &quot;publisher_id&quot;: 1,
+      &quot;instrument_id&quot;: 12345,
+      &quot;ts_event&quot;: 1704067200000000000
+    },
+    &quot;price&quot;: 1005000,
+    &quot;size&quot;: 100,
+    &quot;action&quot;: &quot;T&quot;,
+    &quot;side&quot;: &quot;B&quot;,
+    &quot;flags&quot;: 0,
+    &quot;depth&quot;: 0,
+    &quot;ts_recv&quot;: 1704067200000000000,
+    &quot;ts_in_delta&quot;: 0,
+    &quot;sequence&quot;: 1
+  }
+]</code></pre><p><strong>JSONL Output Format</strong> (one record per line):</p><pre><code class="language-json hljs">{&quot;hd&quot;:{&quot;length&quot;:11,&quot;rtype&quot;:160,...},&quot;price&quot;:1005000,...}
+{&quot;hd&quot;:{&quot;length&quot;:11,&quot;rtype&quot;:160,...},&quot;price&quot;:1005500,...}</code></pre><h3 id="DBN-to-Parquet"><a class="docs-heading-anchor" href="#DBN-to-Parquet">DBN to Parquet</a><a id="DBN-to-Parquet-1"></a><a class="docs-heading-anchor-permalink" href="#DBN-to-Parquet" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Convert to Parquet
+dbn_to_parquet(&quot;trades.dbn&quot;, &quot;output_directory/&quot;)
+
+# Output creates trades.parquet in the directory</code></pre><p><strong>Parquet Output:</strong></p><ul><li>Columnar format (efficient for analytics)</li><li>Preserves data types</li><li>Automatic compression</li><li>Compatible with Arrow, DuckDB, pandas, etc.</li></ul><h3 id="DBN-to-DataFrame"><a class="docs-heading-anchor" href="#DBN-to-DataFrame">DBN to DataFrame</a><a id="DBN-to-DataFrame-1"></a><a class="docs-heading-anchor-permalink" href="#DBN-to-DataFrame" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Read DBN file
+records = read_trades(&quot;trades.dbn&quot;)
+
+# Convert to DataFrame
+df = records_to_dataframe(records)
+
+# Now you can use DataFrames.jl operations
+using DataFrames, Statistics
+
+# Example: Calculate average price
+mean_price = mean(df.price)
+
+# Group by side
+using DataFramesMeta
+@chain df begin
+    @groupby(:side)
+    @combine(:avg_price = mean(:price),
+             :total_volume = sum(:size))
+end</code></pre><h2 id="Other-Formats-to-DBN"><a class="docs-heading-anchor" href="#Other-Formats-to-DBN">Other Formats to DBN</a><a id="Other-Formats-to-DBN-1"></a><a class="docs-heading-anchor-permalink" href="#Other-Formats-to-DBN" title="Permalink"></a></h2><h3 id="JSON-to-DBN"><a class="docs-heading-anchor" href="#JSON-to-DBN">JSON to DBN</a><a id="JSON-to-DBN-1"></a><a class="docs-heading-anchor-permalink" href="#JSON-to-DBN" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Convert JSON to DBN
+json_to_dbn(&quot;trades.json&quot;, &quot;trades.dbn&quot;)
+
+# Also supports JSONL (one record per line)
+json_to_dbn(&quot;trades.jsonl&quot;, &quot;trades.dbn&quot;)</code></pre><p><strong>Requirements:</strong></p><ul><li>JSON must match DBN message structure</li><li>Timestamps in nanoseconds</li><li>Prices as fixed-point integers or floats (will be converted)</li><li>Enum fields as strings or integer values</li></ul><h3 id="CSV-to-DBN"><a class="docs-heading-anchor" href="#CSV-to-DBN">CSV to DBN</a><a id="CSV-to-DBN-1"></a><a class="docs-heading-anchor-permalink" href="#CSV-to-DBN" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Convert CSV to DBN (requires schema specification)
+csv_to_dbn(
+    &quot;trades.csv&quot;,
+    &quot;trades.dbn&quot;,
+    schema = Schema.TRADES,
+    dataset = &quot;XNAS&quot;
+)
+
+# With compression
+csv_to_dbn(
+    &quot;trades.csv&quot;,
+    &quot;trades.dbn.zst&quot;,
+    schema = Schema.TRADES,
+    dataset = &quot;XNAS&quot;
+)</code></pre><p><strong>CSV Requirements:</strong></p><ul><li>Column names must match DBN field names</li><li>Timestamps as nanoseconds (Int64)</li><li>Prices as fixed-point Int64 or will convert from Float64</li><li>Enum fields as strings or integer codes</li></ul><h3 id="Parquet-to-DBN"><a class="docs-heading-anchor" href="#Parquet-to-DBN">Parquet to DBN</a><a id="Parquet-to-DBN-1"></a><a class="docs-heading-anchor-permalink" href="#Parquet-to-DBN" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Convert Parquet to DBN
+parquet_to_dbn(
+    &quot;trades.parquet&quot;,
+    &quot;trades.dbn&quot;,
+    schema = Schema.TRADES,
+    dataset = &quot;XNAS&quot;
+)</code></pre><p><strong>Parquet Requirements:</strong></p><ul><li>Schema must match DBN message type</li><li>Column names must match field names</li><li>Appropriate data types</li></ul><h2 id="Use-Cases"><a class="docs-heading-anchor" href="#Use-Cases">Use Cases</a><a id="Use-Cases-1"></a><a class="docs-heading-anchor-permalink" href="#Use-Cases" title="Permalink"></a></h2><h3 id="CSV:-Human-Readable-Exchange"><a class="docs-heading-anchor" href="#CSV:-Human-Readable-Exchange">CSV: Human-Readable Exchange</a><a id="CSV:-Human-Readable-Exchange-1"></a><a class="docs-heading-anchor-permalink" href="#CSV:-Human-Readable-Exchange" title="Permalink"></a></h3><p><strong>Best for:</strong></p><ul><li>Sharing data with Excel users</li><li>Quick inspection with text tools</li><li>Simple data exchange</li></ul><p><strong>Limitations:</strong></p><ul><li>Larger file size than DBN</li><li>Slower read/write performance</li><li>Loss of type information</li></ul><p><strong>Example: Export sample for Excel analysis</strong></p><pre><code class="language-julia hljs">using DBN
+
+# Read first 10,000 trades
+trades = read_trades(&quot;large_file.dbn.zst&quot;)
+sample = trades[1:10_000]
+
+# Create temporary file
+temp_metadata, _ = read_dbn_with_metadata(&quot;large_file.dbn.zst&quot;)
+write_dbn(&quot;sample.dbn&quot;, temp_metadata, sample)
+
+# Convert to CSV for Excel
+dbn_to_csv(&quot;sample.dbn&quot;, &quot;sample.csv&quot;)
+
+# Clean up
+rm(&quot;sample.dbn&quot;)</code></pre><h3 id="JSON:-API-Integration"><a class="docs-heading-anchor" href="#JSON:-API-Integration">JSON: API Integration</a><a id="JSON:-API-Integration-1"></a><a class="docs-heading-anchor-permalink" href="#JSON:-API-Integration" title="Permalink"></a></h3><p><strong>Best for:</strong></p><ul><li>Web API responses</li><li>JavaScript applications</li><li>Human-readable debugging</li></ul><p><strong>Limitations:</strong></p><ul><li>Largest file size</li><li>Slowest performance</li><li>Verbose</li></ul><p><strong>Example: Export for web application</strong></p><pre><code class="language-julia hljs">using DBN
+
+# Get recent trades
+trades = read_trades(&quot;recent.dbn&quot;)
+
+# Export most recent 100 as JSON
+latest = trades[end-99:end]
+
+# Create temporary DBN file
+metadata, _ = read_dbn_with_metadata(&quot;recent.dbn&quot;)
+write_dbn(&quot;latest.dbn&quot;, metadata, latest)
+
+# Convert to JSON for API
+dbn_to_json(&quot;latest.dbn&quot;, &quot;api_response.json&quot;)
+
+rm(&quot;latest.dbn&quot;)</code></pre><h3 id="Parquet:-Analytics-Pipeline"><a class="docs-heading-anchor" href="#Parquet:-Analytics-Pipeline">Parquet: Analytics Pipeline</a><a id="Parquet:-Analytics-Pipeline-1"></a><a class="docs-heading-anchor-permalink" href="#Parquet:-Analytics-Pipeline" title="Permalink"></a></h3><p><strong>Best for:</strong></p><ul><li>Data lakes and warehouses</li><li>Integration with Spark, Dask, DuckDB</li><li>Columnar analytics</li><li>Long-term storage</li></ul><p><strong>Advantages:</strong></p><ul><li>Efficient columnar format</li><li>Good compression</li><li>Wide tool support</li></ul><p><strong>Example: Export for DuckDB analysis</strong></p><pre><code class="language-julia hljs">using DBN
+
+# Convert historical data to Parquet
+dbn_to_parquet(&quot;2024_trades.dbn.zst&quot;, &quot;data_lake/&quot;)
+
+# Now you can query with DuckDB, pandas, etc.
+# SELECT AVG(price) FROM &#39;data_lake/trades.parquet&#39;</code></pre><h3 id="DataFrame:-In-Memory-Analysis"><a class="docs-heading-anchor" href="#DataFrame:-In-Memory-Analysis">DataFrame: In-Memory Analysis</a><a id="DataFrame:-In-Memory-Analysis-1"></a><a class="docs-heading-anchor-permalink" href="#DataFrame:-In-Memory-Analysis" title="Permalink"></a></h3><p><strong>Best for:</strong></p><ul><li>Statistical analysis</li><li>Data transformation</li><li>Visualization</li><li>Interactive exploration</li></ul><p><strong>Example: Analyze trade patterns</strong></p><pre><code class="language-julia hljs">using DBN, DataFrames, Statistics, Dates
+
+# Read data
+trades = read_trades(&quot;trades.dbn&quot;)
+df = records_to_dataframe(trades)
+
+# Add derived columns
+df.datetime = ts_to_datetime.(df.ts_event)
+df.price_float = price_to_float.(df.price)
+
+# Time series analysis
+using DataFramesMeta
+
+# Calculate 5-minute average prices
+@chain df begin
+    @transform(:minute = floor(:datetime, Minute(5)))
+    @groupby(:minute)
+    @combine(:avg_price = mean(:price_float),
+             :volume = sum(:size),
+             :count = length(:price_float))
+end</code></pre><h2 id="Round-Trip-Conversion"><a class="docs-heading-anchor" href="#Round-Trip-Conversion">Round-Trip Conversion</a><a id="Round-Trip-Conversion-1"></a><a class="docs-heading-anchor-permalink" href="#Round-Trip-Conversion" title="Permalink"></a></h2><h3 id="DBN-CSV-DBN"><a class="docs-heading-anchor" href="#DBN-CSV-DBN">DBN → CSV → DBN</a><a id="DBN-CSV-DBN-1"></a><a class="docs-heading-anchor-permalink" href="#DBN-CSV-DBN" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Original file
+metadata_original, records_original = read_dbn_with_metadata(&quot;original.dbn&quot;)
+
+# Convert to CSV
+dbn_to_csv(&quot;original.dbn&quot;, &quot;temp.csv&quot;)
+
+# Convert back to DBN
+csv_to_dbn(&quot;temp.csv&quot;, &quot;restored.dbn&quot;,
+           schema = metadata_original.schema,
+           dataset = metadata_original.dataset)
+
+# Verify
+records_restored = read_dbn(&quot;restored.dbn&quot;)
+@assert length(records_original) == length(records_restored)
+
+# Clean up
+rm(&quot;temp.csv&quot;)</code></pre><div class="admonition is-warning" id="Precision-Loss-f4bee5170e3a4510"><header class="admonition-header">Precision Loss<a class="admonition-anchor" href="#Precision-Loss-f4bee5170e3a4510" title="Permalink"></a></header><div class="admonition-body"><p>Round-trip conversions through text formats (CSV, JSON) may lose precision or metadata. Use DBN format for archival storage.</p></div></div><h2 id="Performance-Comparison"><a class="docs-heading-anchor" href="#Performance-Comparison">Performance Comparison</a><a id="Performance-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Comparison" title="Permalink"></a></h2><p><strong>Conversion Time</strong> (100k trades):</p><table><tr><th style="text-align: right">Operation</th><th style="text-align: right">Time</th><th style="text-align: right">Notes</th></tr><tr><td style="text-align: right">DBN → CSV</td><td style="text-align: right">~0.5s</td><td style="text-align: right">Simple text output</td></tr><tr><td style="text-align: right">DBN → JSON</td><td style="text-align: right">~1.2s</td><td style="text-align: right">More verbose format</td></tr><tr><td style="text-align: right">DBN → Parquet</td><td style="text-align: right">~0.3s</td><td style="text-align: right">Efficient columnar write</td></tr><tr><td style="text-align: right">CSV → DBN</td><td style="text-align: right">~0.8s</td><td style="text-align: right">Text parsing overhead</td></tr><tr><td style="text-align: right">JSON → DBN</td><td style="text-align: right">~1.5s</td><td style="text-align: right">Complex parsing</td></tr><tr><td style="text-align: right">Parquet → DBN</td><td style="text-align: right">~0.4s</td><td style="text-align: right">Efficient columnar read</td></tr></table><h2 id="File-Size-Comparison"><a class="docs-heading-anchor" href="#File-Size-Comparison">File Size Comparison</a><a id="File-Size-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#File-Size-Comparison" title="Permalink"></a></h2><p><strong>File Sizes</strong> (1M trades):</p><table><tr><th style="text-align: right">Format</th><th style="text-align: right">Size</th><th style="text-align: right">Compression</th></tr><tr><td style="text-align: right">DBN (uncompressed)</td><td style="text-align: right">46 MB</td><td style="text-align: right">1.0x (baseline)</td></tr><tr><td style="text-align: right">DBN (compressed .zst)</td><td style="text-align: right">16 MB</td><td style="text-align: right">2.9x</td></tr><tr><td style="text-align: right">CSV</td><td style="text-align: right">95 MB</td><td style="text-align: right">0.48x (larger!)</td></tr><tr><td style="text-align: right">JSON</td><td style="text-align: right">180 MB</td><td style="text-align: right">0.26x (much larger!)</td></tr><tr><td style="text-align: right">Parquet</td><td style="text-align: right">25 MB</td><td style="text-align: right">1.8x</td></tr></table><p><strong>Recommendation</strong>: Use compressed DBN (.zst) for storage and distribution.</p><h2 id="Tips-and-Best-Practices"><a class="docs-heading-anchor" href="#Tips-and-Best-Practices">Tips and Best Practices</a><a id="Tips-and-Best-Practices-1"></a><a class="docs-heading-anchor-permalink" href="#Tips-and-Best-Practices" title="Permalink"></a></h2><h3 id="1.-Use-Compressed-DBN-for-Storage"><a class="docs-heading-anchor" href="#1.-Use-Compressed-DBN-for-Storage">1. Use Compressed DBN for Storage</a><a id="1.-Use-Compressed-DBN-for-Storage-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Use-Compressed-DBN-for-Storage" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Smallest, fastest
+dbn_to_csv(&quot;data.dbn.zst&quot;, &quot;analysis.csv&quot;)  # For analysis only
+
+# ❌ Don&#39;t store in CSV long-term
+# CSV files are 2-6x larger than compressed DBN</code></pre><h3 id="2.-Convert-Only-What-You-Need"><a class="docs-heading-anchor" href="#2.-Convert-Only-What-You-Need">2. Convert Only What You Need</a><a id="2.-Convert-Only-What-You-Need-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Convert-Only-What-You-Need" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Filter before converting
+trades = read_trades(&quot;all.dbn.zst&quot;)
+high_value = filter(t -&gt; price_to_float(t.price) &gt; 1000, trades)
+
+metadata, _ = read_dbn_with_metadata(&quot;all.dbn.zst&quot;)
+write_dbn(&quot;filtered.dbn&quot;, metadata, high_value)
+dbn_to_csv(&quot;filtered.dbn&quot;, &quot;high_value.csv&quot;)
+
+# ❌ Don&#39;t convert everything then filter
+dbn_to_csv(&quot;all.dbn.zst&quot;, &quot;huge.csv&quot;)  # Wasteful!</code></pre><h3 id="3.-Batch-Processing-for-Large-Files"><a class="docs-heading-anchor" href="#3.-Batch-Processing-for-Large-Files">3. Batch Processing for Large Files</a><a id="3.-Batch-Processing-for-Large-Files-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Batch-Processing-for-Large-Files" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Process in chunks for very large files
+using DBN
+
+writer = open(&quot;output.csv&quot;, &quot;w&quot;)
+println(writer, &quot;ts_event,price,size,side&quot;)  # Header
+
+foreach_trade(&quot;huge_file.dbn.zst&quot;) do trade
+    # Write CSV row
+    println(writer, &quot;$(trade.hd.ts_event),$(trade.price),$(trade.size),$(trade.side)&quot;)
+end
+
+close(writer)</code></pre><h2 id="See-Also"><a class="docs-heading-anchor" href="#See-Also">See Also</a><a id="See-Also-1"></a><a class="docs-heading-anchor-permalink" href="#See-Also" title="Permalink"></a></h2><ul><li><a href="../reading/">Reading Data</a> - Reading DBN files</li><li><a href="../writing/">Writing Data</a> - Writing DBN files</li><li><a href="../../api/conversion/">API Reference - Conversion</a> - Conversion function reference</li><li><a href="https://databento.com/docs/">Databento Documentation</a> - Format specifications</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../streaming/">« Streaming</a><a class="docs-footer-nextpage" href="../../api/reading/">Reading »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Tuesday 28 October 2025 13:43">Tuesday 28 October 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

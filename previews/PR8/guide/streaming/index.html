@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Streaming · DBN.jl</title><meta name="title" content="Streaming · DBN.jl"/><meta property="og:title" content="Streaming · DBN.jl"/><meta property="twitter:title" content="Streaming · DBN.jl"/><meta name="description" content="Documentation for DBN.jl."/><meta property="og:description" content="Documentation for DBN.jl."/><meta property="twitter:description" content="Documentation for DBN.jl."/><meta property="og:url" content="https://tbeason.github.io/DBN.jl/guide/streaming/"/><meta property="twitter:url" content="https://tbeason.github.io/DBN.jl/guide/streaming/"/><link rel="canonical" href="https://tbeason.github.io/DBN.jl/guide/streaming/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">DBN.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../installation/">Installation</a></li><li><a class="tocitem" href="../../quickstart/">Quick Start</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../reading/">Reading Data</a></li><li><a class="tocitem" href="../writing/">Writing Data</a></li><li class="is-active"><a class="tocitem" href>Streaming</a><ul class="internal"><li><a class="tocitem" href="#Why-Stream?"><span>Why Stream?</span></a></li><li><a class="tocitem" href="#Callback-Pattern-(Fastest)"><span>Callback Pattern (Fastest)</span></a></li><li><a class="tocitem" href="#Iterator-Pattern-(Most-Flexible)"><span>Iterator Pattern (Most Flexible)</span></a></li><li><a class="tocitem" href="#Generic-Callback-(For-Mixed-Schemas)"><span>Generic Callback (For Mixed Schemas)</span></a></li><li><a class="tocitem" href="#Compressed-Files"><span>Compressed Files</span></a></li><li><a class="tocitem" href="#Choosing-the-Right-Pattern"><span>Choosing the Right Pattern</span></a></li><li><a class="tocitem" href="#Performance-Tips"><span>Performance Tips</span></a></li><li><a class="tocitem" href="#Memory-Usage-Comparison"><span>Memory Usage Comparison</span></a></li><li><a class="tocitem" href="#Error-Handling"><span>Error Handling</span></a></li><li><a class="tocitem" href="#See-Also"><span>See Also</span></a></li></ul></li><li><a class="tocitem" href="../conversion/">Format Conversion</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/reading/">Reading</a></li><li><a class="tocitem" href="../../api/writing/">Writing</a></li><li><a class="tocitem" href="../../api/streaming/">Streaming</a></li><li><a class="tocitem" href="../../api/types/">Types</a></li><li><a class="tocitem" href="../../api/enums/">Enums</a></li><li><a class="tocitem" href="../../api/conversion/">Conversion</a></li><li><a class="tocitem" href="../../api/utilities/">Utilities</a></li></ul></li><li><a class="tocitem" href="../../performance/">Performance</a></li><li><a class="tocitem" href="../../troubleshooting/">Troubleshooting</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Streaming</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Streaming</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/tbeason/DBN.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/tbeason/DBN.jl/blob/main/docs/src/guide/streaming.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Streaming"><a class="docs-heading-anchor" href="#Streaming">Streaming</a><a id="Streaming-1"></a><a class="docs-heading-anchor-permalink" href="#Streaming" title="Permalink"></a></h1><p>Streaming is essential for working with large DBN files that don&#39;t fit in memory or when you want maximum performance. DBN.jl provides two streaming patterns: <strong>callback-based</strong> (fastest) and <strong>iterator-based</strong> (most flexible).</p><h2 id="Why-Stream?"><a class="docs-heading-anchor" href="#Why-Stream?">Why Stream?</a><a id="Why-Stream?-1"></a><a class="docs-heading-anchor-permalink" href="#Why-Stream?" title="Permalink"></a></h2><p><strong>Memory Efficiency</strong>: Process files larger than your available RAM</p><ul><li>A 10M record trade file (~460 MB) requires only KB of memory when streaming</li><li>Can process billion-record files on modest hardware</li></ul><p><strong>Performance</strong>: Callback streaming achieves up to 40M records/sec</p><ul><li>Near-zero allocations during processing</li><li>Minimal overhead per record</li><li>Optimal for aggregation and filtering</li></ul><p><strong>Flexibility</strong>: Process data as it&#39;s read</p><ul><li>Early termination when condition is met</li><li>Real-time processing</li><li>Conditional logic during iteration</li></ul><h2 id="Callback-Pattern-(Fastest)"><a class="docs-heading-anchor" href="#Callback-Pattern-(Fastest)">Callback Pattern (Fastest)</a><a id="Callback-Pattern-(Fastest)-1"></a><a class="docs-heading-anchor-permalink" href="#Callback-Pattern-(Fastest)" title="Permalink"></a></h2><p>The callback pattern uses <code>foreach_*()</code> functions for maximum performance.</p><h3 id="Basic-Usage"><a class="docs-heading-anchor" href="#Basic-Usage">Basic Usage</a><a id="Basic-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-Usage" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Process all trades with a callback
+total_volume = Ref(0)
+foreach_trade(&quot;trades.dbn&quot;) do trade
+    total_volume[] += trade.size
+end
+println(&quot;Total volume: $(total_volume[])&quot;)</code></pre><h3 id="Available-Callback-Functions"><a class="docs-heading-anchor" href="#Available-Callback-Functions">Available Callback Functions</a><a id="Available-Callback-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#Available-Callback-Functions" title="Permalink"></a></h3><p><strong>Market Data:</strong></p><ul><li><code>foreach_trade()</code> - Trade messages</li><li><code>foreach_mbo()</code> - Market-by-order</li><li><code>foreach_mbp1()</code> - Top-of-book MBP</li><li><code>foreach_mbp10()</code> - 10-level MBP</li><li><code>foreach_tbbo()</code> - Top BBO</li><li><code>foreach_ohlcv()</code> - OHLCV bars (generic)</li><li><code>foreach_ohlcv_1s()</code>, <code>foreach_ohlcv_1m()</code>, <code>foreach_ohlcv_1h()</code>, <code>foreach_ohlcv_1d()</code> - Time-specific OHLCV</li></ul><p><strong>Other Schemas:</strong></p><ul><li><code>foreach_cmbp1()</code> - Consolidated MBP-1</li><li><code>foreach_cbbo1s()</code>, <code>foreach_cbbo1m()</code> - Consolidated BBO</li><li><code>foreach_tcbbo()</code> - Top consolidated BBO</li><li><code>foreach_bbo1s()</code>, <code>foreach_bbo1m()</code> - BBO</li></ul><p>And more! See the <a href="../../api/streaming/">Streaming API Reference</a> for the complete list.</p><h3 id="Performance-Characteristics"><a class="docs-heading-anchor" href="#Performance-Characteristics">Performance Characteristics</a><a id="Performance-Characteristics-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Characteristics" title="Permalink"></a></h3><p>Callback streaming achieves exceptional performance through:</p><ul><li><strong>Zero allocation</strong> per record (records reused internally)</li><li><strong>Type stability</strong> (compiler optimizes callback)</li><li><strong>Minimal overhead</strong> (direct function calls)</li></ul><p><strong>Benchmark results</strong> (10M trades, uncompressed):</p><pre><code class="nohighlight hljs">Callback streaming:  42.37 M records/sec (0.236s, 0.1 MB allocated)
+Iterator streaming:  10.21 M records/sec (0.979s, 1221 MB allocated)
+Bulk read:           6.86 M records/sec  (1.457s, 687 MB allocated)</code></pre><h3 id="Common-Patterns"><a class="docs-heading-anchor" href="#Common-Patterns">Common Patterns</a><a id="Common-Patterns-1"></a><a class="docs-heading-anchor-permalink" href="#Common-Patterns" title="Permalink"></a></h3><h4 id="Aggregation"><a class="docs-heading-anchor" href="#Aggregation">Aggregation</a><a id="Aggregation-1"></a><a class="docs-heading-anchor-permalink" href="#Aggregation" title="Permalink"></a></h4><pre><code class="language-julia hljs">using DBN
+
+# Calculate VWAP
+price_volume_sum = Ref(0.0)
+volume_sum = Ref(0)
+
+foreach_trade(&quot;trades.dbn.zst&quot;) do trade
+    price = price_to_float(trade.price)
+    price_volume_sum[] += price * trade.size
+    volume_sum[] += trade.size
+end
+
+vwap = price_volume_sum[] / volume_sum[]
+println(&quot;VWAP: $vwap&quot;)</code></pre><h4 id="Counting"><a class="docs-heading-anchor" href="#Counting">Counting</a><a id="Counting-1"></a><a class="docs-heading-anchor-permalink" href="#Counting" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Count by side
+bid_count = Ref(0)
+ask_count = Ref(0)
+
+foreach_trade(&quot;trades.dbn&quot;) do trade
+    if trade.side == Side.BID
+        bid_count[] += 1
+    else
+        ask_count[] += 1
+    end
+end
+
+println(&quot;Bids: $(bid_count[]), Asks: $(ask_count[])&quot;)</code></pre><h4 id="Filtering-(with-collection)"><a class="docs-heading-anchor" href="#Filtering-(with-collection)">Filtering (with collection)</a><a id="Filtering-(with-collection)-1"></a><a class="docs-heading-anchor-permalink" href="#Filtering-(with-collection)" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Extract specific records
+large_trades = TradeMsg[]
+
+foreach_trade(&quot;all_trades.dbn&quot;) do trade
+    if trade.size &gt; 10_000
+        push!(large_trades, trade)
+    end
+end
+
+println(&quot;Found $(length(large_trades)) large trades&quot;)</code></pre><h4 id="Time-windowed-Aggregation"><a class="docs-heading-anchor" href="#Time-windowed-Aggregation">Time-windowed Aggregation</a><a id="Time-windowed-Aggregation-1"></a><a class="docs-heading-anchor-permalink" href="#Time-windowed-Aggregation" title="Permalink"></a></h4><pre><code class="language-julia hljs">using Dates
+
+# Group trades into 5-minute buckets
+buckets = Dict{DateTime, Int}()
+
+foreach_trade(&quot;trades.dbn&quot;) do trade
+    bucket = floor(ts_to_datetime(trade.hd.ts_event), Minute(5))
+    buckets[bucket] = get(buckets, bucket, 0) + trade.size
+end
+
+# Print volume per bucket
+for (time, volume) in sort(collect(buckets))
+    println(&quot;$time: $volume&quot;)
+end</code></pre><h4 id="Statistical-Calculation"><a class="docs-heading-anchor" href="#Statistical-Calculation">Statistical Calculation</a><a id="Statistical-Calculation-1"></a><a class="docs-heading-anchor-permalink" href="#Statistical-Calculation" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Calculate mean and std dev of trade sizes (online algorithm)
+n = Ref(0)
+mean = Ref(0.0)
+m2 = Ref(0.0)
+
+foreach_trade(&quot;trades.dbn&quot;) do trade
+    n[] += 1
+    delta = trade.size - mean[]
+    mean[] += delta / n[]
+    m2[] += delta * (trade.size - mean[])
+end
+
+variance = m2[] / n[]
+stddev = sqrt(variance)
+
+println(&quot;Mean size: $(mean[])&quot;)
+println(&quot;Std dev: $stddev&quot;)</code></pre><h3 id="Limitations"><a class="docs-heading-anchor" href="#Limitations">Limitations</a><a id="Limitations-1"></a><a class="docs-heading-anchor-permalink" href="#Limitations" title="Permalink"></a></h3><div class="admonition is-warning" id="Cannot-Break-Early-b34743659f78b879"><header class="admonition-header">Cannot Break Early<a class="admonition-anchor" href="#Cannot-Break-Early-b34743659f78b879" title="Permalink"></a></header><div class="admonition-body"><p>Callback functions process all records - you cannot break out early. Use the iterator pattern if you need early termination.</p></div></div><pre><code class="language-julia hljs"># ❌ Cannot do this with callbacks
+foreach_trade(&quot;trades.dbn&quot;) do trade
+    if trade.size &gt; 100_000
+        break  # ERROR: Cannot break from callback
+    end
+end
+
+# ✅ Use iterator instead
+for trade in DBNStream(&quot;trades.dbn&quot;)
+    if trade.size &gt; 100_000
+        println(&quot;Found large trade!&quot;)
+        break  # OK
+    end
+end</code></pre><h2 id="Iterator-Pattern-(Most-Flexible)"><a class="docs-heading-anchor" href="#Iterator-Pattern-(Most-Flexible)">Iterator Pattern (Most Flexible)</a><a id="Iterator-Pattern-(Most-Flexible)-1"></a><a class="docs-heading-anchor-permalink" href="#Iterator-Pattern-(Most-Flexible)" title="Permalink"></a></h2><p>The iterator pattern uses <code>DBNStream()</code> for maximum flexibility.</p><h3 id="Basic-Usage-2"><a class="docs-heading-anchor" href="#Basic-Usage-2">Basic Usage</a><a class="docs-heading-anchor-permalink" href="#Basic-Usage-2" title="Permalink"></a></h3><pre><code class="language-julia hljs">using DBN
+
+# Iterate through records
+for record in DBNStream(&quot;file.dbn&quot;)
+    # Process record
+    println(&quot;Price: $(price_to_float(record.price))&quot;)
+end</code></pre><h3 id="Features"><a class="docs-heading-anchor" href="#Features">Features</a><a id="Features-1"></a><a class="docs-heading-anchor-permalink" href="#Features" title="Permalink"></a></h3><p><strong>Advantages:</strong></p><ul><li>Can break early</li><li>Works with any Julia iterator tools (<code>take</code>, <code>filter</code>, etc.)</li><li>Handles mixed-schema files</li><li>More familiar pattern for Julia users</li></ul><p><strong>Disadvantages:</strong></p><ul><li>Slower than callbacks (still faster than bulk read)</li><li>Higher memory allocation</li><li>Less optimized by compiler</li></ul><h3 id="Common-Patterns-2"><a class="docs-heading-anchor" href="#Common-Patterns-2">Common Patterns</a><a class="docs-heading-anchor-permalink" href="#Common-Patterns-2" title="Permalink"></a></h3><h4 id="Early-Termination"><a class="docs-heading-anchor" href="#Early-Termination">Early Termination</a><a id="Early-Termination-1"></a><a class="docs-heading-anchor-permalink" href="#Early-Termination" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Find first record matching condition
+for trade in DBNStream(&quot;trades.dbn&quot;)
+    if trade.size &gt; 50_000
+        println(&quot;First large trade: $(price_to_float(trade.price))&quot;)
+        break
+    end
+end</code></pre><h4 id="Limited-Processing"><a class="docs-heading-anchor" href="#Limited-Processing">Limited Processing</a><a id="Limited-Processing-1"></a><a class="docs-heading-anchor-permalink" href="#Limited-Processing" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Process only first N records
+using IterTools
+
+for (i, trade) in enumerate(DBNStream(&quot;trades.dbn&quot;))
+    println(&quot;Trade $i: $(price_to_float(trade.price))&quot;)
+    if i &gt;= 1000
+        break
+    end
+end</code></pre><h4 id="Conditional-Collection"><a class="docs-heading-anchor" href="#Conditional-Collection">Conditional Collection</a><a id="Conditional-Collection-1"></a><a class="docs-heading-anchor-permalink" href="#Conditional-Collection" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Collect records matching complex criteria
+selected = TradeMsg[]
+
+for trade in DBNStream(&quot;trades.dbn&quot;)
+    # Complex filtering logic
+    if meets_criteria(trade)
+        push!(selected, trade)
+
+        # Stop after finding enough
+        if length(selected) &gt;= 100
+            break
+        end
+    end
+end</code></pre><h4 id="Mixed-Schema-Handling"><a class="docs-heading-anchor" href="#Mixed-Schema-Handling">Mixed Schema Handling</a><a id="Mixed-Schema-Handling-1"></a><a class="docs-heading-anchor-permalink" href="#Mixed-Schema-Handling" title="Permalink"></a></h4><pre><code class="language-julia hljs"># Count different message types
+counts = Dict{DataType, Int}()
+
+for record in DBNStream(&quot;mixed.dbn&quot;)
+    record_type = typeof(record)
+    counts[record_type] = get(counts, record_type, 0) + 1
+end
+
+for (type, count) in counts
+    println(&quot;$type: $count&quot;)
+end</code></pre><h2 id="Generic-Callback-(For-Mixed-Schemas)"><a class="docs-heading-anchor" href="#Generic-Callback-(For-Mixed-Schemas)">Generic Callback (For Mixed Schemas)</a><a id="Generic-Callback-(For-Mixed-Schemas)-1"></a><a class="docs-heading-anchor-permalink" href="#Generic-Callback-(For-Mixed-Schemas)" title="Permalink"></a></h2><p>For mixed-schema files with callbacks:</p><pre><code class="language-julia hljs">using DBN
+
+# Generic callback with type checking
+trade_count = Ref(0)
+mbo_count = Ref(0)
+
+foreach_record(&quot;mixed.dbn&quot;, Union{TradeMsg, MBOMsg}) do record
+    if record isa TradeMsg
+        trade_count[] += 1
+    elseif record isa MBOMsg
+        mbo_count[] += 1
+    end
+end
+
+println(&quot;Trades: $(trade_count[]), MBOs: $(mbo_count[])&quot;)</code></pre><h2 id="Compressed-Files"><a class="docs-heading-anchor" href="#Compressed-Files">Compressed Files</a><a id="Compressed-Files-1"></a><a class="docs-heading-anchor-permalink" href="#Compressed-Files" title="Permalink"></a></h2><p>All streaming methods transparently handle compression:</p><pre><code class="language-julia hljs"># Compressed files work identically
+foreach_trade(&quot;trades.dbn.zst&quot;) do trade
+    # Process compressed data
+end
+
+for record in DBNStream(&quot;file.dbn.zst&quot;)
+    # Iterate compressed data
+end</code></pre><p>Compression is detected automatically by the <code>.zst</code> extension.</p><h2 id="Choosing-the-Right-Pattern"><a class="docs-heading-anchor" href="#Choosing-the-Right-Pattern">Choosing the Right Pattern</a><a id="Choosing-the-Right-Pattern-1"></a><a class="docs-heading-anchor-permalink" href="#Choosing-the-Right-Pattern" title="Permalink"></a></h2><table><tr><th style="text-align: right">Use Case</th><th style="text-align: right">Recommended Pattern</th><th style="text-align: right">Reason</th></tr><tr><td style="text-align: right">Calculate statistics</td><td style="text-align: right">Callback (<code>foreach_*</code>)</td><td style="text-align: right">Maximum performance, minimal memory</td></tr><tr><td style="text-align: right">Filter all records</td><td style="text-align: right">Callback (<code>foreach_*</code>)</td><td style="text-align: right">Fast iteration, collect matching records</td></tr><tr><td style="text-align: right">Find first match</td><td style="text-align: right">Iterator (<code>DBNStream</code>)</td><td style="text-align: right">Can break early</td></tr><tr><td style="text-align: right">Process first N records</td><td style="text-align: right">Iterator (<code>DBNStream</code>)</td><td style="text-align: right">Early termination</td></tr><tr><td style="text-align: right">Mixed schema file</td><td style="text-align: right">Iterator (<code>DBNStream</code>)</td><td style="text-align: right">Easier type handling</td></tr><tr><td style="text-align: right">Need complex control flow</td><td style="text-align: right">Iterator (<code>DBNStream</code>)</td><td style="text-align: right">More flexibility</td></tr><tr><td style="text-align: right">Maximum performance</td><td style="text-align: right">Callback (<code>foreach_*</code>)</td><td style="text-align: right">Up to 4x faster</td></tr></table><h2 id="Performance-Tips"><a class="docs-heading-anchor" href="#Performance-Tips">Performance Tips</a><a id="Performance-Tips-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Tips" title="Permalink"></a></h2><h3 id="1.-Use-Callbacks-When-Possible"><a class="docs-heading-anchor" href="#1.-Use-Callbacks-When-Possible">1. Use Callbacks When Possible</a><a id="1.-Use-Callbacks-When-Possible-1"></a><a class="docs-heading-anchor-permalink" href="#1.-Use-Callbacks-When-Possible" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Fastest
+total = Ref(0)
+foreach_trade(&quot;file.dbn&quot;) do trade
+    total[] += trade.size
+end
+
+# ❌ Slower
+total = 0
+for trade in DBNStream(&quot;file.dbn&quot;)
+    total += trade.size
+end</code></pre><h3 id="2.-Pre-allocate-Collections"><a class="docs-heading-anchor" href="#2.-Pre-allocate-Collections">2. Pre-allocate Collections</a><a id="2.-Pre-allocate-Collections-1"></a><a class="docs-heading-anchor-permalink" href="#2.-Pre-allocate-Collections" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Pre-allocate
+result = Vector{TradeMsg}()
+sizehint!(result, 100_000)
+
+foreach_trade(&quot;file.dbn&quot;) do trade
+    if condition(trade)
+        push!(result, trade)
+    end
+end</code></pre><h3 id="3.-Minimize-Work-in-Loop"><a class="docs-heading-anchor" href="#3.-Minimize-Work-in-Loop">3. Minimize Work in Loop</a><a id="3.-Minimize-Work-in-Loop-1"></a><a class="docs-heading-anchor-permalink" href="#3.-Minimize-Work-in-Loop" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Hoist constant computations
+threshold = calculate_threshold()
+
+foreach_trade(&quot;file.dbn&quot;) do trade
+    if trade.size &gt; threshold
+        # Process
+    end
+end
+
+# ❌ Repeated computation
+foreach_trade(&quot;file.dbn&quot;) do trade
+    if trade.size &gt; calculate_threshold()  # Don&#39;t do this!
+        # Process
+    end
+end</code></pre><h3 id="4.-Use-Refs-for-Mutable-State"><a class="docs-heading-anchor" href="#4.-Use-Refs-for-Mutable-State">4. Use Refs for Mutable State</a><a id="4.-Use-Refs-for-Mutable-State-1"></a><a class="docs-heading-anchor-permalink" href="#4.-Use-Refs-for-Mutable-State" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Use Ref for accumulation in callbacks
+sum = Ref(0)
+foreach_trade(&quot;file.dbn&quot;) do trade
+    sum[] += trade.size
+end</code></pre><h3 id="5.-Avoid-Type-Instability"><a class="docs-heading-anchor" href="#5.-Avoid-Type-Instability">5. Avoid Type Instability</a><a id="5.-Avoid-Type-Instability-1"></a><a class="docs-heading-anchor-permalink" href="#5.-Avoid-Type-Instability" title="Permalink"></a></h3><pre><code class="language-julia hljs"># ✅ Type-stable
+total::Int = 0
+for trade in DBNStream(&quot;file.dbn&quot;)
+    total += trade.size  # Type is known
+end
+
+# ❌ Type-unstable
+total = 0
+for trade in DBNStream(&quot;file.dbn&quot;)
+    total = trade.size &gt; 1000 ? trade.size : 0.0  # Type changes!
+end</code></pre><h2 id="Memory-Usage-Comparison"><a class="docs-heading-anchor" href="#Memory-Usage-Comparison">Memory Usage Comparison</a><a id="Memory-Usage-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Usage-Comparison" title="Permalink"></a></h2><p>For a 10M record file (458 MB):</p><table><tr><th style="text-align: right">Method</th><th style="text-align: right">Peak Memory</th><th style="text-align: right">Records/sec</th></tr><tr><td style="text-align: right">Callback streaming</td><td style="text-align: right">0.1 MB</td><td style="text-align: right">42.37 M</td></tr><tr><td style="text-align: right">Iterator streaming</td><td style="text-align: right">1221 MB</td><td style="text-align: right">10.21 M</td></tr><tr><td style="text-align: right">Bulk read</td><td style="text-align: right">687 MB</td><td style="text-align: right">6.86 M</td></tr></table><p>Callback streaming uses <strong>~6,000x less memory</strong> than iterator streaming!</p><h2 id="Error-Handling"><a class="docs-heading-anchor" href="#Error-Handling">Error Handling</a><a id="Error-Handling-1"></a><a class="docs-heading-anchor-permalink" href="#Error-Handling" title="Permalink"></a></h2><pre><code class="language-julia hljs">using DBN
+
+try
+    foreach_trade(&quot;file.dbn&quot;) do trade
+        # Process
+        if invalid(trade)
+            error(&quot;Invalid trade found&quot;)
+        end
+    end
+catch e
+    println(&quot;Error processing file: $(e)&quot;)
+end</code></pre><h2 id="See-Also"><a class="docs-heading-anchor" href="#See-Also">See Also</a><a id="See-Also-1"></a><a class="docs-heading-anchor-permalink" href="#See-Also" title="Permalink"></a></h2><ul><li><a href="../reading/">Reading Data</a> - Other reading approaches</li><li><a href="../writing/">Writing Data</a> - Writing DBN files</li><li><a href="../../api/streaming/">API Reference - Streaming</a> - Complete function reference</li><li><a href="../../performance/">Performance Guide</a> - Optimization techniques</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../writing/">« Writing Data</a><a class="docs-footer-nextpage" href="../conversion/">Format Conversion »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Tuesday 28 October 2025 13:43">Tuesday 28 October 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
