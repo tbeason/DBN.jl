@@ -221,8 +221,6 @@ function generate_test_files(output_dir="benchmark/data")
     mkpath(output_dir)
 
     sizes = [
-        ("1k", 1_000),
-        ("10k", 10_000),
         ("100k", 100_000),
         ("1m", 1_000_000),
         ("10m", 10_000_000),
@@ -256,11 +254,10 @@ function generate_test_files(output_dir="benchmark/data")
             write_dbn(mbo_zst, metadata_mbo, mbo)
         end
 
-        # OHLCV (smaller counts since these are aggregated)
-        if n_records <= 100_000
-            ohlcv_count = min(n_records ÷ 100, 10_000)
-            println("  - ohlcv.$size_label ($ohlcv_count bars)...")
-            ohlcv = generate_ohlcv_messages(ohlcv_count)
+        # OHLCV - only generate 10M for performance benchmarking
+        if size_label == "10m"
+            println("  - ohlcv.$size_label...")
+            ohlcv = generate_ohlcv_messages(n_records)
             metadata_ohlcv = create_metadata(Schema.OHLCV_1M, ohlcv, "XNAS")
 
             ohlcv_file = joinpath(output_dir, "ohlcv.$size_label.dbn")

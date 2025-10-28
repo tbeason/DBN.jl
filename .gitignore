@@ -8,3 +8,6 @@ Manifest.toml
 # Test artifacts
 *.dbn
 *.dbn.zst
+
+# Benchmark results
+benchmark/benchmark_results.txt

@@ -3,7 +3,7 @@ Comprehensive DBN performance comparison using BenchmarkTools.jl
 
 Tests all combinations of:
 - Schemas: trades, mbo, ohlcv
-- Sizes: 1k, 10k, 100k, 1m, 10m (where available)
+- Sizes: 100k, 1m, 10m (where available)
 - Operations: read, write
 - Compression: uncompressed, zstd
 
@@ -19,7 +19,7 @@ using DBN, BenchmarkTools, Printf, Statistics
 
 # Benchmark configuration
 const BENCHMARK_SECONDS = 2  # Minimum time to run each benchmark
-const BENCHMARK_SAMPLES = 20  # Minimum number of samples (20 is enough for stable median)
+const BENCHMARK_SAMPLES = 10  # Minimum number of samples
 
 """
 Generate compressed versions of test files if they don't exist
@@ -381,7 +381,7 @@ function run_benchmarks(outfile::String)
     
     # Define test matrix
     schemas = ["trades", "mbo", "ohlcv"]
-    sizes = ["1k", "10k", "100k", "1m", "10m"]
+    sizes = ["100k", "1m", "10m"]
     
     # Track results for summary
     results = Dict()
@@ -446,6 +446,8 @@ function run_benchmarks(outfile::String)
                 callback_stream = (foreach_trade, "foreach_trade()")
             elseif schema == "mbo"
                 callback_stream = (foreach_mbo, "foreach_mbo()")
+            elseif schema == "ohlcv"
+                callback_stream = (foreach_ohlcv, "foreach_ohlcv()")
             end
 
             if callback_stream !== nothing
@@ -465,6 +467,8 @@ function run_benchmarks(outfile::String)
                 optimized_reader = (read_trades, "read_trades()")
             elseif schema == "mbo"
                 optimized_reader = (read_mbo, "read_mbo()")
+            elseif schema == "ohlcv"
+                optimized_reader = (read_ohlcv, "read_ohlcv()")
             end
             
             if optimized_reader !== nothing
