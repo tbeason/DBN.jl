@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Troubleshooting · DBN.jl</title><meta name="title" content="Troubleshooting · DBN.jl"/><meta property="og:title" content="Troubleshooting · DBN.jl"/><meta property="twitter:title" content="Troubleshooting · DBN.jl"/><meta name="description" content="Documentation for DBN.jl."/><meta property="og:description" content="Documentation for DBN.jl."/><meta property="twitter:description" content="Documentation for DBN.jl."/><meta property="og:url" content="https://tbeason.github.io/DBN.jl/troubleshooting/"/><meta property="twitter:url" content="https://tbeason.github.io/DBN.jl/troubleshooting/"/><link rel="canonical" href="https://tbeason.github.io/DBN.jl/troubleshooting/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">DBN.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../installation/">Installation</a></li><li><a class="tocitem" href="../quickstart/">Quick Start</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../guide/reading/">Reading Data</a></li><li><a class="tocitem" href="../guide/writing/">Writing Data</a></li><li><a class="tocitem" href="../guide/streaming/">Streaming</a></li><li><a class="tocitem" href="../guide/conversion/">Format Conversion</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../api/reading/">Reading</a></li><li><a class="tocitem" href="../api/writing/">Writing</a></li><li><a class="tocitem" href="../api/streaming/">Streaming</a></li><li><a class="tocitem" href="../api/types/">Types</a></li><li><a class="tocitem" href="../api/enums/">Enums</a></li><li><a class="tocitem" href="../api/conversion/">Conversion</a></li><li><a class="tocitem" href="../api/utilities/">Utilities</a></li></ul></li><li><a class="tocitem" href="../performance/">Performance</a></li><li class="is-active"><a class="tocitem" href>Troubleshooting</a><ul class="internal"><li><a class="tocitem" href="#Installation-Issues"><span>Installation Issues</span></a></li><li><a class="tocitem" href="#Compression-Issues"><span>Compression Issues</span></a></li><li><a class="tocitem" href="#Memory-Issues"><span>Memory Issues</span></a></li><li><a class="tocitem" href="#Performance-Issues"><span>Performance Issues</span></a></li><li><a class="tocitem" href="#Data-Issues"><span>Data Issues</span></a></li><li><a class="tocitem" href="#File-Format-Issues"><span>File Format Issues</span></a></li><li><a class="tocitem" href="#Callback-Issues"><span>Callback Issues</span></a></li><li><a class="tocitem" href="#Conversion-Issues"><span>Conversion Issues</span></a></li><li><a class="tocitem" href="#Getting-Help"><span>Getting Help</span></a></li><li><a class="tocitem" href="#Common-Error-Messages"><span>Common Error Messages</span></a></li><li><a class="tocitem" href="#See-Also"><span>See Also</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Troubleshooting</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Troubleshooting</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/tbeason/DBN.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/tbeason/DBN.jl/blob/main/docs/src/troubleshooting.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Troubleshooting"><a class="docs-heading-anchor" href="#Troubleshooting">Troubleshooting</a><a id="Troubleshooting-1"></a><a class="docs-heading-anchor-permalink" href="#Troubleshooting" title="Permalink"></a></h1><p>Common issues and solutions when working with DBN.jl.</p><h2 id="Installation-Issues"><a class="docs-heading-anchor" href="#Installation-Issues">Installation Issues</a><a id="Installation-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Installation-Issues" title="Permalink"></a></h2><h3 id="Package-Not-Found"><a class="docs-heading-anchor" href="#Package-Not-Found">Package Not Found</a><a id="Package-Not-Found-1"></a><a class="docs-heading-anchor-permalink" href="#Package-Not-Found" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR: Package DBN not found</code></p><p><strong>Solution</strong>: DBN.jl is not registered. Install from GitHub:</p><pre><code class="language-julia hljs">using Pkg
+Pkg.add(url=&quot;https://github.com/tbeason/DBN.jl&quot;)</code></pre><h3 id="Dependency-Conflicts"><a class="docs-heading-anchor" href="#Dependency-Conflicts">Dependency Conflicts</a><a id="Dependency-Conflicts-1"></a><a class="docs-heading-anchor-permalink" href="#Dependency-Conflicts" title="Permalink"></a></h3><p><strong>Problem</strong>: Version conflicts with other packages</p><p><strong>Solution</strong>:</p><pre><code class="language-julia hljs">using Pkg
+Pkg.update()  # Update all packages
+Pkg.resolve()  # Resolve conflicts</code></pre><p>If problems persist:</p><pre><code class="language-julia hljs">Pkg.rm(&quot;DBN&quot;)
+Pkg.gc()  # Clean up
+Pkg.add(url=&quot;https://github.com/tbeason/DBN.jl&quot;)</code></pre><h2 id="Compression-Issues"><a class="docs-heading-anchor" href="#Compression-Issues">Compression Issues</a><a id="Compression-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Compression-Issues" title="Permalink"></a></h2><h3 id="Zstd-Decompression-Errors"><a class="docs-heading-anchor" href="#Zstd-Decompression-Errors">Zstd Decompression Errors</a><a id="Zstd-Decompression-Errors-1"></a><a class="docs-heading-anchor-permalink" href="#Zstd-Decompression-Errors" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR: zstd error</code> when reading <code>.zst</code> files</p><p><strong>Possible causes:</strong></p><ol><li>Corrupt compressed file</li><li>CodecZstd not properly installed</li><li>File not actually Zstd compressed</li></ol><p><strong>Solutions</strong>:</p><pre><code class="language-julia hljs"># 1. Verify CodecZstd is installed
+using CodecZstd
+
+# 2. Reinstall codec
+using Pkg
+Pkg.rm(&quot;CodecZstd&quot;)
+Pkg.add(&quot;CodecZstd&quot;)
+
+# 3. Check file is valid
+# Try decompressing manually
+using TranscodingStreams, CodecZstd
+open(&quot;file.dbn.zst&quot;) do io
+    zstd_stream = ZstdDecompressorStream(io)
+    # Should not error
+end</code></pre><h3 id="Compression-Not-Working"><a class="docs-heading-anchor" href="#Compression-Not-Working">Compression Not Working</a><a id="Compression-Not-Working-1"></a><a class="docs-heading-anchor-permalink" href="#Compression-Not-Working" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>.zst</code> files created but not compressed</p><p><strong>Solution</strong>: Ensure you&#39;re using the <code>.zst</code> extension:</p><pre><code class="language-julia hljs"># ✅ Will compress
+write_dbn(&quot;output.dbn.zst&quot;, metadata, records)
+
+# ❌ Won&#39;t compress (missing .zst)
+write_dbn(&quot;output.dbn&quot;, metadata, records)</code></pre><h2 id="Memory-Issues"><a class="docs-heading-anchor" href="#Memory-Issues">Memory Issues</a><a id="Memory-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Memory-Issues" title="Permalink"></a></h2><h3 id="Out-of-Memory-When-Reading"><a class="docs-heading-anchor" href="#Out-of-Memory-When-Reading">Out of Memory When Reading</a><a id="Out-of-Memory-When-Reading-1"></a><a class="docs-heading-anchor-permalink" href="#Out-of-Memory-When-Reading" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR: Out of memory</code> when reading large files</p><p><strong>Solution</strong>: Use streaming instead of bulk reading:</p><pre><code class="language-julia hljs"># ❌ Don&#39;t load huge files into memory
+records = read_dbn(&quot;huge_file.dbn&quot;)  # OOM!
+
+# ✅ Stream instead
+foreach_record(&quot;huge_file.dbn&quot;, TradeMsg) do record
+    # Process without loading all records
+end
+
+# ✅ Or use iterator
+for record in DBNStream(&quot;huge_file.dbn&quot;)
+    # Process one at a time
+end</code></pre><h3 id="High-Memory-Usage-with-Iterator"><a class="docs-heading-anchor" href="#High-Memory-Usage-with-Iterator">High Memory Usage with Iterator</a><a id="High-Memory-Usage-with-Iterator-1"></a><a class="docs-heading-anchor-permalink" href="#High-Memory-Usage-with-Iterator" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>DBNStream</code> uses too much memory</p><p><strong>Solution</strong>: Use callback pattern instead:</p><pre><code class="language-julia hljs"># ❌ Iterator uses more memory
+for trade in DBNStream(&quot;file.dbn&quot;)
+    process(trade)
+end
+
+# ✅ Callback uses minimal memory
+foreach_trade(&quot;file.dbn&quot;) do trade
+    process(trade)
+end</code></pre><h2 id="Performance-Issues"><a class="docs-heading-anchor" href="#Performance-Issues">Performance Issues</a><a id="Performance-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Issues" title="Permalink"></a></h2><h3 id="Slower-Than-Expected"><a class="docs-heading-anchor" href="#Slower-Than-Expected">Slower Than Expected</a><a id="Slower-Than-Expected-1"></a><a class="docs-heading-anchor-permalink" href="#Slower-Than-Expected" title="Permalink"></a></h3><p><strong>Problem</strong>: Reading/writing is slow</p><p><strong>Checklist</strong>:</p><ol><li><strong>Use type-specific readers</strong>:</li></ol><pre><code class="language-julia hljs"># ❌ Slow
+records = read_dbn(&quot;trades.dbn&quot;)
+
+# ✅ 5-6x faster
+trades = read_trades(&quot;trades.dbn&quot;)</code></pre><ol><li><strong>Use callbacks for processing</strong>:</li></ol><pre><code class="language-julia hljs"># ❌ Slower
+trades = read_trades(&quot;file.dbn&quot;)
+total = sum(t.size for t in trades)
+
+# ✅ Up to 6x faster
+total = Ref(0)
+foreach_trade(&quot;file.dbn&quot;) do trade
+    total[] += trade.size
+end</code></pre><ol><li><strong>Check for type instability</strong>:</li></ol><pre><code class="language-julia hljs"># Run with type checking
+using DBN
+@code_warntype read_trades(&quot;file.dbn&quot;)</code></pre><ol><li><strong>Profile your code</strong>:</li></ol><pre><code class="language-julia hljs">using Profile
+
+@profile begin
+    foreach_trade(&quot;file.dbn&quot;) do trade
+        # Your processing code
+    end
+end
+
+Profile.print()</code></pre><h2 id="Data-Issues"><a class="docs-heading-anchor" href="#Data-Issues">Data Issues</a><a id="Data-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Data-Issues" title="Permalink"></a></h2><h3 id="Wrong-Schema-Error"><a class="docs-heading-anchor" href="#Wrong-Schema-Error">Wrong Schema Error</a><a id="Wrong-Schema-Error-1"></a><a class="docs-heading-anchor-permalink" href="#Wrong-Schema-Error" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR: Expected TradeMsg but got rtype=...</code></p><p><strong>Cause</strong>: File contains different message type than expected</p><p><strong>Solutions</strong>:</p><ol><li><strong>Check file schema</strong>:</li></ol><pre><code class="language-julia hljs">metadata, _ = read_dbn_with_metadata(&quot;file.dbn&quot;)
+println(&quot;Schema: $(metadata.schema)&quot;)</code></pre><ol><li><strong>Use generic reader</strong>:</li></ol><pre><code class="language-julia hljs"># For mixed-schema files
+records = read_dbn(&quot;file.dbn&quot;)
+
+# Or iterator
+for record in DBNStream(&quot;file.dbn&quot;)
+    if record isa TradeMsg
+        # Handle trade
+    elseif record isa MBOMsg
+        # Handle MBO
+    end
+end</code></pre><h3 id="Price-Conversion-Issues"><a class="docs-heading-anchor" href="#Price-Conversion-Issues">Price Conversion Issues</a><a id="Price-Conversion-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Price-Conversion-Issues" title="Permalink"></a></h3><p><strong>Problem</strong>: Prices look wrong</p><p><strong>Remember</strong>: DBN uses fixed-point prices!</p><pre><code class="language-julia hljs"># ❌ Wrong - prices are fixed-point integers
+println(trade.price)  # e.g., 1005000 (not 100.50!)
+
+# ✅ Convert to float
+println(price_to_float(trade.price))  # 100.5</code></pre><p><strong>Creating prices</strong>:</p><pre><code class="language-julia hljs"># ✅ Convert float to fixed-point
+price = float_to_price(100.50)  # 1005000
+
+# ❌ Don&#39;t use float directly
+trade.price = 100.50  # WRONG!</code></pre><h3 id="Timestamp-Conversion-Issues"><a class="docs-heading-anchor" href="#Timestamp-Conversion-Issues">Timestamp Conversion Issues</a><a id="Timestamp-Conversion-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Timestamp-Conversion-Issues" title="Permalink"></a></h3><p><strong>Problem</strong>: Timestamps look strange</p><p><strong>Remember</strong>: DBN uses nanosecond timestamps!</p><pre><code class="language-julia hljs"># ❌ Raw timestamp
+println(trade.hd.ts_event)  # 1704067200000000000 (nanoseconds!)
+
+# ✅ Convert to DateTime
+using Dates
+println(ts_to_datetime(trade.hd.ts_event))  # 2024-01-01T00:00:00
+
+# ✅ Format nicely
+dt = ts_to_datetime(trade.hd.ts_event)
+println(Dates.format(dt, &quot;yyyy-mm-dd HH:MM:SS&quot;))</code></pre><p><strong>Creating timestamps</strong>:</p><pre><code class="language-julia hljs">using Dates
+
+# ✅ Convert DateTime to nanoseconds
+dt = DateTime(2024, 1, 1, 9, 30)
+ts = datetime_to_ts(dt)
+
+# ❌ Don&#39;t use DateTime directly
+record.ts_event = DateTime(2024, 1, 1)  # WRONG!</code></pre><h2 id="File-Format-Issues"><a class="docs-heading-anchor" href="#File-Format-Issues">File Format Issues</a><a id="File-Format-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#File-Format-Issues" title="Permalink"></a></h2><h3 id="Unsupported-DBN-Version"><a class="docs-heading-anchor" href="#Unsupported-DBN-Version">Unsupported DBN Version</a><a id="Unsupported-DBN-Version-1"></a><a class="docs-heading-anchor-permalink" href="#Unsupported-DBN-Version" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR: Unsupported DBN version 1</code></p><p><strong>Cause</strong>: DBN.jl only supports DBN v2 and v3</p><p><strong>Solution</strong>: Upgrade v1 files using Databento CLI:</p><pre><code class="language-bash hljs">dbn version1.dbn --output version2.dbn --upgrade</code></pre><p>See <a href="https://databento.com/docs/api-reference-historical/cli">Databento CLI documentation</a>.</p><h3 id="Corrupt-File"><a class="docs-heading-anchor" href="#Corrupt-File">Corrupt File</a><a id="Corrupt-File-1"></a><a class="docs-heading-anchor-permalink" href="#Corrupt-File" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR</code> when reading file</p><p><strong>Diagnostics</strong>:</p><pre><code class="language-julia hljs"># Check file size
+filesize(&quot;file.dbn&quot;)  # Should be &gt; 0
+
+# Check file is readable
+open(&quot;file.dbn&quot;, &quot;r&quot;) do io
+    read(io, 1)  # Should not error
+end
+
+# Try reading just metadata
+metadata, _ = read_dbn_with_metadata(&quot;file.dbn&quot;)
+println(metadata)</code></pre><h2 id="Callback-Issues"><a class="docs-heading-anchor" href="#Callback-Issues">Callback Issues</a><a id="Callback-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Callback-Issues" title="Permalink"></a></h2><h3 id="Cannot-Mutate-Variable"><a class="docs-heading-anchor" href="#Cannot-Mutate-Variable">Cannot Mutate Variable</a><a id="Cannot-Mutate-Variable-1"></a><a class="docs-heading-anchor-permalink" href="#Cannot-Mutate-Variable" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR: cannot assign variable from callback</code></p><p><strong>Cause</strong>: Variables from outer scope are immutable in callbacks</p><p><strong>Solution</strong>: Use <code>Ref</code> for mutable state:</p><pre><code class="language-julia hljs"># ❌ Won&#39;t work
+count = 0
+foreach_trade(&quot;file.dbn&quot;) do trade
+    count += 1  # ERROR!
+end
+
+# ✅ Use Ref
+count = Ref(0)
+foreach_trade(&quot;file.dbn&quot;) do trade
+    count[] += 1  # OK
+end
+println(count[])</code></pre><h3 id="Cannot-Break-From-Callback"><a class="docs-heading-anchor" href="#Cannot-Break-From-Callback">Cannot Break From Callback</a><a id="Cannot-Break-From-Callback-1"></a><a class="docs-heading-anchor-permalink" href="#Cannot-Break-From-Callback" title="Permalink"></a></h3><p><strong>Problem</strong>: Want to stop early but callbacks can&#39;t break</p><p><strong>Solution</strong>: Use iterator pattern instead:</p><pre><code class="language-julia hljs"># ❌ Can&#39;t do this with callbacks
+foreach_trade(&quot;file.dbn&quot;) do trade
+    if trade.size &gt; 100_000
+        break  # ERROR: can&#39;t break from callback
+    end
+end
+
+# ✅ Use iterator
+for trade in DBNStream(&quot;file.dbn&quot;)
+    if trade.size &gt; 100_000
+        println(&quot;Found large trade!&quot;)
+        break  # OK
+    end
+end</code></pre><h2 id="Conversion-Issues"><a class="docs-heading-anchor" href="#Conversion-Issues">Conversion Issues</a><a id="Conversion-Issues-1"></a><a class="docs-heading-anchor-permalink" href="#Conversion-Issues" title="Permalink"></a></h2><h3 id="CSV/JSON-Round-Trip-Differences"><a class="docs-heading-anchor" href="#CSV/JSON-Round-Trip-Differences">CSV/JSON Round-Trip Differences</a><a id="CSV/JSON-Round-Trip-Differences-1"></a><a class="docs-heading-anchor-permalink" href="#CSV/JSON-Round-Trip-Differences" title="Permalink"></a></h3><p><strong>Problem</strong>: Data changes after CSV → DBN → CSV conversion</p><p><strong>Cause</strong>: Text formats may lose precision or metadata</p><p><strong>Best Practice</strong>:</p><ul><li>Use DBN format for archival storage</li><li>Use CSV/JSON only for analysis or export</li><li>Don&#39;t rely on perfect round-trip through text formats</li></ul><h3 id="Parquet-Schema-Mismatch"><a class="docs-heading-anchor" href="#Parquet-Schema-Mismatch">Parquet Schema Mismatch</a><a id="Parquet-Schema-Mismatch-1"></a><a class="docs-heading-anchor-permalink" href="#Parquet-Schema-Mismatch" title="Permalink"></a></h3><p><strong>Problem</strong>: <code>ERROR</code> when converting Parquet to DBN</p><p><strong>Cause</strong>: Column names or types don&#39;t match DBN schema</p><p><strong>Solution</strong>: Ensure Parquet has correct schema:</p><pre><code class="language-julia hljs"># Check column names
+using Parquet2
+df = Parquet2.Dataset(&quot;file.parquet&quot;) |&gt; DataFrame
+names(df)  # Should match DBN field names
+
+# Ensure correct types (especially timestamps, prices)</code></pre><h2 id="Getting-Help"><a class="docs-heading-anchor" href="#Getting-Help">Getting Help</a><a id="Getting-Help-1"></a><a class="docs-heading-anchor-permalink" href="#Getting-Help" title="Permalink"></a></h2><p>If you encounter issues not covered here:</p><ol><li><strong>Check the documentation</strong> for the specific function</li><li><strong>Search existing GitHub issues</strong>: <a href="https://github.com/tbeason/DBN.jl/issues">github.com/tbeason/DBN.jl/issues</a></li><li><strong>Ask on GitHub Discussions</strong> (if available)</li><li><strong>Open a new issue</strong> with:<ul><li>Julia version (<code>versioninfo()</code>)</li><li>DBN.jl version</li><li>Minimal example reproducing the issue</li><li>Error message and stack trace</li></ul></li></ol><h3 id="Minimal-Reproducible-Example"><a class="docs-heading-anchor" href="#Minimal-Reproducible-Example">Minimal Reproducible Example</a><a id="Minimal-Reproducible-Example-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-Reproducible-Example" title="Permalink"></a></h3><p>When reporting issues, include:</p><pre><code class="language-julia hljs">using Pkg, DBN
+
+# Julia version
+versioninfo()
+
+# Package version
+Pkg.status(&quot;DBN&quot;)
+
+# Minimal code that reproduces the issue
+# (Use synthetic data if possible)
+metadata = Metadata(...)
+records = [TradeMsg(...)]
+write_dbn(&quot;test.dbn&quot;, metadata, records)
+result = read_trades(&quot;test.dbn&quot;)  # Error occurs here</code></pre><h2 id="Common-Error-Messages"><a class="docs-heading-anchor" href="#Common-Error-Messages">Common Error Messages</a><a id="Common-Error-Messages-1"></a><a class="docs-heading-anchor-permalink" href="#Common-Error-Messages" title="Permalink"></a></h2><table><tr><th style="text-align: right">Error</th><th style="text-align: right">Likely Cause</th><th style="text-align: right">Solution</th></tr><tr><td style="text-align: right"><code>Out of memory</code></td><td style="text-align: right">File too large for RAM</td><td style="text-align: right">Use streaming (callbacks or iterator)</td></tr><tr><td style="text-align: right"><code>zstd error</code></td><td style="text-align: right">Corrupt .zst file or codec issue</td><td style="text-align: right">Reinstall CodecZstd or check file</td></tr><tr><td style="text-align: right"><code>Expected TradeMsg but got rtype=...</code></td><td style="text-align: right">Wrong schema</td><td style="text-align: right">Check metadata.schema, use correct reader</td></tr><tr><td style="text-align: right"><code>Unsupported DBN version 1</code></td><td style="text-align: right">Old DBN format</td><td style="text-align: right">Upgrade using Databento CLI</td></tr><tr><td style="text-align: right"><code>cannot assign variable</code></td><td style="text-align: right">Immutable in callback scope</td><td style="text-align: right">Use Ref for mutable state</td></tr><tr><td style="text-align: right"><code>SystemError: opening file</code></td><td style="text-align: right">File not found or permissions</td><td style="text-align: right">Check path and file permissions</td></tr></table><h2 id="See-Also"><a class="docs-heading-anchor" href="#See-Also">See Also</a><a id="See-Also-1"></a><a class="docs-heading-anchor-permalink" href="#See-Also" title="Permalink"></a></h2><ul><li><a href="../quickstart/">Quick Start Guide</a> - Basic usage</li><li><a href="../guide/reading/">Reading Guide</a> - Reading methods</li><li><a href="../performance/">Performance Guide</a> - Optimization</li><li><a href="https://github.com/tbeason/DBN.jl/issues">GitHub Issues</a> - Report bugs</li><li><a href="https://databento.com/docs/">Databento Documentation</a> - DBN format details</li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../performance/">« Performance</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.15.0 on <span class="colophon-date" title="Wednesday 29 October 2025 13:06">Wednesday 29 October 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
