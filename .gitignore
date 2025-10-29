@@ -11,3 +11,7 @@ Manifest.toml
 
 # Benchmark results
 benchmark/benchmark_results.txt
+
+# Documentation build output
+docs/build/
+docs/Manifest.toml
