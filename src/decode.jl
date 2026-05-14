@@ -463,12 +463,13 @@ function read_record(decoder::DBNDecoder)
     # Handle unknown record types
     if hd_result isa Tuple
         _, rtype_raw, record_length = hd_result
-        skip(decoder.io, record_length - 2)
+        # record_length is in 4-byte units; we already consumed length+rtype (2 bytes).
+        skip(decoder.io, Int(record_length) * LENGTH_MULTIPLIER - 2)
         return nothing
     end
-    
+
     hd = hd_result
-    
+
     # Type-stable dispatch - function barrier eliminates type instability
     return read_record_dispatch(decoder, hd, hd.rtype)
 end
@@ -512,7 +513,8 @@ end
     elseif rtype == RType.BBO_1M_MSG
         return read_bbo1m_msg(decoder, hd)
     else
-        skip(decoder.io, hd.length - 16)
+        # hd.length is in 4-byte units; standard header is 16 bytes already consumed.
+        skip(decoder.io, Int(hd.length) * LENGTH_MULTIPLIER - 16)
         return nothing
     end
 end
@@ -666,8 +668,8 @@ end
 end
 
 @inline function read_error_msg(decoder::DBNDecoder, hd::RecordHeader)
-    # Read error message string
-    msg_bytes = hd.length - 16  # Subtract header size
+    # Read error message string. hd.length is in 4-byte units; subtract the 16-byte header.
+    msg_bytes = Int(hd.length) * LENGTH_MULTIPLIER - 16
     if msg_bytes > 0
         err_data = read(decoder.io, msg_bytes)
         # Remove null terminator if present
@@ -684,30 +686,57 @@ end
 end
 
 @inline function read_symbol_mapping_msg(decoder::DBNDecoder, hd::RecordHeader)
-    # Read symbol mapping fields
-    stype_in = SType.T(read(decoder.io, UInt8))
-    _ = read(decoder.io, 3)  # Padding
-    
-    # Read input symbol (variable length string)
-    stype_in_len = read(decoder.io, UInt16)
-    stype_in_symbol = intern_string(decoder, read(decoder.io, stype_in_len))
+    # SymbolMappingMsg layout depends on DBN version. Per the public spec:
+    #   v1: stype_in_symbol[22] | stype_out_symbol[22] | padding(4) | start_ts(8) | end_ts(8) = 64
+    #       (stype_in/stype_out fields don't exist in v1)
+    #   v2+: stype_in(1) | stype_in_symbol[symbol_cstr_len] | stype_out(1) |
+    #        stype_out_symbol[symbol_cstr_len] | start_ts(8) | end_ts(8)
+    body_size = Int(hd.length) * LENGTH_MULTIPLIER - 16
+    if body_size <= 64
+        return _read_symbol_mapping_v1(decoder, hd)
+    else
+        # symbol_cstr_len = (body_size - 1 - 1 - 8 - 8) / 2
+        sym_len = (body_size - 18) ÷ 2
+        return _read_symbol_mapping_v2(decoder, hd, sym_len)
+    end
+end
 
-    stype_out = SType.T(read(decoder.io, UInt8))
-    _ = read(decoder.io, 3)  # Padding
+@inline function _trim_cstr(bytes::Vector{UInt8})
+    nul = findfirst(==(0), bytes)
+    nul === nothing ? bytes : bytes[1:nul-1]
+end
 
-    # Read output symbol (variable length string)
-    stype_out_len = read(decoder.io, UInt16)
-    stype_out_symbol = intern_string(decoder, read(decoder.io, stype_out_len))
-    
-    start_ts = read(decoder.io, Int64)
-    end_ts = read(decoder.io, Int64)
-    
-    return SymbolMappingMsg(hd, stype_in, stype_in_symbol, stype_out, stype_out_symbol, start_ts, end_ts)
+@inline function _read_symbol_mapping_v1(decoder::DBNDecoder, hd::RecordHeader)
+    in_bytes  = read(decoder.io, 22)
+    out_bytes = read(decoder.io, 22)
+    _ = read(decoder.io, 4)  # padding to 8-byte alignment for timestamps
+    start_ts  = reinterpret(Int64, read(decoder.io, UInt64))
+    end_ts    = reinterpret(Int64, read(decoder.io, UInt64))
+    # v1 has no stype_in/stype_out bytes; use INSTRUMENT_ID as a neutral default.
+    return SymbolMappingMsg(hd,
+        SType.INSTRUMENT_ID,  intern_string(decoder, _trim_cstr(in_bytes)),
+        SType.INSTRUMENT_ID,  intern_string(decoder, _trim_cstr(out_bytes)),
+        start_ts, end_ts,
+    )
+end
+
+@inline function _read_symbol_mapping_v2(decoder::DBNDecoder, hd::RecordHeader, sym_len::Int)
+    stype_in_raw   = read(decoder.io, UInt8)
+    in_bytes       = read(decoder.io, sym_len)
+    stype_out_raw  = read(decoder.io, UInt8)
+    out_bytes      = read(decoder.io, sym_len)
+    start_ts       = reinterpret(Int64, read(decoder.io, UInt64))
+    end_ts         = reinterpret(Int64, read(decoder.io, UInt64))
+    return SymbolMappingMsg(hd,
+        SType.T(stype_in_raw),  intern_string(decoder, _trim_cstr(in_bytes)),
+        SType.T(stype_out_raw), intern_string(decoder, _trim_cstr(out_bytes)),
+        start_ts, end_ts,
+    )
 end
 
 @inline function read_system_msg(decoder::DBNDecoder, hd::RecordHeader)
-    # Read system message fields
-    remaining_bytes = hd.length - 16
+    # Read system message fields. hd.length is in 4-byte units; subtract the 16-byte header.
+    remaining_bytes = Int(hd.length) * LENGTH_MULTIPLIER - 16
     if remaining_bytes > 0
         # Split remaining data into msg and code (format TBD)
         # For now, read as single message string
@@ -1343,7 +1372,8 @@ function read_dbn_typed(filename::String, ::Type{T}) where T
                 # Handle unknown record types
                 if hd_result isa Tuple
                     _, rtype_raw, record_length = hd_result
-                    skip(decoder.io, record_length - 2)
+                    # record_length is in 4-byte units; we already consumed 2 bytes.
+                    skip(decoder.io, Int(record_length) * LENGTH_MULTIPLIER - 2)
                     continue
                 end
 
@@ -1390,7 +1420,8 @@ function read_dbn_typed(filename::String, ::Type{T}) where T
 
                 if hd_result isa Tuple
                     _, rtype_raw, record_length = hd_result
-                    skip(decoder.io, record_length - 2)
+                    # record_length is in 4-byte units; we already consumed 2 bytes.
+                    skip(decoder.io, Int(record_length) * LENGTH_MULTIPLIER - 2)
                     continue
                 end
 
