@@ -1,8 +1,17 @@
-# Dependabot config — keeps GitHub Actions versions up to date.
-# Julia's Pkg ecosystem isn't supported by Dependabot; for that, see
-# CompatHelper.yml which proposes [compat] bumps for Julia deps.
+# Dependabot config covering Julia deps (replaces CompatHelper, which is in
+# maintenance mode as of Feb 2026) and GitHub Actions versions.
 version: 2
 updates:
+  - package-ecosystem: julia
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      julia-deps:
+        update-types:
+          - minor
+          - patch
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
