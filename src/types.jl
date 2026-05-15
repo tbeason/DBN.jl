@@ -105,19 +105,39 @@ end
 """
     SType
 
-Symbol types for identifying instruments in DBN data.
+Symbol types for identifying instruments in DBN data. Numeric values match the
+official Databento DBN spec — wire-encoded as a `UInt8` in metadata and in
+`SymbolMappingMsg` (v2+).
 
 # Values
-- `INSTRUMENT_ID`: Numeric instrument identifier
-- `RAW_SYMBOL`: Raw symbol string from exchange
-- `CONTINUOUS`: Continuous contract symbol
-- `PARENT`: Parent symbol for derived instruments
+- `INSTRUMENT_ID = 0`: Numeric instrument identifier
+- `RAW_SYMBOL = 1`: Raw symbol string from exchange
+- `SMART = 2`: Deprecated alias (was split into `CONTINUOUS` and `PARENT`)
+- `CONTINUOUS = 3`: Continuous contract symbol
+- `PARENT = 4`: Parent symbol for derived instruments (e.g. `SPXW.OPT`)
+- `NASDAQ_SYMBOL = 5`: Nasdaq-specific symbol
+- `CMS_SYMBOL = 6`: CMS symbol
+- `ISIN = 7`: ISO 6166 International Securities Identification Number
+- `US_CODE = 8`: US Code (CUSIP-style)
+- `BBG_COMP_ID = 9`: Bloomberg composite ID
+- `BBG_COMP_TICKER = 10`: Bloomberg composite ticker
+- `FIGI = 11`: OpenFIGI identifier
+- `FIGI_TICKER = 12`: OpenFIGI ticker
 """
 @enumx SType::UInt8 begin
-    INSTRUMENT_ID = 0
-    RAW_SYMBOL = 1
-    CONTINUOUS = 2
-    PARENT = 3
+    INSTRUMENT_ID   = 0
+    RAW_SYMBOL      = 1
+    SMART           = 2   # deprecated (kept for round-trip with v1 wire data)
+    CONTINUOUS      = 3
+    PARENT          = 4
+    NASDAQ_SYMBOL   = 5
+    CMS_SYMBOL      = 6
+    ISIN            = 7
+    US_CODE         = 8
+    BBG_COMP_ID     = 9
+    BBG_COMP_TICKER = 10
+    FIGI            = 11
+    FIGI_TICKER     = 12
 end
 
 """
