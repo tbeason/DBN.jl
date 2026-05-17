@@ -41,9 +41,36 @@ Refill the internal buffer by reading from the underlying I/O stream.
 Makes a single syscall to read up to `buffer_size` bytes.
 """
 @inline function refill_buffer!(reader::BufferedReader)
-    # Read into buffer (single syscall)
-    reader.buffer_size = readbytes!(reader.io, reader.buffer)
+    if reader.buffer_pos > reader.buffer_size
+        # Fast path: buffer fully consumed. Original single-syscall refill.
+        reader.buffer_size = readbytes!(reader.io, reader.buffer)
+        reader.buffer_pos = 1
+        return reader.buffer_size
+    end
+    return _refill_keep_residual!(reader)
+end
+
+@noinline function _refill_keep_residual!(reader::BufferedReader)
+    residual = reader.buffer_size - reader.buffer_pos + 1
+    if reader.buffer_pos > 1
+        @inbounds for i in 1:residual
+            reader.buffer[i] = reader.buffer[reader.buffer_pos + i - 1]
+        end
+    end
     reader.buffer_pos = 1
+    if residual >= length(reader.buffer)
+        reader.buffer_size = residual
+        return residual
+    end
+    capacity = length(reader.buffer) - residual
+    tmp = Vector{UInt8}(undef, capacity)
+    new_bytes = readbytes!(reader.io, tmp)
+    if new_bytes > 0
+        @inbounds for i in 1:new_bytes
+            reader.buffer[residual + i] = tmp[i]
+        end
+    end
+    reader.buffer_size = residual + new_bytes
     return reader.buffer_size
 end
 
