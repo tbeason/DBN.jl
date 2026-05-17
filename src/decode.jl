@@ -252,11 +252,14 @@ function read_header!(decoder::DBNDecoder)
         len
     end
     
-    # Skip reserved padding
+    # Skip reserved padding. Per the official DBN spec
+    # (databento/dbn rust crate, src/compat.rs):
+    #   v1: METADATA_RESERVED_LEN_V1 = 47
+    #   v2+: METADATA_RESERVED_LEN    = 53
     reserved_len = if version == 1
-        39  # v1::METADATA_RESERVED_LEN
+        47
     else
-        53  # METADATA_RESERVED_LEN
+        53
     end
     pos += reserved_len
     
