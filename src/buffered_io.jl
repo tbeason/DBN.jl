@@ -23,6 +23,7 @@ of making a syscall.
 mutable struct BufferedReader{IO_T <: IO} <: IO
     io::IO_T
     buffer::Vector{UInt8}
+    refill_tmp::Vector{UInt8}   # reused scratch for residual-preserving refill
     buffer_pos::Int
     buffer_size::Int
     total_read::Int
@@ -30,7 +31,11 @@ mutable struct BufferedReader{IO_T <: IO} <: IO
     function BufferedReader(io::IO_T, buffer_size::Int=65536) where {IO_T <: IO}
         # 64KB buffer is a good balance between memory and syscall reduction
         buffer = Vector{UInt8}(undef, buffer_size)
-        new{IO_T}(io, buffer, 1, 0, 0)
+        # Pre-allocate the refill scratch buffer so the slow path is allocation-
+        # free. Sized to match `buffer` (the worst case is residual == 0, in
+        # which case we read up to the full buffer length into the scratch).
+        refill_tmp = Vector{UInt8}(undef, buffer_size)
+        new{IO_T}(io, buffer, refill_tmp, 1, 0, 0)
     end
 end
 
@@ -63,8 +68,8 @@ end
         return residual
     end
     capacity = length(reader.buffer) - residual
-    tmp = Vector{UInt8}(undef, capacity)
-    new_bytes = readbytes!(reader.io, tmp)
+    tmp = reader.refill_tmp  # pre-allocated scratch; no per-call malloc
+    new_bytes = readbytes!(reader.io, tmp, capacity)
     if new_bytes > 0
         @inbounds for i in 1:new_bytes
             reader.buffer[residual + i] = tmp[i]
