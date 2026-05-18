@@ -20,6 +20,19 @@ end
 Provides memory-efficient streaming access to DBN files without loading
 the entire file into memory. Automatically detects and handles Zstd compression.
 Gracefully skips unknown record types.
+
+# Performance
+`DBNStream` returns the abstract `Union` element type, so each iteration boxes
+the record and allocates roughly ~120 bytes per record. This is acceptable for
+exploration / debugging but bottlenecks high-throughput workloads. For
+performance-critical loops over a known-schema file, prefer
+[`foreach_record`](@ref):
+
+```julia
+foreach_record("data.dbn", DBN.TradeMsg) do rec
+    # near-zero allocation per record
+end
+```
 """
 mutable struct DBNStream
     decoder::DBNDecoder
@@ -111,6 +124,47 @@ _type_to_rtype_stream(::Type{OHLCVMsg}) = RType.OHLCV_1S_MSG  # Default to 1s
 _type_to_rtype_stream(::Type{StatusMsg}) = RType.STATUS_MSG
 _type_to_rtype_stream(::Type{InstrumentDefMsg}) = RType.INSTRUMENT_DEF_MSG
 _type_to_rtype_stream(::Type{ImbalanceMsg}) = RType.IMBALANCE_MSG
+_type_to_rtype_stream(::Type{StatMsg}) = RType.STAT_MSG
+_type_to_rtype_stream(::Type{CMBP1Msg}) = RType.CMBP_1_MSG
+_type_to_rtype_stream(::Type{CBBO1sMsg}) = RType.CBBO_1S_MSG
+_type_to_rtype_stream(::Type{CBBO1mMsg}) = RType.CBBO_1M_MSG
+_type_to_rtype_stream(::Type{TCBBOMsg}) = RType.TCBBO_MSG
+_type_to_rtype_stream(::Type{BBO1sMsg}) = RType.BBO_1S_MSG
+_type_to_rtype_stream(::Type{BBO1mMsg}) = RType.BBO_1M_MSG
+
+"""
+    record_type_for_dbn_schema(schema::Schema.T) -> Union{Type, Nothing}
+
+Map a DBN `Schema` to the concrete record struct it produces, when the schema
+is type-pure AND DBN.jl has a `_read_typed_record_stream` overload for that
+type. Returns `nothing` otherwise (callers should fall back to the generic
+`read_record` Union path).
+
+Used by `read_dbn` and `read_dbn_with_metadata` to dispatch to the typed
+zero-allocation reader when possible.
+"""
+function record_type_for_dbn_schema(schema::Schema.T)
+    schema == Schema.TRADES     && return TradeMsg
+    schema == Schema.MBO        && return MBOMsg
+    schema == Schema.MBP_1      && return MBP1Msg
+    schema == Schema.MBP_10     && return MBP10Msg
+    schema == Schema.TBBO       && return MBP1Msg   # TBBO records are MBP1Msg layout
+    schema == Schema.OHLCV_1S   && return OHLCVMsg
+    schema == Schema.OHLCV_1M   && return OHLCVMsg
+    schema == Schema.OHLCV_1H   && return OHLCVMsg
+    schema == Schema.OHLCV_1D   && return OHLCVMsg
+    schema == Schema.DEFINITION && return InstrumentDefMsg
+    schema == Schema.STATUS     && return StatusMsg
+    schema == Schema.IMBALANCE  && return ImbalanceMsg
+    schema == Schema.STATISTICS && return StatMsg
+    schema == Schema.CMBP_1     && return CMBP1Msg
+    schema == Schema.CBBO_1S    && return CBBO1sMsg
+    schema == Schema.CBBO_1M    && return CBBO1mMsg
+    schema == Schema.TCBBO      && return TCBBOMsg
+    schema == Schema.BBO_1S     && return BBO1sMsg
+    schema == Schema.BBO_1M     && return BBO1mMsg
+    return nothing
+end
 
 # Type-stable record reading helpers (shared by eager read and callback API)
 @inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{TradeMsg}, hd::RecordHeader)
@@ -143,6 +197,34 @@ end
 
 @inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{ImbalanceMsg}, hd::RecordHeader)
     return read_imbalance_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{StatMsg}, hd::RecordHeader)
+    return read_stat_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{CMBP1Msg}, hd::RecordHeader)
+    return read_cmbp1_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{CBBO1sMsg}, hd::RecordHeader)
+    return read_cbbo1s_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{CBBO1mMsg}, hd::RecordHeader)
+    return read_cbbo1m_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{TCBBOMsg}, hd::RecordHeader)
+    return read_tcbbo_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{BBO1sMsg}, hd::RecordHeader)
+    return read_bbo1s_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{BBO1mMsg}, hd::RecordHeader)
+    return read_bbo1m_msg(decoder, hd)
 end
 
 # ============================================================================
@@ -233,10 +315,12 @@ function _foreach_record_impl(f::Function, decoder::DBNDecoder, ::Type{T}) where
             # Read header
             hd_result = read_record_header(decoder.io)
 
-            # Handle unknown record types
+            # Handle unknown record types. `record_length` from
+            # read_record_header is in 4-byte units; the 2 bytes
+            # (length + rtype) of the header are already consumed.
             if hd_result isa Tuple
                 _, rtype_raw, record_length = hd_result
-                skip(decoder.io, record_length - 2)
+                skip(decoder.io, Int(record_length) * LENGTH_MULTIPLIER - 2)
                 continue
             end
 
@@ -260,6 +344,114 @@ function _foreach_record_impl(f::Function, decoder::DBNDecoder, ::Type{T}) where
         end
     finally
         # Clean up
+        if decoder.io !== decoder.base_io
+            close(decoder.io)
+        end
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
+    end
+end
+
+# ============================================================================
+# Typed Streaming With Separate Control-Record Routing
+# ============================================================================
+
+"""
+    foreach_record_with_control(f_data, f_control, filename::String, ::Type{T}) where T
+    foreach_record_with_control(f_data, f_control, decoder::DBNDecoder, ::Type{T}) where T
+
+Like [`foreach_record`](@ref) but split into two callbacks: `f_data` receives
+concrete `T`-typed records (the expected schema type) via a reused `Ref{T}()`
+buffer with no per-record allocation, while `f_control` receives the
+Union-typed value for *control* records (`ErrorMsg`, `SystemMsg`,
+`SymbolMappingMsg`) that can interleave with data on a live stream.
+
+The typed-record path is the same hot loop as `_foreach_record_impl` and
+achieves the same near-zero allocation profile. Control records do allocate
+the Union container (one per control record), but they are rare relative
+to data and don't contribute meaningfully to GC pressure.
+
+This is the primitive that backs the typed-channel live reader:
+data records flow into a `Channel{T}` and control records flow into a
+separate `Channel{DBNRecord}` for status/heartbeat/error handling.
+
+# Arguments
+- `f_data`: called as `f_data(rec::T)` for every record whose `rtype` matches
+  `_type_to_rtype_stream(T)` (or any OHLCV variant when `T === OHLCVMsg`).
+- `f_control`: called as `f_control(rec)` for every `ErrorMsg`, `SystemMsg`,
+  or `SymbolMappingMsg`. `rec` is one of those concrete types but typed
+  as the `DBNRecord` Union.
+- `filename` / `decoder`: same as [`foreach_record`](@ref).
+- `T`: the expected data record type (must have a `_type_to_rtype_stream`
+  overload — see [`record_type_for_dbn_schema`](@ref) for the supported set).
+
+Unknown rtypes (anything that's neither `T`-matching nor a control rtype)
+are silently skipped, matching `read_record`'s permissive behaviour. This
+mirrors what production live streams need: gateway-side schema additions
+shouldn't crash existing consumers.
+"""
+function foreach_record_with_control(f_data::Function, f_control::Function,
+                                     filename::String, ::Type{T}) where T
+    decoder = DBNDecoder(filename)
+    _foreach_record_with_control_impl(f_data, f_control, decoder, T)
+    return nothing
+end
+
+function foreach_record_with_control(f_data::Function, f_control::Function,
+                                     decoder::DBNDecoder, ::Type{T}) where T
+    _foreach_record_with_control_impl(f_data, f_control, decoder, T)
+    return nothing
+end
+
+function _foreach_record_with_control_impl(f_data::Function, f_control::Function,
+                                           decoder::DBNDecoder, ::Type{T}) where T
+    expected_rtype = _type_to_rtype_stream(T)
+    # Reused buffer for the typed-record path — same trick as
+    # _foreach_record_impl; immutable bitstype, value-copied through `f_data`.
+    buffer = Ref{T}()
+
+    try
+        while !eof(decoder.io)
+            hd_result = read_record_header(decoder.io)
+
+            # Unknown-record-type case (header decoded as Tuple). Skip.
+            # `record_length` is in 4-byte units; we already consumed the
+            # 2 header bytes (length + rtype).
+            if hd_result isa Tuple
+                _, _, record_length = hd_result
+                skip(decoder.io, Int(record_length) * LENGTH_MULTIPLIER - 2)
+                continue
+            end
+
+            hd = hd_result
+
+            # Data record: matches expected rtype, or OHLCV-variant when T is OHLCVMsg.
+            is_match = hd.rtype == expected_rtype ||
+                       (T === OHLCVMsg && hd.rtype in (RType.OHLCV_1S_MSG,
+                                                      RType.OHLCV_1M_MSG,
+                                                      RType.OHLCV_1H_MSG,
+                                                      RType.OHLCV_1D_MSG))
+            if is_match
+                buffer[] = _read_typed_record_stream(decoder, T, hd)
+                f_data(buffer[])
+                continue
+            end
+
+            # Control records: route via the generic Union dispatch.
+            if hd.rtype == RType.ERROR_MSG ||
+               hd.rtype == RType.SYSTEM_MSG ||
+               hd.rtype == RType.SYMBOL_MAPPING_MSG
+                rec = read_record_dispatch(decoder, hd, hd.rtype)
+                rec === nothing || f_control(rec)
+                continue
+            end
+
+            # Unknown / unsupported rtype: skip. hd.length is in 4-byte units;
+            # 16 bytes of header already consumed.
+            skip(decoder.io, Int(hd.length) * LENGTH_MULTIPLIER - 16)
+        end
+    finally
         if decoder.io !== decoder.base_io
             close(decoder.io)
         end

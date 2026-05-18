@@ -312,6 +312,20 @@ function write_record(encoder::DBNEncoder, record)
     write_record_complex(encoder, record)
 end
 
+# Write a Julia String into a fixed-width null-padded char array of `n` bytes.
+# Truncates if too long; pads with NULs if too short. Used for SymbolMappingMsg
+# and other records with fixed-length C-string fields.
+@inline function _write_fixed_string(io::IO, s::AbstractString, n::Int)
+    bytes = Vector{UInt8}(String(s))
+    if length(bytes) >= n
+        write(io, view(bytes, 1:n))
+    else
+        write(io, bytes)
+        write(io, zeros(UInt8, n - length(bytes)))
+    end
+    return nothing
+end
+
 # Fallback for complex types that need field-by-field writing
 function write_record_complex(encoder::DBNEncoder, record)
     io = encoder.io
@@ -761,46 +775,59 @@ function write_record_complex(encoder::DBNEncoder, record)
         
     elseif isa(record, ErrorMsg)
         write_record_header(io, record.hd)
-        # Write error message string with null terminator
+        # Write error message string with null terminator, padding to fill the
+        # payload size implied by hd.length (in 4-byte units).
+        target = Int(record.hd.length) * LENGTH_MULTIPLIER - 16
         err_bytes = Vector{UInt8}(record.err)
-        write(io, err_bytes)
+        written = 0
+        write(io, err_bytes); written += length(err_bytes)
         if length(err_bytes) == 0 || err_bytes[end] != 0
-            write(io, UInt8(0))  # Null terminator
+            write(io, UInt8(0)); written += 1
         end
-        
+        if written < target
+            write(io, zeros(UInt8, target - written))
+        end
+
+
     elseif isa(record, SymbolMappingMsg)
+        # Spec-compliant SymbolMappingMsg layout (depends on DBN version):
+        #   v1:  stype_in_symbol[22] | stype_out_symbol[22] | pad(4) | start_ts(8) | end_ts(8)
+        #        (no explicit stype_in/stype_out bytes in v1)
+        #   v2+: stype_in(1) | stype_in_symbol[71] | stype_out(1) | stype_out_symbol[71] |
+        #        start_ts(8) | end_ts(8)
         write_record_header(io, record.hd)
-        write(io, UInt8(record.stype_in))
-        write(io, zeros(UInt8, 3))  # Padding
-        
-        # Write input symbol with length prefix
-        stype_in_bytes = Vector{UInt8}(record.stype_in_symbol)
-        write(io, htol(UInt16(length(stype_in_bytes))))
-        write(io, stype_in_bytes)
-        
-        write(io, UInt8(record.stype_out))
-        write(io, zeros(UInt8, 3))  # Padding
-        
-        # Write output symbol with length prefix
-        stype_out_bytes = Vector{UInt8}(record.stype_out_symbol)
-        write(io, htol(UInt16(length(stype_out_bytes))))
-        write(io, stype_out_bytes)
-        
-        write(io, record.start_ts)
-        write(io, record.end_ts)
-        
+        if encoder.metadata.version == 1
+            _write_fixed_string(io, record.stype_in_symbol,  22)
+            _write_fixed_string(io, record.stype_out_symbol, 22)
+            write(io, zeros(UInt8, 4))  # padding for 8-byte ts alignment
+            write(io, record.start_ts)
+            write(io, record.end_ts)
+        else
+            sym_len = 71
+            write(io, UInt8(record.stype_in))
+            _write_fixed_string(io, record.stype_in_symbol, sym_len)
+            write(io, UInt8(record.stype_out))
+            _write_fixed_string(io, record.stype_out_symbol, sym_len)
+            write(io, record.start_ts)
+            write(io, record.end_ts)
+        end
+
+
     elseif isa(record, SystemMsg)
         write_record_header(io, record.hd)
-        # Write message string
+        # Write msg + null + code + null, padded to the payload size implied by
+        # hd.length (in 4-byte units).
+        target = Int(record.hd.length) * LENGTH_MULTIPLIER - 16
         msg_bytes = Vector{UInt8}(record.msg)
-        write(io, msg_bytes)
-        write(io, UInt8(0))  # Null terminator
-        
-        # Write code string  
         code_bytes = Vector{UInt8}(record.code)
-        write(io, code_bytes)
+        write(io, msg_bytes); written = length(msg_bytes)
+        write(io, UInt8(0)); written += 1
+        write(io, code_bytes); written += length(code_bytes)
         if length(code_bytes) == 0 || code_bytes[end] != 0
-            write(io, UInt8(0))  # Null terminator
+            write(io, UInt8(0)); written += 1
+        end
+        if written < target
+            write(io, zeros(UInt8, target - written))
         end
     end
 end

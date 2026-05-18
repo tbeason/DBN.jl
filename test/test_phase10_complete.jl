@@ -3,6 +3,7 @@ using DBN
 using Dates
 using Statistics
 using BenchmarkTools
+using DataFrames   # for nrow / ncol on dbn_to_csv / dbn_to_parquet / records_to_dataframe output
 
 # Phase 10: Complete Integration and Performance Testing
 @testset "Phase 10: Integration and Performance Testing" begin
@@ -218,10 +219,10 @@ using BenchmarkTools
                     @test ncol(df) > 0
                     println("  Exported $(nrow(df)) records to CSV")
                 finally
-                    rm(temp_csv, force=true)
+                    safe_rm(temp_csv)   # GC.gc() + retry handles Windows EBUSY
                 end
             end
-            
+
             @testset "JSON Export" begin
                 temp_json = tempname() * ".json"
                 try
@@ -232,10 +233,10 @@ using BenchmarkTools
                     @test length(output["records"]) > 0
                     println("  Exported $(length(output["records"])) records to JSON")
                 finally
-                    rm(temp_json, force=true)
+                    safe_rm(temp_json)
                 end
             end
-            
+
             @testset "Parquet Export" begin
                 temp_parquet = tempname() * ".parquet"
                 try
@@ -245,7 +246,7 @@ using BenchmarkTools
                     @test ncol(df) > 0
                     println("  Exported $(nrow(df)) records to Parquet")
                 finally
-                    rm(temp_parquet, force=true)
+                    safe_rm(temp_parquet)
                 end
             end
             

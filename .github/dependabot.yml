@@ -1,0 +1,23 @@
+# Dependabot config covering Julia deps (replaces CompatHelper, which is in
+# maintenance mode as of Feb 2026) and GitHub Actions versions.
+version: 2
+updates:
+  - package-ecosystem: julia
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      julia-deps:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        update-types:
+          - minor
+          - patch

@@ -23,6 +23,7 @@ of making a syscall.
 mutable struct BufferedReader{IO_T <: IO} <: IO
     io::IO_T
     buffer::Vector{UInt8}
+    refill_tmp::Vector{UInt8}   # reused scratch for residual-preserving refill
     buffer_pos::Int
     buffer_size::Int
     total_read::Int
@@ -30,7 +31,11 @@ mutable struct BufferedReader{IO_T <: IO} <: IO
     function BufferedReader(io::IO_T, buffer_size::Int=65536) where {IO_T <: IO}
         # 64KB buffer is a good balance between memory and syscall reduction
         buffer = Vector{UInt8}(undef, buffer_size)
-        new{IO_T}(io, buffer, 1, 0, 0)
+        # Pre-allocate the refill scratch buffer so the slow path is allocation-
+        # free. Sized to match `buffer` (the worst case is residual == 0, in
+        # which case we read up to the full buffer length into the scratch).
+        refill_tmp = Vector{UInt8}(undef, buffer_size)
+        new{IO_T}(io, buffer, refill_tmp, 1, 0, 0)
     end
 end
 
@@ -41,9 +46,36 @@ Refill the internal buffer by reading from the underlying I/O stream.
 Makes a single syscall to read up to `buffer_size` bytes.
 """
 @inline function refill_buffer!(reader::BufferedReader)
-    # Read into buffer (single syscall)
-    reader.buffer_size = readbytes!(reader.io, reader.buffer)
+    if reader.buffer_pos > reader.buffer_size
+        # Fast path: buffer fully consumed. Original single-syscall refill.
+        reader.buffer_size = readbytes!(reader.io, reader.buffer)
+        reader.buffer_pos = 1
+        return reader.buffer_size
+    end
+    return _refill_keep_residual!(reader)
+end
+
+@noinline function _refill_keep_residual!(reader::BufferedReader)
+    residual = reader.buffer_size - reader.buffer_pos + 1
+    if reader.buffer_pos > 1
+        @inbounds for i in 1:residual
+            reader.buffer[i] = reader.buffer[reader.buffer_pos + i - 1]
+        end
+    end
     reader.buffer_pos = 1
+    if residual >= length(reader.buffer)
+        reader.buffer_size = residual
+        return residual
+    end
+    capacity = length(reader.buffer) - residual
+    tmp = reader.refill_tmp  # pre-allocated scratch; no per-call malloc
+    new_bytes = readbytes!(reader.io, tmp, capacity)
+    if new_bytes > 0
+        @inbounds for i in 1:new_bytes
+            reader.buffer[residual + i] = tmp[i]
+        end
+    end
+    reader.buffer_size = residual + new_bytes
     return reader.buffer_size
 end
 

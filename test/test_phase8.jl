@@ -196,9 +196,12 @@ using Dates
         )
         
         @testset "ErrorMsg Write/Read" begin
-            # Create an ErrorMsg
+            # Create an ErrorMsg. hd.length is in 4-byte units (LENGTH_MULTIPLIER).
             err_text = "Connection timeout occurred"
-            err_length = UInt8(16 + length(err_text) + 1)  # header + message + null terminator
+            payload_bytes = length(err_text) + 1  # message + null terminator
+            total_bytes = 16 + payload_bytes
+            padded = ((total_bytes + 3) ÷ 4) * 4   # round up to 4-byte boundary
+            err_length = UInt8(padded ÷ 4)
             error_msg = ErrorMsg(
                 RecordHeader(err_length, RType.ERROR_MSG, UInt16(0), UInt32(0), 1609459200000000000),
                 err_text
@@ -217,11 +220,12 @@ using Dates
         end
         
         @testset "SymbolMappingMsg Write/Read" begin
-            # Create a SymbolMappingMsg
+            # DBN v2/v3 SymbolMappingMsg layout (the encoder writes for DBN_VERSION=3):
+            #   header(16) + stype_in(1) + sym[71] + stype_out(1) + sym[71] + start_ts(8) + end_ts(8) = 176
+            #   hd.length = 176 / 4 = 44
             in_symbol = "AAPL.NASDAQ"
             out_symbol = "12345"
-            # Length: header(16) + stype_in(1) + pad(3) + len(2) + in_symbol + stype_out(1) + pad(3) + len(2) + out_symbol + timestamps(16)
-            sym_length = UInt8(16 + 1 + 3 + 2 + length(in_symbol) + 1 + 3 + 2 + length(out_symbol) + 16)
+            sym_length = UInt8(44)
             symbol_mapping = SymbolMappingMsg(
                 RecordHeader(sym_length, RType.SYMBOL_MAPPING_MSG, UInt16(0), UInt32(0), 1609459200000000000),
                 SType.RAW_SYMBOL,
@@ -248,10 +252,13 @@ using Dates
         end
         
         @testset "SystemMsg Write/Read" begin
-            # Create a SystemMsg
+            # Create a SystemMsg. hd.length is in 4-byte units.
             msg_text = "Market open notification"
             code_text = "OPEN"
-            msg_length = UInt8(16 + length(msg_text) + 1 + length(code_text) + 1)  # header + msg + null + code + null
+            payload_bytes = length(msg_text) + 1 + length(code_text) + 1   # msg + null + code + null
+            total_bytes = 16 + payload_bytes
+            padded = ((total_bytes + 3) ÷ 4) * 4
+            msg_length = UInt8(padded ÷ 4)
             system_msg = SystemMsg(
                 RecordHeader(msg_length, RType.SYSTEM_MSG, UInt16(0), UInt32(0), 1609459200000000000),
                 msg_text,
@@ -272,19 +279,28 @@ using Dates
         end
         
         @testset "Mixed Message Types Write/Read" begin
-            # Test writing multiple message types together
+            # Test writing multiple message types together. hd.length is in 4-byte units.
+            err_payload = 10 + 1                       # "Test error" + null
+            err_total   = 16 + err_payload             # 27 → pad to 28
+            err_units   = UInt8(((err_total + 3) ÷ 4)) # 7
+
+            sys_payload = 19 + 1 + 4 + 1               # msg + null + code + null
+            sys_total   = 16 + sys_payload             # 41 → pad to 44
+            sys_units   = UInt8(((sys_total + 3) ÷ 4)) # 11
+
             messages = [
                 ErrorMsg(
-                    RecordHeader(UInt8(16 + 10 + 1), RType.ERROR_MSG, UInt16(0), UInt32(0), 1609459200000000000),
+                    RecordHeader(err_units, RType.ERROR_MSG, UInt16(0), UInt32(0), 1609459200000000000),
                     "Test error"
                 ),
                 SystemMsg(
-                    RecordHeader(UInt8(16 + 19 + 1 + 4 + 1), RType.SYSTEM_MSG, UInt16(0), UInt32(0), 1609459210000000000),
+                    RecordHeader(sys_units, RType.SYSTEM_MSG, UInt16(0), UInt32(0), 1609459210000000000),
                     "Test system message",
                     "TEST"
                 ),
                 SymbolMappingMsg(
-                    RecordHeader(UInt8(16 + 1 + 3 + 2 + 4 + 1 + 3 + 2 + 3 + 16), RType.SYMBOL_MAPPING_MSG, UInt16(0), UInt32(0), 1609459220000000000),
+                    # v3 layout: 16 + 1 + 71 + 1 + 71 + 8 + 8 = 176, /4 = 44
+                    RecordHeader(UInt8(44), RType.SYMBOL_MAPPING_MSG, UInt16(0), UInt32(0), 1609459220000000000),
                     SType.RAW_SYMBOL,
                     "TEST",
                     SType.INSTRUMENT_ID,
