@@ -124,6 +124,13 @@ _type_to_rtype_stream(::Type{OHLCVMsg}) = RType.OHLCV_1S_MSG  # Default to 1s
 _type_to_rtype_stream(::Type{StatusMsg}) = RType.STATUS_MSG
 _type_to_rtype_stream(::Type{InstrumentDefMsg}) = RType.INSTRUMENT_DEF_MSG
 _type_to_rtype_stream(::Type{ImbalanceMsg}) = RType.IMBALANCE_MSG
+_type_to_rtype_stream(::Type{StatMsg}) = RType.STAT_MSG
+_type_to_rtype_stream(::Type{CMBP1Msg}) = RType.CMBP_1_MSG
+_type_to_rtype_stream(::Type{CBBO1sMsg}) = RType.CBBO_1S_MSG
+_type_to_rtype_stream(::Type{CBBO1mMsg}) = RType.CBBO_1M_MSG
+_type_to_rtype_stream(::Type{TCBBOMsg}) = RType.TCBBO_MSG
+_type_to_rtype_stream(::Type{BBO1sMsg}) = RType.BBO_1S_MSG
+_type_to_rtype_stream(::Type{BBO1mMsg}) = RType.BBO_1M_MSG
 
 """
     record_type_for_dbn_schema(schema::Schema.T) -> Union{Type, Nothing}
@@ -141,6 +148,7 @@ function record_type_for_dbn_schema(schema::Schema.T)
     schema == Schema.MBO        && return MBOMsg
     schema == Schema.MBP_1      && return MBP1Msg
     schema == Schema.MBP_10     && return MBP10Msg
+    schema == Schema.TBBO       && return MBP1Msg   # TBBO records are MBP1Msg layout
     schema == Schema.OHLCV_1S   && return OHLCVMsg
     schema == Schema.OHLCV_1M   && return OHLCVMsg
     schema == Schema.OHLCV_1H   && return OHLCVMsg
@@ -148,6 +156,13 @@ function record_type_for_dbn_schema(schema::Schema.T)
     schema == Schema.DEFINITION && return InstrumentDefMsg
     schema == Schema.STATUS     && return StatusMsg
     schema == Schema.IMBALANCE  && return ImbalanceMsg
+    schema == Schema.STATISTICS && return StatMsg
+    schema == Schema.CMBP_1     && return CMBP1Msg
+    schema == Schema.CBBO_1S    && return CBBO1sMsg
+    schema == Schema.CBBO_1M    && return CBBO1mMsg
+    schema == Schema.TCBBO      && return TCBBOMsg
+    schema == Schema.BBO_1S     && return BBO1sMsg
+    schema == Schema.BBO_1M     && return BBO1mMsg
     return nothing
 end
 
@@ -182,6 +197,34 @@ end
 
 @inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{ImbalanceMsg}, hd::RecordHeader)
     return read_imbalance_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{StatMsg}, hd::RecordHeader)
+    return read_stat_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{CMBP1Msg}, hd::RecordHeader)
+    return read_cmbp1_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{CBBO1sMsg}, hd::RecordHeader)
+    return read_cbbo1s_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{CBBO1mMsg}, hd::RecordHeader)
+    return read_cbbo1m_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{TCBBOMsg}, hd::RecordHeader)
+    return read_tcbbo_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{BBO1sMsg}, hd::RecordHeader)
+    return read_bbo1s_msg(decoder, hd)
+end
+
+@inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{BBO1mMsg}, hd::RecordHeader)
+    return read_bbo1m_msg(decoder, hd)
 end
 
 # ============================================================================
