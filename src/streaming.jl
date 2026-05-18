@@ -308,6 +308,112 @@ function _foreach_record_impl(f::Function, decoder::DBNDecoder, ::Type{T}) where
     end
 end
 
+# ============================================================================
+# Typed Streaming With Separate Control-Record Routing
+# ============================================================================
+
+"""
+    foreach_record_with_control(f_data, f_control, filename::String, ::Type{T}) where T
+    foreach_record_with_control(f_data, f_control, decoder::DBNDecoder, ::Type{T}) where T
+
+Like [`foreach_record`](@ref) but split into two callbacks: `f_data` receives
+concrete `T`-typed records (the expected schema type) via a reused `Ref{T}()`
+buffer with no per-record allocation, while `f_control` receives the
+Union-typed value for *control* records (`ErrorMsg`, `SystemMsg`,
+`SymbolMappingMsg`) that can interleave with data on a live stream.
+
+The typed-record path is the same hot loop as `_foreach_record_impl` and
+achieves the same near-zero allocation profile. Control records do allocate
+the Union container (one per control record), but they are rare relative
+to data and don't contribute meaningfully to GC pressure.
+
+This is the primitive that backs the typed-channel live reader:
+data records flow into a `Channel{T}` and control records flow into a
+separate `Channel{DBNRecord}` for status/heartbeat/error handling.
+
+# Arguments
+- `f_data`: called as `f_data(rec::T)` for every record whose `rtype` matches
+  `_type_to_rtype_stream(T)` (or any OHLCV variant when `T === OHLCVMsg`).
+- `f_control`: called as `f_control(rec)` for every `ErrorMsg`, `SystemMsg`,
+  or `SymbolMappingMsg`. `rec` is one of those concrete types but typed
+  as the `DBNRecord` Union.
+- `filename` / `decoder`: same as [`foreach_record`](@ref).
+- `T`: the expected data record type (must have a `_type_to_rtype_stream`
+  overload — see [`record_type_for_dbn_schema`](@ref) for the supported set).
+
+Unknown rtypes (anything that's neither `T`-matching nor a control rtype)
+are silently skipped, matching `read_record`'s permissive behaviour. This
+mirrors what production live streams need: gateway-side schema additions
+shouldn't crash existing consumers.
+"""
+function foreach_record_with_control(f_data::Function, f_control::Function,
+                                     filename::String, ::Type{T}) where T
+    decoder = DBNDecoder(filename)
+    _foreach_record_with_control_impl(f_data, f_control, decoder, T)
+    return nothing
+end
+
+function foreach_record_with_control(f_data::Function, f_control::Function,
+                                     decoder::DBNDecoder, ::Type{T}) where T
+    _foreach_record_with_control_impl(f_data, f_control, decoder, T)
+    return nothing
+end
+
+function _foreach_record_with_control_impl(f_data::Function, f_control::Function,
+                                           decoder::DBNDecoder, ::Type{T}) where T
+    expected_rtype = _type_to_rtype_stream(T)
+    # Reused buffer for the typed-record path — same trick as
+    # _foreach_record_impl; immutable bitstype, value-copied through `f_data`.
+    buffer = Ref{T}()
+
+    try
+        while !eof(decoder.io)
+            hd_result = read_record_header(decoder.io)
+
+            # Unknown-record-type case (header decoded as Tuple). Skip.
+            if hd_result isa Tuple
+                _, _, record_length = hd_result
+                skip(decoder.io, record_length - 2)
+                continue
+            end
+
+            hd = hd_result
+
+            # Data record: matches expected rtype, or OHLCV-variant when T is OHLCVMsg.
+            is_match = hd.rtype == expected_rtype ||
+                       (T === OHLCVMsg && hd.rtype in (RType.OHLCV_1S_MSG,
+                                                      RType.OHLCV_1M_MSG,
+                                                      RType.OHLCV_1H_MSG,
+                                                      RType.OHLCV_1D_MSG))
+            if is_match
+                buffer[] = _read_typed_record_stream(decoder, T, hd)
+                f_data(buffer[])
+                continue
+            end
+
+            # Control records: route via the generic Union dispatch.
+            if hd.rtype == RType.ERROR_MSG ||
+               hd.rtype == RType.SYSTEM_MSG ||
+               hd.rtype == RType.SYMBOL_MAPPING_MSG
+                rec = read_record_dispatch(decoder, hd, hd.rtype)
+                rec === nothing || f_control(rec)
+                continue
+            end
+
+            # Unknown / unsupported rtype: skip. hd.length is in 4-byte units;
+            # 16 bytes of header already consumed.
+            skip(decoder.io, Int(hd.length) * LENGTH_MULTIPLIER - 16)
+        end
+    finally
+        if decoder.io !== decoder.base_io
+            close(decoder.io)
+        end
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
+    end
+end
+
 # Convenience functions for callback-based streaming
 
 """
