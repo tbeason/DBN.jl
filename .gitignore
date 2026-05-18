@@ -4,6 +4,7 @@ Manifest.toml
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # Test artifacts
 *.dbn
