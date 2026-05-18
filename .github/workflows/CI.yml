@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -24,8 +24,6 @@ jobs:
           - ubuntu-latest
           - macOS-latest
           - windows-latest
-        arch:
-          - x64
     steps:
       - uses: actions/checkout@v6
 
@@ -93,7 +91,9 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
+          # Omit `arch` so setup-julia picks the runner's native arch
+          # (macOS-latest is now arm64; setup-julia@v3 errors hard if we
+          # force x64 on an arm64 runner).
 
       - uses: julia-actions/cache@v3
 
