@@ -20,6 +20,19 @@ end
 Provides memory-efficient streaming access to DBN files without loading
 the entire file into memory. Automatically detects and handles Zstd compression.
 Gracefully skips unknown record types.
+
+# Performance
+`DBNStream` returns the abstract `Union` element type, so each iteration boxes
+the record and allocates roughly ~120 bytes per record. This is acceptable for
+exploration / debugging but bottlenecks high-throughput workloads. For
+performance-critical loops over a known-schema file, prefer
+[`foreach_record`](@ref):
+
+```julia
+foreach_record("data.dbn", DBN.TradeMsg) do rec
+    # near-zero allocation per record
+end
+```
 """
 mutable struct DBNStream
     decoder::DBNDecoder
@@ -111,6 +124,32 @@ _type_to_rtype_stream(::Type{OHLCVMsg}) = RType.OHLCV_1S_MSG  # Default to 1s
 _type_to_rtype_stream(::Type{StatusMsg}) = RType.STATUS_MSG
 _type_to_rtype_stream(::Type{InstrumentDefMsg}) = RType.INSTRUMENT_DEF_MSG
 _type_to_rtype_stream(::Type{ImbalanceMsg}) = RType.IMBALANCE_MSG
+
+"""
+    record_type_for_dbn_schema(schema::Schema.T) -> Union{Type, Nothing}
+
+Map a DBN `Schema` to the concrete record struct it produces, when the schema
+is type-pure AND DBN.jl has a `_read_typed_record_stream` overload for that
+type. Returns `nothing` otherwise (callers should fall back to the generic
+`read_record` Union path).
+
+Used by `read_dbn` and `read_dbn_with_metadata` to dispatch to the typed
+zero-allocation reader when possible.
+"""
+function record_type_for_dbn_schema(schema::Schema.T)
+    schema == Schema.TRADES     && return TradeMsg
+    schema == Schema.MBO        && return MBOMsg
+    schema == Schema.MBP_1      && return MBP1Msg
+    schema == Schema.MBP_10     && return MBP10Msg
+    schema == Schema.OHLCV_1S   && return OHLCVMsg
+    schema == Schema.OHLCV_1M   && return OHLCVMsg
+    schema == Schema.OHLCV_1H   && return OHLCVMsg
+    schema == Schema.OHLCV_1D   && return OHLCVMsg
+    schema == Schema.DEFINITION && return InstrumentDefMsg
+    schema == Schema.STATUS     && return StatusMsg
+    schema == Schema.IMBALANCE  && return ImbalanceMsg
+    return nothing
+end
 
 # Type-stable record reading helpers (shared by eager read and callback API)
 @inline function _read_typed_record_stream(decoder::DBNDecoder, ::Type{TradeMsg}, hd::RecordHeader)

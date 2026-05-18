@@ -1183,6 +1183,35 @@ end
 function read_dbn(filename::String)
     decoder = DBNDecoder(filename)  # This now handles compression automatically
 
+    # Schema-aware fast path: when the metadata's schema maps to a single
+    # concrete record type and DBN.jl has a typed reader for it, dispatch
+    # to `read_dbn_typed` instead. The typed path returns `Vector{T}` (still
+    # a subtype of Vector{<:DBNRecord} for callers that iterate generically)
+    # and avoids the per-push Union allocation that dominates GC time on
+    # the generic path.
+    #
+    # If the file's records don't actually match the declared schema (mixed
+    # files, files containing only control records like ErrorMsg/SystemMsg
+    # under a data-schema label), `read_dbn_typed` raises an
+    # `ErrorException`; fall back to the generic loop in that case so
+    # `read_dbn`'s historical permissive semantics are preserved.
+    T = record_type_for_dbn_schema(decoder.metadata.schema)
+    if T !== nothing
+        if decoder.io !== decoder.base_io
+            close(decoder.io)
+        end
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
+        try
+            return read_dbn_typed(filename, T)
+        catch e
+            isa(e, ErrorException) || rethrow()
+            # rtype mismatch — reopen and fall through to generic.
+            decoder = DBNDecoder(filename)
+        end
+    end
+
     # Pre-allocate records vector
     # Two strategies: exact pre-allocation if limit known, or dynamic with sizehint
     has_exact_limit = decoder.metadata.limit !== nothing && decoder.metadata.limit > 0
@@ -1276,6 +1305,27 @@ println("Records: \$(length(records))")
 """
 function read_dbn_with_metadata(filename::String)
     decoder = DBNDecoder(filename)  # This now handles compression automatically
+
+    # Schema-aware fast path (same rationale as `read_dbn`): when the metadata
+    # schema is type-pure, capture metadata first and then delegate to the
+    # typed reader, returning (metadata, Vector{T}) where T is concrete.
+    # Falls back to the generic loop on rtype-mismatch (mixed files, etc.).
+    T = record_type_for_dbn_schema(decoder.metadata.schema)
+    if T !== nothing
+        metadata = decoder.metadata
+        if decoder.io !== decoder.base_io
+            close(decoder.io)
+        end
+        if isa(decoder.base_io, IOStream)
+            close(decoder.base_io)
+        end
+        try
+            return metadata, read_dbn_typed(filename, T)
+        catch e
+            isa(e, ErrorException) || rethrow()
+            decoder = DBNDecoder(filename)
+        end
+    end
 
     # Pre-allocate records vector with size hint
     estimated_count = if decoder.metadata.limit !== nothing && decoder.metadata.limit > 0
