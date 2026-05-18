@@ -17,6 +17,7 @@ include("test_utils.jl")
     include("test_phase9_working.jl")  # Edge cases and error handling
     include("test_phase10_complete.jl")  # Integration and performance testing
     include("test_convenience_functions.jl")  # Test all convenience read_*/foreach_* functions
+    include("test_phase11_typed_with_control.jl")  # foreach_record_with_control: typed data + Union control split
 
     # Run compatibility tests if the Rust CLI is available
     dbn_cli_path = if Sys.iswindows()
