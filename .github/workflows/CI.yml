@@ -27,7 +27,7 @@ jobs:
         arch:
           - x64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Install Rust for compatibility tests with official dbn-cli
       - name: Install Rust toolchain
