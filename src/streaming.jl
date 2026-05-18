@@ -315,10 +315,12 @@ function _foreach_record_impl(f::Function, decoder::DBNDecoder, ::Type{T}) where
             # Read header
             hd_result = read_record_header(decoder.io)
 
-            # Handle unknown record types
+            # Handle unknown record types. `record_length` from
+            # read_record_header is in 4-byte units; the 2 bytes
+            # (length + rtype) of the header are already consumed.
             if hd_result isa Tuple
                 _, rtype_raw, record_length = hd_result
-                skip(decoder.io, record_length - 2)
+                skip(decoder.io, Int(record_length) * LENGTH_MULTIPLIER - 2)
                 continue
             end
 
@@ -414,9 +416,11 @@ function _foreach_record_with_control_impl(f_data::Function, f_control::Function
             hd_result = read_record_header(decoder.io)
 
             # Unknown-record-type case (header decoded as Tuple). Skip.
+            # `record_length` is in 4-byte units; we already consumed the
+            # 2 header bytes (length + rtype).
             if hd_result isa Tuple
                 _, _, record_length = hd_result
-                skip(decoder.io, record_length - 2)
+                skip(decoder.io, Int(record_length) * LENGTH_MULTIPLIER - 2)
                 continue
             end
 
