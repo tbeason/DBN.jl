@@ -155,6 +155,96 @@ using DBN
         end
     end
 
+    @testset "unknown rtype is skipped without desyncing the stream" begin
+        # Regression test for the skip-length bug: the unknown-rtype branch
+        # must skip `length_units * 4 - 2` bytes (record_length is in
+        # 4-byte units), not `length_units - 2`. The bug would leave the
+        # stream cursor mid-record, corrupting every subsequent record.
+        #
+        # Construct a stream manually: one valid TradeMsg, then a record
+        # with an unknown rtype (0xFE) and length = 8 units (= 32 bytes
+        # total, 30 bytes body after the 2-byte header), then a second
+        # valid TradeMsg. With the bug the post-unknown TradeMsg would be
+        # read at the wrong offset and either fail or yield garbage data.
+        metadata = DBN.Metadata(
+            DBN.DBN_VERSION, "TEST.MOCK", DBN.Schema.TRADES,
+            Int64(0), nothing, nothing, nothing,
+            DBN.SType.INSTRUMENT_ID, false,
+            ["AAPL"], String[], String[],
+            Tuple{String,String,Int64,Int64}[],
+        )
+        ts0 = Int64(1_700_000_000_000_000_000)
+
+        # Write metadata + first trade via the standard encoder, then
+        # append the unknown-rtype bytes + second trade by hand.
+        tmp, io = mktemp(); close(io)
+        try
+            # Use a temp file written via the encoder to get the metadata
+            # header + first trade correctly framed.
+            tr1 = DBN.TradeMsg(
+                DBN.RecordHeader(UInt8(0), DBN.RType.MBP_0_MSG,
+                                 UInt16(1), UInt32(100), ts0),
+                Int64(100_000_000_000), UInt32(50),
+                DBN.Action.TRADE, DBN.Side.ASK, UInt8(0), UInt8(1),
+                ts0, Int32(0), UInt32(1))
+            DBN.write_dbn(tmp, metadata, DBN.DBNRecord[tr1])
+
+            # Append an unknown-rtype record (8 units = 32 bytes total,
+            # body 30 bytes of garbage) + a second TradeMsg.
+            tr2 = DBN.TradeMsg(
+                DBN.RecordHeader(UInt8(0), DBN.RType.MBP_0_MSG,
+                                 UInt16(1), UInt32(200), ts0 + 1),
+                Int64(200_000_000_000), UInt32(75),
+                DBN.Action.TRADE, DBN.Side.ASK, UInt8(0), UInt8(1),
+                ts0 + 1, Int32(0), UInt32(2))
+
+            # Encode tr2 to a temporary buffer to grab its bytes.
+            tmp2, io2 = mktemp(); close(io2)
+            DBN.write_dbn(tmp2, metadata, DBN.DBNRecord[tr2])
+            tr2_bytes = read(tmp2)
+            rm(tmp2; force = true)
+
+            # We need just the record portion of tr2_bytes, not the metadata
+            # header. The simplest approach: read tr2_bytes minus the metadata.
+            # Use the encoder's metadata header to find the record start.
+            md_bytes = read(tmp)   # has header + tr1 only
+            # md_bytes layout: dbn header + tr1.
+            # tr2_bytes layout: dbn header + tr2.
+            # The dbn header length is constant for the same metadata, so
+            # the record portion of tr2_bytes starts at the same offset as
+            # the record portion of md_bytes (which is after the header,
+            # i.e. md_bytes[end - tr1_bytes_len + 1 : end]).
+            # Easier: compute header length from tr2_bytes - tr1 bytes len.
+            # tr1 is a TradeMsg = 48 bytes.
+            header_len = length(tr2_bytes) - 48
+            tr2_record = tr2_bytes[header_len + 1 : end]
+
+            # Unknown-rtype record: 8 units = 32 bytes total. Layout:
+            # [length(1)=8] [rtype(1)=0xFE] [30 bytes body]
+            unknown_record = vcat(UInt8[8, 0xFE], rand(UInt8, 30))
+
+            # Append unknown-record + tr2-record to the file.
+            open(tmp, "a") do io
+                write(io, unknown_record)
+                write(io, tr2_record)
+            end
+
+            trades = DBN.TradeMsg[]
+            controls = Any[]
+            DBN.foreach_record_with_control(
+                rec -> push!(trades, rec),
+                ctrl -> push!(controls, ctrl),
+                tmp, DBN.TradeMsg)
+            @test length(trades) == 2
+            @test trades[1].sequence == UInt32(1)
+            @test trades[2].sequence == UInt32(2)
+            @test trades[2].price == Int64(200_000_000_000)
+            @test length(controls) == 0   # unknown rtype was skipped, not routed
+        finally
+            rm(tmp; force = true)
+        end
+    end
+
     @testset "data-path callback near-zero allocation" begin
         # Generate a pure-data fixture and time the callback path.
         metadata = DBN.Metadata(
