@@ -90,7 +90,7 @@ jobs:
           cd "$workspace\dbn"
           cargo build --release
 
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
