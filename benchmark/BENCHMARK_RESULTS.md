@@ -1,5 +1,5 @@
 ================================================================================
-DBN.jl COMPREHENSIVE PERFORMANCE COMPARISON
+DatabentoBinaryEncoding.jl COMPREHENSIVE PERFORMANCE COMPARISON
 ================================================================================
 
 

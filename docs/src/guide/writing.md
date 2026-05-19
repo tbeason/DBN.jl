@@ -1,6 +1,6 @@
 # Writing Data
 
-DBN.jl provides two main approaches for writing DBN files: bulk writing for pre-existing data, and streaming for real-time data ingestion.
+DatabentoBinaryEncoding.jl provides two main approaches for writing DBN files: bulk writing for pre-existing data, and streaming for real-time data ingestion.
 
 ## Quick Reference
 
@@ -16,7 +16,7 @@ DBN.jl provides two main approaches for writing DBN files: bulk writing for pre-
 Write a collection of records with metadata:
 
 ```julia
-using DBN, Dates
+using DatabentoBinaryEncoding, Dates
 
 # Your records (e.g., from reading another file or creating synthetically)
 records = [trade1, trade2, trade3, ...]
@@ -125,7 +125,7 @@ For writing data as it arrives (real-time or sequential processing):
 ### Basic Usage
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Create a streaming writer
 writer = DBNStreamWriter("output.dbn", "XNAS", Schema.TRADES)
@@ -157,7 +157,7 @@ close_writer!(writer)
 ### Real-time Data Example
 
 ```julia
-using DBN, Dates
+using DatabentoBinaryEncoding, Dates
 
 # Create writer for live data
 writer = DBNStreamWriter("live_trades.dbn.zst", "XNAS", Schema.TRADES)
@@ -198,7 +198,7 @@ end
 ### Trade Messages
 
 ```julia
-using DBN, Dates
+using DatabentoBinaryEncoding, Dates
 
 function create_trade(price::Float64, size::Int, side::Side.T,
                      instrument_id::Int = 12345,
@@ -393,7 +393,7 @@ write_dbn("output.dbn", metadata, records)
 ## Error Handling
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 try
     writer = DBNStreamWriter("output.dbn", "XNAS", Schema.TRADES)

@@ -1,6 +1,6 @@
 # Performance
 
-DBN.jl is designed for high-throughput market data processing. This page provides performance characteristics, benchmarks, and optimization tips.
+DatabentoBinaryEncoding.jl is designed for high-throughput market data processing. This page provides performance characteristics, benchmarks, and optimization tips.
 
 ## Performance Summary
 
@@ -201,24 +201,24 @@ end
 
 ## Comparison with Other Implementations
 
-DBN.jl performance compared to official implementations:
+DatabentoBinaryEncoding.jl performance compared to official implementations:
 
 ### Read Performance (Trades, Uncompressed)
 
 | Implementation | Size | Throughput |
 |----------------|------|------------|
-| **DBN.jl (callback)** | 10M | 42.37 M/s |
-| **DBN.jl (optimized)** | 10M | 27.94 M/s |
+| **DatabentoBinaryEncoding.jl (callback)** | 10M | 42.37 M/s |
+| **DatabentoBinaryEncoding.jl (optimized)** | 10M | 27.94 M/s |
 | Python databento-dbn | 10M | 9.23 M/s |
 | Rust dbn | - | (Reference) |
 
-DBN.jl callback streaming is **4.5x faster** than Python implementation.
+DatabentoBinaryEncoding.jl callback streaming is **4.5x faster** than Python implementation.
 
 ### Write Performance (Trades, Uncompressed)
 
 | Implementation | Size | Throughput |
 |----------------|------|------------|
-| **DBN.jl** | 10M | 11.57 M/s |
+| **DatabentoBinaryEncoding.jl** | 10M | 11.57 M/s |
 | Python databento-dbn | 10M | 43.79 M/s |
 
 Python has faster write performance due to optimized C extensions.
@@ -236,7 +236,7 @@ Performance scales with:
 Run benchmarks on your hardware:
 
 ```julia
-using DBN, BenchmarkTools
+using DatabentoBinaryEncoding, BenchmarkTools
 
 # Download test data or generate synthetic data
 # trades = generate_test_trades(10_000_000)

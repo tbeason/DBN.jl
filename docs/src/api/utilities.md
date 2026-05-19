@@ -14,7 +14,7 @@ float_to_price
 ### Usage Examples
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert DBN fixed-point price to float
 fixed_price = 1005000  # 100.5000 in fixed-point
@@ -49,7 +49,7 @@ to_nanoseconds
 ### Usage Examples
 
 ```julia
-using DBN, Dates
+using DatabentoBinaryEncoding, Dates
 
 # DateTime to nanoseconds
 dt = DateTime(2024, 1, 1, 9, 30, 0)
@@ -111,7 +111,7 @@ DBN_VERSION::UInt8 = 3    # Supported DBN version
 DBN uses special sentinel values to indicate undefined/missing data:
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Check for undefined price
 if trade.price == UNDEF_PRICE

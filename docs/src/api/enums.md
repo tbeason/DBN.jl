@@ -1,6 +1,6 @@
 # Enums API Reference
 
-Enumeration types used throughout DBN.jl.
+Enumeration types used throughout DatabentoBinaryEncoding.jl.
 
 ## Schema Types
 
@@ -115,7 +115,7 @@ Instrument classification:
 ### Working with Schemas
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Check schema type
 if metadata.schema == Schema.TRADES

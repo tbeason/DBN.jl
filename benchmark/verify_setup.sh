@@ -2,7 +2,7 @@
 # Verify benchmark suite setup
 
 echo "=================================================="
-echo "  DBN.jl Benchmark Suite Verification"
+echo "  DatabentoBinaryEncoding.jl Benchmark Suite Verification"
 echo "=================================================="
 echo
 
@@ -35,7 +35,7 @@ if command -v julia &> /dev/null; then
 
     # Check if DBN can be loaded
     echo "Testing DBN package load..."
-    julia --project=. -e 'using DBN; println("✓ DBN.jl loaded successfully")' 2>&1
+    julia --project=. -e 'using DatabentoBinaryEncoding; println("✓ DatabentoBinaryEncoding.jl loaded successfully")' 2>&1
 
     if [ $? -eq 0 ]; then
         echo
@@ -48,7 +48,7 @@ if command -v julia &> /dev/null; then
         echo
     else
         echo
-        echo "⚠ DBN.jl could not be loaded. Run:"
+        echo "⚠ DatabentoBinaryEncoding.jl could not be loaded. Run:"
         echo "  julia --project=. -e 'using Pkg; Pkg.instantiate()'"
         echo
     fi

@@ -1,6 +1,6 @@
 # Reading Data
 
-DBN.jl provides multiple ways to read DBN files, each optimized for different use cases. This guide helps you choose the right approach for your needs.
+DatabentoBinaryEncoding.jl provides multiple ways to read DBN files, each optimized for different use cases. This guide helps you choose the right approach for your needs.
 
 ## Quick Reference
 
@@ -43,7 +43,7 @@ Plus additional readers for other schemas. See the [API Reference](../api/readin
 
 **Example:**
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Read trades file
 trades = read_trades("AAPL_trades_2024-01-01.dbn.zst")
@@ -84,7 +84,7 @@ end
 
 **Example: Calculate VWAP**
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 total_price_volume = Ref(0.0)
 total_volume = Ref(0)
@@ -138,7 +138,7 @@ end
 
 **Example: Find First Record Matching Condition**
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 function find_first_large_trade(filename, threshold)
     for trade in DBNStream(filename)
@@ -175,7 +175,7 @@ metadata, records = read_dbn_with_metadata("file.dbn")
 
 **Example:**
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Quick look at a file
 metadata, records = read_dbn_with_metadata("unknown.dbn")
@@ -201,7 +201,7 @@ for record in DBNStream("data.dbn.zst")
 end
 ```
 
-No special handling needed - DBN.jl detects compression automatically!
+No special handling needed - DatabentoBinaryEncoding.jl detects compression automatically!
 
 ## Reading Metadata
 
@@ -300,7 +300,7 @@ end
 ## Error Handling
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 try
     records = read_dbn("file.dbn")

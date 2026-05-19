@@ -1,4 +1,4 @@
-# DBN.jl Performance Optimization Report
+# DatabentoBinaryEncoding.jl Performance Optimization Report
 
 **Date**: 2025-10-26
 **Branch**: `claude/benchmark-package-performance-011CUSRjJF6DMNNwX64UELMY`
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This report documents the performance optimization work on DBN.jl, including critical bug fixes, code quality improvements, and performance benchmarking against the official Rust implementation.
+This report documents the performance optimization work on DatabentoBinaryEncoding.jl, including critical bug fixes, code quality improvements, and performance benchmarking against the official Rust implementation.
 
 ### Key Achievements
 
@@ -19,7 +19,7 @@ This report documents the performance optimization work on DBN.jl, including cri
 
 ### Current Performance: Julia vs Rust vs Python
 
-| Metric | Julia DBN.jl | Rust dbn CLI | Python databento | Julia vs Rust | Julia vs Python |
+| Metric | Julia DatabentoBinaryEncoding.jl | Rust dbn CLI | Python databento | Julia vs Rust | Julia vs Python |
 |--------|--------------|--------------|------------------|---------------|-----------------|
 | **Large files (1M+ records)** | 1.18-1.45 M rec/s | 2.22-2.68 M rec/s | 10.04-11.90 M rec/s | **1.77-1.84x slower** | **7.73-10.13x slower** |
 | **Medium files (100K records)** | 0.83-0.89 M rec/s | 1.78-1.94 M rec/s | 9.90-10.02 M rec/s | **2.04-2.17x slower** | **11.11-11.48x slower** |
@@ -28,7 +28,7 @@ This report documents the performance optimization work on DBN.jl, including cri
 
 **Write Performance**: 2.0-2.2 M rec/s (excellent, competitive with Rust)
 
-**Note on Python Performance**: The Python databento client uses Rust bindings (`databento-dbn`) under the hood, essentially providing a thin wrapper over the Rust implementation. This explains its excellent performance - it's doing minimal work in Python, with the heavy lifting done by compiled Rust code. This is a different architecture than Julia DBN.jl which implements the full decoding in Julia.
+**Note on Python Performance**: The Python databento client uses Rust bindings (`databento-dbn`) under the hood, essentially providing a thin wrapper over the Rust implementation. This explains its excellent performance - it's doing minimal work in Python, with the heavy lifting done by compiled Rust code. This is a different architecture than Julia DatabentoBinaryEncoding.jl which implements the full decoding in Julia.
 
 ---
 
@@ -289,7 +289,7 @@ end
 
 ## Conclusion
 
-DBN.jl is currently **2.45x slower** than the Rust CLI implementation on average, which is a reasonable starting point for a Julia package. The write performance is already excellent at 2.0-2.2 M rec/s.
+DatabentoBinaryEncoding.jl is currently **2.45x slower** than the Rust CLI implementation on average, which is a reasonable starting point for a Julia package. The write performance is already excellent at 2.0-2.2 M rec/s.
 
 **Key findings**:
 - ✅ Critical bugs fixed (compression, world age)

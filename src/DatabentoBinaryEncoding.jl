@@ -1,11 +1,11 @@
 """
-    DBN
+    DatabentoBinaryEncoding
 
 Julia implementation of the Databento Binary Encoding (DBN) format for normalized market data.
 
 # Overview
 
-DBN.jl provides complete support for reading and writing DBN v3 format files with:
+DatabentoBinaryEncoding.jl provides complete support for reading and writing DBN v3 format files with:
 - Efficient streaming support for large files
 - Automatic Zstd compression/decompression  
 - All DBN v3 message types
@@ -44,7 +44,8 @@ DBN.jl provides complete support for reading and writing DBN v3 format files wit
 # Example Usage
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
+# Or, for terser internal references: `import DatabentoBinaryEncoding as DBN`
 
 # Reading data
 records = read_dbn("data.dbn")
@@ -75,7 +76,7 @@ close_writer!(writer)
 See the [DBN specification](https://databento.com/docs/standards-and-conventions/databento-binary-encoding) 
 for complete format documentation.
 """
-module DBN
+module DatabentoBinaryEncoding
 
 # All using statements at the top
 using Dates
@@ -123,4 +124,4 @@ export write_header, read_header!, write_record, read_record, finalize_encoder
 export dbn_to_csv, dbn_to_json, dbn_to_parquet, records_to_dataframe
 export json_to_dbn, parquet_to_dbn, csv_to_dbn
 
-end  # module DBN
+end  # module DatabentoBinaryEncoding

@@ -1,4 +1,4 @@
-# DBN.jl
+# DatabentoBinaryEncoding.jl
 
 Julia implementation of the Databento Binary Encoding (DBN) message encoding and storage format for normalized market data.
 
@@ -19,7 +19,7 @@ For more details, read the [introduction to DBN](https://databento.com/docs/stan
 
 ## Performance
 
-DBN.jl is optimized for high-throughput market data processing:
+DatabentoBinaryEncoding.jl is optimized for high-throughput market data processing:
 - **Read**: Up to 40M records/sec with near-zero-allocation callback streaming
 - **Write**: 11M records/sec with optimized bulk operations
 - **Type-specific readers** (`read_trades`, `read_mbo`, etc.) are 5-6x faster than generic `read_dbn()`
@@ -35,7 +35,7 @@ This package is not yet registered. Install directly from GitHub:
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/tbeason/DBN.jl")
+Pkg.add(url="https://github.com/tbeason/DatabentoBinaryEncoding.jl")
 ```
 
 ## Usage
@@ -43,7 +43,8 @@ Pkg.add(url="https://github.com/tbeason/DBN.jl")
 ### Reading DBN Files
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
+# Tip: `import DatabentoBinaryEncoding as DBN` gives you the terser `DBN.foo` prefix.
 
 # Read entire file into memory (fastest for bulk loading)
 records = read_dbn("trades.dbn")
@@ -72,7 +73,7 @@ println("Total: $(total[])")
 ### Writing DBN Files
 
 ```julia
-using DBN, Dates
+using DatabentoBinaryEncoding, Dates
 
 # Create metadata for trades
 metadata = Metadata(

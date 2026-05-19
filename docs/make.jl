@@ -1,14 +1,14 @@
 using Documenter
-using DBN
+using DatabentoBinaryEncoding
 
 makedocs(
-    sitename = "DBN.jl",
+    sitename = "DatabentoBinaryEncoding.jl",
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
-        canonical = "https://tbeason.github.io/DBN.jl",
+        canonical = "https://tbeason.github.io/DatabentoBinaryEncoding.jl",
         assets = String[],
     ),
-    modules = [DBN],
+    modules = [DatabentoBinaryEncoding],
     pages = [
         "Home" => "index.md",
         "Installation" => "installation.md",
@@ -35,7 +35,7 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/tbeason/DBN.jl.git",
+    repo = "github.com/tbeason/DatabentoBinaryEncoding.jl.git",
     devbranch = "main",
     push_preview = true,
 )

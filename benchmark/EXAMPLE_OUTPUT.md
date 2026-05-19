@@ -1,13 +1,13 @@
 # Example Benchmark Output
 
-This document shows example output from the DBN.jl benchmark suite.
+This document shows example output from the DatabentoBinaryEncoding.jl benchmark suite.
 
 ## Throughput Benchmark Example
 
 ```
 ████████████████████████████████████████████████████████████████████
 █                                                                  █
-█  DBN.jl THROUGHPUT BENCHMARK SUITE                              █
+█  DatabentoBinaryEncoding.jl THROUGHPUT BENCHMARK SUITE                              █
 █                                                                  █
 ████████████████████████████████████████████████████████████████████
 
@@ -134,7 +134,7 @@ Completed at: 2024-01-15 10:45:23
 
 ```
 ======================================================================
-DBN.jl BenchmarkTools Suite
+DatabentoBinaryEncoding.jl BenchmarkTools Suite
 ======================================================================
 
 Creating benchmark suite...
@@ -230,7 +230,7 @@ sys     0m0.012s
 ```
 **Throughput:** ~5.05 million records/second
 
-### Julia (DBN.jl)
+### Julia (DatabentoBinaryEncoding.jl)
 ```julia
 julia> @time read_dbn("trades.1m.dbn.zst")
   0.245000 seconds (450 allocations: 3.82 MiB)

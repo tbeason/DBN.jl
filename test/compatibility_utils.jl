@@ -1,6 +1,7 @@
 module CompatibilityUtils
 
-using DBN
+using DatabentoBinaryEncoding
+import DatabentoBinaryEncoding as DBN
 using Test
 using JSON3
 using StructTypes
