@@ -1,4 +1,4 @@
-name = "DBN"
+name = "DatabentoBinaryEncoding"
 uuid = "90689371-c8cb-40d1-831f-18033db90f74"
 authors = ["Tyler Beason <tbeas12@gmail.com>"]
 version = "0.1.0"

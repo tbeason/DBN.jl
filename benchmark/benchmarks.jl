@@ -8,7 +8,8 @@ min/median/max times, memory allocations, and garbage collection overhead.
 """
 
 using BenchmarkTools
-using DBN
+using DatabentoBinaryEncoding
+import DatabentoBinaryEncoding as DBN
 using DataFrames
 using CSV
 using Printf

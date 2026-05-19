@@ -5,16 +5,16 @@
 - Julia 1.12 or later
 - Operating System: Windows, macOS, or Linux
 
-## Installing DBN.jl
+## Installing DatabentoBinaryEncoding.jl
 
 !!! note
-    DBN.jl is not yet registered in the Julia General registry. Install directly from GitHub.
+    DatabentoBinaryEncoding.jl is not yet registered in the Julia General registry. Install directly from GitHub.
 
 ### From GitHub
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/tbeason/DBN.jl")
+Pkg.add(url="https://github.com/tbeason/DatabentoBinaryEncoding.jl")
 ```
 
 ### Development Installation
@@ -23,17 +23,17 @@ If you want to modify the package or contribute:
 
 ```julia
 using Pkg
-Pkg.develop(url="https://github.com/tbeason/DBN.jl")
+Pkg.develop(url="https://github.com/tbeason/DatabentoBinaryEncoding.jl")
 ```
 
 This will clone the repository to `~/.julia/dev/DBN`.
 
 ## Verifying Installation
 
-Test that DBN.jl is installed correctly:
+Test that DatabentoBinaryEncoding.jl is installed correctly:
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Check package version
 println(Pkg.TOML.parsefile(joinpath(dirname(pathof(DBN)), "..", "Project.toml"))["version"])
@@ -45,7 +45,7 @@ println(Pkg.TOML.parsefile(joinpath(dirname(pathof(DBN)), "..", "Project.toml"))
 
 ## Dependencies
 
-DBN.jl has the following dependencies (automatically installed):
+DatabentoBinaryEncoding.jl has the following dependencies (automatically installed):
 
 - **CodecZstd** - Zstd compression support
 - **CSV** - CSV file conversion
@@ -65,7 +65,7 @@ DBN.jl has the following dependencies (automatically installed):
 If you get a "Package not found" error, make sure you're using the full GitHub URL:
 
 ```julia
-Pkg.add(url="https://github.com/tbeason/DBN.jl")
+Pkg.add(url="https://github.com/tbeason/DatabentoBinaryEncoding.jl")
 ```
 
 ### Dependency Conflicts

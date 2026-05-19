@@ -7,7 +7,8 @@ This script creates DBN files of various sizes with realistic market data
 to enable thorough performance testing.
 """
 
-using DBN
+using DatabentoBinaryEncoding
+import DatabentoBinaryEncoding as DBN
 using Dates
 using Printf
 

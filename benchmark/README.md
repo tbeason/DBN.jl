@@ -1,6 +1,6 @@
-# DBN.jl Benchmark Suite
+# DatabentoBinaryEncoding.jl Benchmark Suite
 
-Comprehensive performance benchmarking tools for DBN.jl, measuring throughput (records/second), latency, memory usage, and bandwidth.
+Comprehensive performance benchmarking tools for DatabentoBinaryEncoding.jl, measuring throughput (records/second), latency, memory usage, and bandwidth.
 
 ## Quick Start
 
@@ -185,7 +185,7 @@ julia benchmark/run_benchmarks.jl --suite-only
 ### 4. Custom Analysis
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 include("benchmark/throughput.jl")
 
 # Benchmark specific file
@@ -262,7 +262,7 @@ For detailed profiling of hot spots:
 
 ```julia
 using Profile, ProfileView
-using DBN
+using DatabentoBinaryEncoding
 
 # Profile reading
 file = "benchmark/data/trades.1m.dbn"
@@ -281,7 +281,7 @@ g = flamegraph()
 ## Memory Profiling
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Track allocations
 file = "benchmark/data/trades.1m.dbn"
@@ -327,7 +327,7 @@ julia benchmark/run_benchmarks.jl --throughput-only
 
 ## Contributing
 
-When adding new features to DBN.jl:
+When adding new features to DatabentoBinaryEncoding.jl:
 
 1. Add relevant benchmarks to `benchmarks.jl`
 2. Run `julia benchmark/run_benchmarks.jl --quick` to verify no regressions

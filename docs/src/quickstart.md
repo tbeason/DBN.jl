@@ -1,12 +1,12 @@
 # Quick Start Guide
 
-Get up and running with DBN.jl in 5 minutes!
+Get up and running with DatabentoBinaryEncoding.jl in 5 minutes!
 
 ## Installation
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/tbeason/DBN.jl")
+Pkg.add(url="https://github.com/tbeason/DatabentoBinaryEncoding.jl")
 ```
 
 ## Basic Usage
@@ -16,7 +16,7 @@ Pkg.add(url="https://github.com/tbeason/DBN.jl")
 The simplest way to read a DBN file:
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Read entire file into memory
 records = read_dbn("trades.dbn")
@@ -62,7 +62,7 @@ println("Total volume: $(total_volume[])")
 Create a DBN file from Julia data:
 
 ```julia
-using DBN, Dates
+using DatabentoBinaryEncoding, Dates
 
 # Create metadata
 metadata = Metadata(
@@ -179,7 +179,7 @@ parquet_to_dbn("trades.parquet", "trades.dbn",
 
 ### Working with Compressed Files
 
-DBN.jl transparently handles Zstd-compressed files:
+DatabentoBinaryEncoding.jl transparently handles Zstd-compressed files:
 
 ```julia
 # Read compressed files (automatically detected by .zst extension)
@@ -272,4 +272,4 @@ Now that you know the basics:
 - **Troubleshooting**: See [common issues](troubleshooting.md)
 - **Databento Format**: Read the [official DBN documentation](https://databento.com/docs/standards-and-conventions/databento-binary-encoding)
 - **Schemas**: Learn about [DBN schemas](https://databento.com/docs/schemas-and-data-formats)
-- **Bug Reports**: Open an issue on [GitHub](https://github.com/tbeason/DBN.jl/issues)
+- **Bug Reports**: Open an issue on [GitHub](https://github.com/tbeason/DatabentoBinaryEncoding.jl/issues)

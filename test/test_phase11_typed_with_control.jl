@@ -3,7 +3,8 @@
 # reader to split data records from gateway control records.
 
 using Test
-using DBN
+using DatabentoBinaryEncoding
+import DatabentoBinaryEncoding as DBN
 
 @testset "foreach_record_with_control" begin
 

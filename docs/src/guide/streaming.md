@@ -1,6 +1,6 @@
 # Streaming
 
-Streaming is essential for working with large DBN files that don't fit in memory or when you want maximum performance. DBN.jl provides two streaming patterns: **callback-based** (fastest) and **iterator-based** (most flexible).
+Streaming is essential for working with large DBN files that don't fit in memory or when you want maximum performance. DatabentoBinaryEncoding.jl provides two streaming patterns: **callback-based** (fastest) and **iterator-based** (most flexible).
 
 ## Why Stream?
 
@@ -25,7 +25,7 @@ The callback pattern uses `foreach_*()` functions for maximum performance.
 ### Basic Usage
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Process all trades with a callback
 total_volume = Ref(0)
@@ -73,7 +73,7 @@ Bulk read:           6.86 M records/sec  (1.457s, 687 MB allocated)
 #### Aggregation
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Calculate VWAP
 price_volume_sum = Ref(0.0)
@@ -192,7 +192,7 @@ The iterator pattern uses `DBNStream()` for maximum flexibility.
 ### Basic Usage
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Iterate through records
 for record in DBNStream("file.dbn")
@@ -282,7 +282,7 @@ end
 For mixed-schema files with callbacks:
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Generic callback with type checking
 trade_count = Ref(0)
@@ -421,7 +421,7 @@ Callback streaming uses **~6,000x less memory** than iterator streaming!
 ## Error Handling
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 try
     foreach_trade("file.dbn") do trade

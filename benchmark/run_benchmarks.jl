@@ -1,7 +1,7 @@
 """
     run_benchmarks.jl
 
-Main entry point for running all DBN.jl benchmarks.
+Main entry point for running all DatabentoBinaryEncoding.jl benchmarks.
 
 Usage:
     julia benchmark/run_benchmarks.jl [options]
@@ -18,17 +18,19 @@ Options:
 using Pkg
 
 # Ensure we're in the right environment
-# Check if DBN is either a dependency or if we're in the DBN.jl project itself
+# Check if DatabentoBinaryEncoding is either a dependency or if we're in the
+# DatabentoBinaryEncoding.jl project itself.
 proj = Pkg.project()
-if !haskey(proj.dependencies, "DBN") && proj.name != "DBN"
-    error("DBN package not found. Make sure you're in the DBN.jl project directory.")
+if !haskey(proj.dependencies, "DatabentoBinaryEncoding") && proj.name != "DatabentoBinaryEncoding"
+    error("DatabentoBinaryEncoding package not found. Make sure you're in the DatabentoBinaryEncoding.jl project directory.")
 end
 
 # Activate the project
 Pkg.activate(".")
 
 # Load DBN
-using DBN
+using DatabentoBinaryEncoding
+import DatabentoBinaryEncoding as DBN
 using Printf
 using Dates
 
@@ -98,7 +100,7 @@ Print usage information.
 """
 function print_help()
     println("""
-    DBN.jl Benchmark Suite
+    DatabentoBinaryEncoding.jl Benchmark Suite
 
     Usage:
         julia benchmark/run_benchmarks.jl [options]
@@ -136,7 +138,7 @@ function print_banner()
     println("\n")
     println("█"^80)
     println("█" * " "^78 * "█")
-    println("█" * "        DBN.jl - Databento Binary Encoding Performance Benchmark" * " "^12 * "█")
+    println("█" * "        DatabentoBinaryEncoding.jl - Databento Binary Encoding Performance Benchmark" * " "^12 * "█")
     println("█" * " "^78 * "█")
     println("█"^80)
     println()

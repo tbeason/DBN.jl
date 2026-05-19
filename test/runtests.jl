@@ -1,5 +1,6 @@
 using Test
-using DBN
+using DatabentoBinaryEncoding
+import DatabentoBinaryEncoding as DBN
 using Dates
 
 # Load test utilities (safe_rm, etc.)

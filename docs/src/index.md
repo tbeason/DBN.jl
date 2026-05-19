@@ -1,4 +1,4 @@
-# DBN.jl Documentation
+# DatabentoBinaryEncoding.jl Documentation
 
 Julia implementation of the Databento Binary Encoding (DBN) message encoding and storage format for normalized market data.
 
@@ -14,9 +14,9 @@ DBN (Databento Binary Encoding) is a fast, compact binary format for storing and
 
 For details on the DBN format specification, see the [official Databento documentation](https://databento.com/docs/standards-and-conventions/databento-binary-encoding).
 
-## Why DBN.jl?
+## Why DatabentoBinaryEncoding.jl?
 
-DBN.jl brings the power of DBN to Julia with:
+DatabentoBinaryEncoding.jl brings the power of DBN to Julia with:
 
 - ✅ **Complete DBN v3 Format Support** - All message types and schemas
 - ✅ **Efficient Streaming** - Read and write large files with minimal memory
@@ -30,7 +30,7 @@ DBN.jl brings the power of DBN to Julia with:
 ## Quick Example
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Read a DBN file
 trades = read_trades("trades.dbn")
@@ -48,7 +48,7 @@ dbn_to_parquet("trades.dbn", "output_dir/")
 
 ## Performance Characteristics
 
-DBN.jl is optimized for high-throughput market data processing:
+DatabentoBinaryEncoding.jl is optimized for high-throughput market data processing:
 
 | Operation | Throughput | Method |
 |-----------|-----------|---------|
@@ -73,7 +73,7 @@ See the [Performance](@ref) page for detailed benchmarks and optimization tips.
 
 ## Getting Started
 
-1. [Install DBN.jl](installation.md)
+1. [Install DatabentoBinaryEncoding.jl](installation.md)
 2. Follow the [Quick Start Guide](quickstart.md)
 3. Explore the [User Guide](guide/reading.md)
 4. Check the [API Reference](api/reading.md)
@@ -81,11 +81,11 @@ See the [Performance](@ref) page for detailed benchmarks and optimization tips.
 ## Getting Help
 
 - **Documentation**: You're reading it! Browse the sections in the sidebar
-- **Issues**: Report bugs or request features on [GitHub](https://github.com/tbeason/DBN.jl/issues)
+- **Issues**: Report bugs or request features on [GitHub](https://github.com/tbeason/DatabentoBinaryEncoding.jl/issues)
 - **Databento Docs**: For DBN format details, see [databento.com/docs](https://databento.com/docs/)
 
 ## License
 
-DBN.jl is not affiliated with Databento.
+DatabentoBinaryEncoding.jl is not affiliated with Databento.
 
 The official DBN implementations ([dbn](https://github.com/databento/dbn)) are distributed under the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0.html).

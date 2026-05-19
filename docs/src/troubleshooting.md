@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues and solutions when working with DBN.jl.
+Common issues and solutions when working with DatabentoBinaryEncoding.jl.
 
 ## Installation Issues
 
@@ -8,10 +8,10 @@ Common issues and solutions when working with DBN.jl.
 
 **Problem**: `ERROR: Package DBN not found`
 
-**Solution**: DBN.jl is not registered. Install from GitHub:
+**Solution**: DatabentoBinaryEncoding.jl is not registered. Install from GitHub:
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/tbeason/DBN.jl")
+Pkg.add(url="https://github.com/tbeason/DatabentoBinaryEncoding.jl")
 ```
 
 ### Dependency Conflicts
@@ -29,7 +29,7 @@ If problems persist:
 ```julia
 Pkg.rm("DBN")
 Pkg.gc()  # Clean up
-Pkg.add(url="https://github.com/tbeason/DBN.jl")
+Pkg.add(url="https://github.com/tbeason/DatabentoBinaryEncoding.jl")
 ```
 
 ## Compression Issues
@@ -147,7 +147,7 @@ end
 3. **Check for type instability**:
 ```julia
 # Run with type checking
-using DBN
+using DatabentoBinaryEncoding
 @code_warntype read_trades("file.dbn")
 ```
 
@@ -255,7 +255,7 @@ record.ts_event = DateTime(2024, 1, 1)  # WRONG!
 
 **Problem**: `ERROR: Unsupported DBN version 1`
 
-**Cause**: DBN.jl only supports DBN v2 and v3
+**Cause**: DatabentoBinaryEncoding.jl only supports DBN v2 and v3
 
 **Solution**: Upgrade v1 files using Databento CLI:
 ```bash
@@ -363,11 +363,11 @@ names(df)  # Should match DBN field names
 If you encounter issues not covered here:
 
 1. **Check the documentation** for the specific function
-2. **Search existing GitHub issues**: [github.com/tbeason/DBN.jl/issues](https://github.com/tbeason/DBN.jl/issues)
+2. **Search existing GitHub issues**: [github.com/tbeason/DatabentoBinaryEncoding.jl/issues](https://github.com/tbeason/DatabentoBinaryEncoding.jl/issues)
 3. **Ask on GitHub Discussions** (if available)
 4. **Open a new issue** with:
    - Julia version (`versioninfo()`)
-   - DBN.jl version
+   - DatabentoBinaryEncoding.jl version
    - Minimal example reproducing the issue
    - Error message and stack trace
 
@@ -408,5 +408,5 @@ result = read_trades("test.dbn")  # Error occurs here
 - [Quick Start Guide](quickstart.md) - Basic usage
 - [Reading Guide](guide/reading.md) - Reading methods
 - [Performance Guide](performance.md) - Optimization
-- [GitHub Issues](https://github.com/tbeason/DBN.jl/issues) - Report bugs
+- [GitHub Issues](https://github.com/tbeason/DatabentoBinaryEncoding.jl/issues) - Report bugs
 - [Databento Documentation](https://databento.com/docs/) - DBN format details

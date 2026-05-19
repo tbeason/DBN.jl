@@ -1,6 +1,6 @@
 # Format Conversion
 
-DBN.jl supports bidirectional conversion between DBN and other popular formats: CSV, JSON, Parquet, and DataFrames.
+DatabentoBinaryEncoding.jl supports bidirectional conversion between DBN and other popular formats: CSV, JSON, Parquet, and DataFrames.
 
 ## Supported Formats
 
@@ -16,7 +16,7 @@ DBN.jl supports bidirectional conversion between DBN and other popular formats: 
 ### DBN to CSV
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert DBN to CSV
 dbn_to_csv("trades.dbn", "trades.csv")
@@ -42,7 +42,7 @@ ts_event,publisher_id,instrument_id,price,size,action,side,flags,depth,ts_recv,t
 ### DBN to JSON
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert to JSON (array of objects)
 dbn_to_json("trades.dbn", "trades.json")
@@ -84,7 +84,7 @@ dbn_to_json("trades.dbn", "trades.jsonl")
 ### DBN to Parquet
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert to Parquet
 dbn_to_parquet("trades.dbn", "output_directory/")
@@ -101,7 +101,7 @@ dbn_to_parquet("trades.dbn", "output_directory/")
 ### DBN to DataFrame
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Read DBN file
 records = read_trades("trades.dbn")
@@ -129,7 +129,7 @@ end
 ### JSON to DBN
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert JSON to DBN
 json_to_dbn("trades.json", "trades.dbn")
@@ -147,7 +147,7 @@ json_to_dbn("trades.jsonl", "trades.dbn")
 ### CSV to DBN
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert CSV to DBN (requires schema specification)
 csv_to_dbn(
@@ -175,7 +175,7 @@ csv_to_dbn(
 ### Parquet to DBN
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert Parquet to DBN
 parquet_to_dbn(
@@ -207,7 +207,7 @@ parquet_to_dbn(
 
 **Example: Export sample for Excel analysis**
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Read first 10,000 trades
 trades = read_trades("large_file.dbn.zst")
@@ -238,7 +238,7 @@ rm("sample.dbn")
 
 **Example: Export for web application**
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Get recent trades
 trades = read_trades("recent.dbn")
@@ -271,7 +271,7 @@ rm("latest.dbn")
 
 **Example: Export for DuckDB analysis**
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Convert historical data to Parquet
 dbn_to_parquet("2024_trades.dbn.zst", "data_lake/")
@@ -290,7 +290,7 @@ dbn_to_parquet("2024_trades.dbn.zst", "data_lake/")
 
 **Example: Analyze trade patterns**
 ```julia
-using DBN, DataFrames, Statistics, Dates
+using DatabentoBinaryEncoding, DataFrames, Statistics, Dates
 
 # Read data
 trades = read_trades("trades.dbn")
@@ -318,7 +318,7 @@ end
 ### DBN → CSV → DBN
 
 ```julia
-using DBN
+using DatabentoBinaryEncoding
 
 # Original file
 metadata_original, records_original = read_dbn_with_metadata("original.dbn")
@@ -397,7 +397,7 @@ dbn_to_csv("all.dbn.zst", "huge.csv")  # Wasteful!
 ### 3. Batch Processing for Large Files
 ```julia
 # Process in chunks for very large files
-using DBN
+using DatabentoBinaryEncoding
 
 writer = open("output.csv", "w")
 println(writer, "ts_event,price,size,side")  # Header
