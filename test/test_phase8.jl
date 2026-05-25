@@ -247,10 +247,56 @@ using Dates
             @test records[1].stype_in_symbol == "AAPL.NASDAQ"
             @test records[1].stype_out == SType.INSTRUMENT_ID
             @test records[1].stype_out_symbol == "12345"
-            
+
             rm(test_file, force=true)
         end
-        
+
+        @testset "SymbolMappingMsg cross-version (v1 wire → v3 file)" begin
+            # Live Databento gateway emits SymbolMappingMsg in v1 wire layout
+            # (hd.length=20, 80 bytes total) even when the consumer writes a
+            # v3 file. The encoder must re-derive the header length from the
+            # v2+ layout it is actually about to serialize (hd.length=44,
+            # 176 bytes total) so that the resulting record header matches
+            # the body and the file remains parseable.
+            v1_wire_length = UInt8(20)
+            mapping = SymbolMappingMsg(
+                RecordHeader(v1_wire_length, RType.SYMBOL_MAPPING_MSG,
+                             UInt16(0), UInt32(1191182337), 1779203015494476543),
+                SType.INSTRUMENT_ID,
+                "SPX.OPT",
+                SType.INSTRUMENT_ID,
+                "SPX   271217C02800000",
+                Int64(-1),
+                Int64(-1),
+            )
+
+            # Pair with a follow-up record so we exercise the stream offset:
+            # if hd.length on the SymbolMappingMsg is wrong, the decoder
+            # mis-positions for the next read and the file is unparseable.
+            # TradeMsg on-wire: 16-byte header + 32-byte body = 48 bytes, hd.length = 12
+            trade = TradeMsg(
+                RecordHeader(UInt8(12), RType.MBP_0_MSG, UInt16(0), UInt32(1191182337),
+                             1779203015494476600),
+                Int64(100_000_000_000), UInt32(10),
+                Action.TRADE, Side.BID, 0x00, 0x00,
+                Int64(1779203015494476600), Int32(0), UInt32(1),
+            )
+
+            write_dbn(test_file, metadata, [mapping, trade])
+            records = read_dbn(test_file)
+
+            @test length(records) == 2
+            @test records[1] isa SymbolMappingMsg
+            @test records[1].stype_in_symbol  == "SPX.OPT"
+            @test records[1].stype_out_symbol == "SPX   271217C02800000"
+            @test records[1].hd.instrument_id == UInt32(1191182337)
+            @test records[1].hd.length        == UInt8(44)   # rewritten to v3 layout
+            @test records[2] isa TradeMsg
+            @test records[2].hd.instrument_id == UInt32(1191182337)
+
+            rm(test_file, force=true)
+        end
+
         @testset "SystemMsg Write/Read" begin
             # Create a SystemMsg. hd.length is in 4-byte units.
             msg_text = "Market open notification"
