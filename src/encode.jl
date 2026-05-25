@@ -791,11 +791,21 @@ function write_record_complex(encoder::DBNEncoder, record)
 
     elseif isa(record, SymbolMappingMsg)
         # Spec-compliant SymbolMappingMsg layout (depends on DBN version):
-        #   v1:  stype_in_symbol[22] | stype_out_symbol[22] | pad(4) | start_ts(8) | end_ts(8)
-        #        (no explicit stype_in/stype_out bytes in v1)
+        #   v1:  stype_in_symbol[22] | stype_out_symbol[22] | pad(4) | start_ts(8) | end_ts(8)   (body 64, total 80, hd.length 20)
         #   v2+: stype_in(1) | stype_in_symbol[71] | stype_out(1) | stype_out_symbol[71] |
-        #        start_ts(8) | end_ts(8)
-        write_record_header(io, record.hd)
+        #        start_ts(8) | end_ts(8)                                                          (body 160, total 176, hd.length 44)
+        #
+        # The record's hd.length may reflect a different on-wire version than
+        # the file we're writing into — the Databento Live gateway emits v1
+        # layout (hd.length = 20) even when the consumer is writing a v3 file.
+        # Re-derive the length from the layout we are about to write so the
+        # resulting record header matches the bytes that follow it.
+        body_bytes = encoder.metadata.version == 1 ? 64 : 160
+        fixed_length = UInt8((16 + body_bytes) ÷ LENGTH_MULTIPLIER)
+        hd = record.hd
+        out_hd = hd.length == fixed_length ? hd :
+            RecordHeader(fixed_length, hd.rtype, hd.publisher_id, hd.instrument_id, hd.ts_event)
+        write_record_header(io, out_hd)
         if encoder.metadata.version == 1
             _write_fixed_string(io, record.stype_in_symbol,  22)
             _write_fixed_string(io, record.stype_out_symbol, 22)
