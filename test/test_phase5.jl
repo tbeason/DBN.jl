@@ -21,6 +21,19 @@ using Dates
             Tuple{String,String,Int64,Int64}[]  # mappings
         )
     end
+
+    function record_bytes(metadata::Metadata, record)
+        io = IOBuffer()
+        encoder = DBNEncoder(io, metadata)
+        write_record(encoder, record)
+        return take!(io)
+    end
+
+    function scalar_bytes(value)
+        io = IOBuffer()
+        write(io, value)
+        return take!(io)
+    end
     
     @testset "MBOMsg serialization/deserialization" begin
         metadata = create_test_metadata(Schema.MBO)
@@ -452,7 +465,7 @@ using Dates
                 "USD",                       # currency
                 "USD",                       # settl_currency
                 "CS",                        # secsubtype
-                "TSLA",                      # raw_symbol
+                "TSLA240119C00100000.EXTRA", # raw_symbol longer than DBN v1 length
                 "AUTO",                      # group
                 "XNAS",                      # exchange
                 "TSLA.NASDAQ",               # asset (11 bytes in v3)
@@ -482,10 +495,10 @@ using Dates
                 2,                           # leg_count
                 1,                           # leg_index
                 88888,                       # leg_instrument_id
-                "LEG1",                      # leg_raw_symbol
+                "LEG-SYMBOL-LONGER-THAN-20", # leg_raw_symbol uses DBN v2/v3 length
                 Side.BID,                    # leg_side
                 99999,                       # leg_underlying_id
-                InstrumentClass.OPTION,      # leg_instrument_class
+                InstrumentClass.CALL,        # leg_instrument_class
                 1,                           # leg_ratio_qty_numerator
                 2,                           # leg_ratio_qty_denominator
                 3,                           # leg_ratio_price_numerator
@@ -524,7 +537,18 @@ using Dates
             @test read_msg.leg_ratio_price_denominator == original_msg.leg_ratio_price_denominator
             @test read_msg.leg_price == original_msg.leg_price
             @test read_msg.leg_delta == original_msg.leg_delta
-            
+
+            bytes = record_bytes(metadata, original_msg)
+            @test length(bytes) == 520
+            @test bytes[17:24] == scalar_bytes(original_msg.ts_recv)
+            @test bytes[25:32] == scalar_bytes(original_msg.min_price_increment)
+            @test bytes[129:136] == scalar_bytes(original_msg.leg_delta)
+            @test bytes[239:238 + ncodeunits(original_msg.raw_symbol)] ==
+                collect(codeunits(original_msg.raw_symbol))
+            @test bytes[488] == UInt8(original_msg.instrument_class)
+            @test bytes[494] == UInt8(original_msg.security_update_action)
+            @test bytes[495] == original_msg.maturity_month
+
         finally
             safe_rm(temp_file)
         end

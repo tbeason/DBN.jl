@@ -4,6 +4,9 @@
 """The current DBN format version supported by this implementation."""
 const DBN_VERSION = 3
 
+"""Fixed-length symbol string size for DBN v2/v3 metadata and records."""
+const SYMBOL_CSTR_LEN = 71
+
 """Fixed-point price scaling factor for converting between integer and float prices."""
 const FIXED_PRICE_SCALE = Int32(1_000_000_000)
 
@@ -235,37 +238,37 @@ end
 """
     InstrumentClass
 
-Classification of financial instruments.
+Classification of financial instruments. Values match Databento's DBN
+`InstrumentClass` enum.
 
 # Values
 - `STOCK`: Equity instruments
-- `OPTION`: Option contracts
+- `CALL`: Call option contracts
+- `PUT`: Put option contracts
 - `FUTURE`: Futures contracts
-- `FX`: Foreign exchange
 - `BOND`: Fixed income securities
 - `MIXED_SPREAD`: Mixed spread instruments
-- `COMMODITY`: Commodity instruments
-- `INDEX`: Index instruments
-- `CURRENCY`: Currency instruments
-- `SWAP`: Swap instruments
-- `OTHER`: Other/unknown instrument types
+- `FUTURE_SPREAD`: Futures spread instruments
+- `OPTION_SPREAD`: Option spread instruments
+- `FX_SPOT`: Foreign exchange spot
+- `COMMODITY_SPOT`: Commodity spot
 - `UNKNOWN_0`, `UNKNOWN_45`: Numeric fallback values for unknown classes
 """
 @enumx InstrumentClass::UInt8 begin
-    STOCK = UInt8('K')
-    OPTION = UInt8('O')
-    FUTURE = UInt8('F')
-    FX = UInt8('X')
     BOND = UInt8('B')
+    CALL = UInt8('C')
+    FUTURE = UInt8('F')
+    STOCK = UInt8('K')
     MIXED_SPREAD = UInt8('M')
-    COMMODITY = UInt8('C')
-    INDEX = UInt8('I')
-    CURRENCY = UInt8('U')
-    SWAP = UInt8('S')
-    OTHER = UInt8('?')
+    PUT = UInt8('P')
+    FUTURE_SPREAD = UInt8('S')
+    OPTION_SPREAD = UInt8('T')
+    FX_SPOT = UInt8('X')
+    COMMODITY_SPOT = UInt8('Y')
     # Also support numeric values
     UNKNOWN_0 = 0
     UNKNOWN_45 = 45
+    OTHER = UInt8('?')
 end
 
 # Basic structures

@@ -324,7 +324,7 @@ Note: DBN v2 and v3 have different field sets. This struct supports both version
 - v2-only fields (trading_reference_price, trading_reference_date, md_security_trading_status, settl_price_type) are set to 0 in v3
 - v3-only fields (all leg_* fields) are set to 0/empty in v2
 - raw_instrument_id is UInt32 in v2, UInt64 in v3
-- raw_symbol is 19 bytes in v2, 22 bytes in v3
+- raw_symbol is 71 bytes in DBN v2/v3
 - asset is 7 bytes in v2, 11 bytes in v3
 
 # Fields
@@ -363,7 +363,7 @@ Note: DBN v2 and v3 have different field sets. This struct supports both version
 - `currency::String`: Currency code
 - `settl_currency::String`: Settlement currency
 - `secsubtype::String`: Security subtype
-- `raw_symbol::String`: Raw symbol (19 bytes in v2, 22 bytes in v3)
+- `raw_symbol::String`: Raw symbol (71 bytes in DBN v2/v3)
 - `group::String`: Group identifier
 - `exchange::String`: Exchange identifier
 - `asset::String`: Asset identifier (7 bytes in v2, 11 bytes in v3)
@@ -392,14 +392,14 @@ Note: DBN v2 and v3 have different field sets. This struct supports both version
 - `leg_count::UInt16`: Number of legs (DBN v3 only, 0 in v2)
 - `leg_index::UInt16`: Leg index (DBN v3 only, 0 in v2)
 - `leg_instrument_id::UInt32`: Leg instrument ID (DBN v3 only, 0 in v2)
-- `leg_raw_symbol::String`: Leg raw symbol (DBN v3 only, empty in v2)
+- `leg_raw_symbol::String`: Leg raw symbol (DBN v3 only, 71 bytes, empty in v2)
 - `leg_side::Side.T`: Leg side (DBN v3 only, NONE in v2)
 - `leg_underlying_id::UInt32`: Leg underlying ID (DBN v3 only, 0 in v2)
 - `leg_instrument_class::InstrumentClass.T`: Leg instrument class (DBN v3 only, UNKNOWN_0 in v2)
-- `leg_ratio_qty_numerator::UInt32`: Leg ratio quantity numerator (DBN v3 only, 0 in v2)
-- `leg_ratio_qty_denominator::UInt32`: Leg ratio quantity denominator (DBN v3 only, 0 in v2)
-- `leg_ratio_price_numerator::UInt32`: Leg ratio price numerator (DBN v3 only, 0 in v2)
-- `leg_ratio_price_denominator::UInt32`: Leg ratio price denominator (DBN v3 only, 0 in v2)
+- `leg_ratio_qty_numerator::Int32`: Leg ratio quantity numerator (DBN v3 only, 0 in v2)
+- `leg_ratio_qty_denominator::Int32`: Leg ratio quantity denominator (DBN v3 only, 0 in v2)
+- `leg_ratio_price_numerator::Int32`: Leg ratio price numerator (DBN v3 only, 0 in v2)
+- `leg_ratio_price_denominator::Int32`: Leg ratio price denominator (DBN v3 only, 0 in v2)
 - `leg_price::Int64`: Leg price (DBN v3 only, 0 in v2)
 - `leg_delta::Int64`: Leg delta (DBN v3 only, 0 in v2)
 """
@@ -473,10 +473,10 @@ struct InstrumentDefMsg
     leg_side::Side.T
     leg_underlying_id::UInt32
     leg_instrument_class::InstrumentClass.T
-    leg_ratio_qty_numerator::UInt32
-    leg_ratio_qty_denominator::UInt32
-    leg_ratio_price_numerator::UInt32
-    leg_ratio_price_denominator::UInt32
+    leg_ratio_qty_numerator::Int32
+    leg_ratio_qty_denominator::Int32
+    leg_ratio_price_numerator::Int32
+    leg_ratio_price_denominator::Int32
     leg_price::Int64
     leg_delta::Int64
 end

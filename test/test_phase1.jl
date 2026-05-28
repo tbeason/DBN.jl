@@ -113,9 +113,10 @@
         
         # Test InstrumentClass enum
         @test InstrumentClass.STOCK == InstrumentClass.T(UInt8('K'))
-        @test InstrumentClass.OPTION == InstrumentClass.T(UInt8('O'))
+        @test InstrumentClass.CALL == InstrumentClass.T(UInt8('C'))
+        @test InstrumentClass.PUT == InstrumentClass.T(UInt8('P'))
         @test InstrumentClass.FUTURE == InstrumentClass.T(UInt8('F'))
-        @test InstrumentClass.FX == InstrumentClass.T(UInt8('X'))
+        @test InstrumentClass.FX_SPOT == InstrumentClass.T(UInt8('X'))
         @test InstrumentClass.BOND == InstrumentClass.T(UInt8('B'))
     end
     
